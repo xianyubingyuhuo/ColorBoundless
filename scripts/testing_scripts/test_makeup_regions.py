@@ -33,14 +33,13 @@ import torchvision.transforms as transforms
 
 # ---------- 引用 lipstick.tryon 的复用函数 ----------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))  # 使 cv.face_parsing / beauty 包可导入
 LIPSTICK_DIR = PROJECT_ROOT / "beauty" / "lipstick"
 sys.path.insert(0, str(LIPSTICK_DIR))
 from tryon import hex2bgr, save_img, segment  # noqa: E402
 
-# 人脸解析库 + 模型
-_PARSE_LIB = PROJECT_ROOT.parent / "face-parsing.PyTorch"
-sys.path.insert(0, str(_PARSE_LIB))
-from model import BiSeNet  # noqa: E402
+# 人脸解析模型（已 vendor 进仓库，见 cv/face_parsing/README.md）
+from cv.face_parsing import BiSeNet  # noqa: E402
 
 WEIGHTS = PROJECT_ROOT / "models" / "face_parsing" / "79999_iter.pth"
 TEST_IMG = PROJECT_ROOT / "data" / "faces" / "11053.jpg"
