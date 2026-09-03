@@ -18,11 +18,8 @@ import torch
 from PIL import Image
 import torchvision.transforms as transforms
 
-# 引用公共库模型（face-parsing.PyTorch）
-_PARSE_LIB = r"e:\作业\欧莱雅比赛项目\项目3\face-parsing.PyTorch"
-if _PARSE_LIB not in sys.path:
-    sys.path.insert(0, _PARSE_LIB)
-from model import BiSeNet  # noqa: E402
+# BiSeNet 定义已 vendor 进仓库（cv/face_parsing，MIT，来源见该目录 README）
+from cv.face_parsing import BiSeNet  # noqa: E402
 
 # 项目根目录 ColorBoundless/
 _BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
