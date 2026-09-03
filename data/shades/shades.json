@@ -1,0 +1,142 @@
+[
+  {
+    "hex": "A63A2B",
+    "name": "复古红棕",
+    "tone": "warm",
+    "occasion": "晚宴/气场",
+    "desc": "温暖的红棕色，显白不挑皮"
+  },
+  {
+    "hex": "FF4D6D",
+    "name": "元气正红",
+    "tone": "warm",
+    "occasion": "日常/约会",
+    "desc": "明亮的正红色，提气色"
+  },
+  {
+    "hex": "D81B60",
+    "name": "玫红",
+    "tone": "cool",
+    "occasion": "派对/舞台",
+    "desc": "玫粉色，冷调显白"
+  },
+  {
+    "hex": "C2185B",
+    "name": "浆果红",
+    "tone": "cool",
+    "occasion": "秋冬/复古",
+    "desc": "深浆果色，浓郁有质感"
+  },
+  {
+    "hex": "E75480",
+    "name": "蜜桃粉",
+    "tone": "warm",
+    "occasion": "日常/少女",
+    "desc": "柔和蜜桃粉，清透自然"
+  },
+  {
+    "hex": "B22222",
+    "name": "正宫红",
+    "tone": "warm",
+    "occasion": "正式/通勤",
+    "desc": "经典正红，端庄大气"
+  },
+  {
+    "hex": "8E2A3A",
+    "name": "红酒",
+    "tone": "cool",
+    "occasion": "晚宴/高冷",
+    "desc": "深沉酒红色，高级感"
+  },
+  {
+    "hex": "DB7093",
+    "name": "豆沙粉",
+    "tone": "warm",
+    "occasion": "通勤/温柔",
+    "desc": "温柔豆沙粉，日常百搭"
+  },
+  {
+    "hex": "CD5C5C",
+    "name": "珊瑚红",
+    "tone": "warm",
+    "occasion": "春夏/活力",
+    "desc": "珊瑚色，活泼显气色"
+  },
+  {
+    "hex": "AD1457",
+    "name": "车厘子",
+    "tone": "cool",
+    "occasion": "秋冬/复古",
+    "desc": "深车厘子红，浓郁显白"
+  },
+  {
+    "hex": "E0115F",
+    "name": "桃红",
+    "tone": "cool",
+    "occasion": "派对/亮眼",
+    "desc": "亮桃红，张扬有活力"
+  },
+  {
+    "hex": "722F37",
+    "name": "干枯玫瑰",
+    "tone": "cool",
+    "occasion": "通勤/温柔",
+    "desc": "干枯玫瑰色，低调温柔"
+  },
+  {
+    "hex": "C71585",
+    "name": "紫红",
+    "tone": "cool",
+    "occasion": "舞台/个性",
+    "desc": "紫调口红，个性十足"
+  },
+  {
+    "hex": "FF4040",
+    "name": "炽热红",
+    "tone": "warm",
+    "occasion": "舞台/亮眼",
+    "desc": "高饱和亮红，吸睛"
+  },
+  {
+    "hex": "960018",
+    "name": "胭脂红",
+    "tone": "warm",
+    "occasion": "复古/浓郁",
+    "desc": "深胭脂红，有韵味"
+  },
+  {
+    "hex": "DA70D6",
+    "name": "樱花粉",
+    "tone": "cool",
+    "occasion": "少女/日常",
+    "desc": "樱花粉，甜美清透"
+  },
+  {
+    "hex": "800000",
+    "name": "枫叶红",
+    "tone": "warm",
+    "occasion": "秋冬/气质",
+    "desc": "深枫叶红，沉稳显白"
+  },
+  {
+    "hex": "FF69B4",
+    "name": "芭比粉",
+    "tone": "cool",
+    "occasion": "少女/潮流",
+    "desc": "芭比粉，甜酷风"
+  },
+  {
+    "hex": "9C2542",
+    "name": "石榴红",
+    "tone": "cool",
+    "occasion": "宴会/复古",
+    "desc": "石榴红，浓郁饱满"
+  },
+  {
+    "hex": "E30B5D",
+    "name": "莓果红",
+    "tone": "cool",
+    "occasion": "日常/活力",
+    "desc": "莓果红，显白提气"
+  }
+]

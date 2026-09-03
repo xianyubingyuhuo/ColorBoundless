@@ -1,0 +1,26 @@
+{
+  "source_root": "e:\\作业\\欧莱雅比赛项目\\download_materials\\fashion_style\\recommendations.csv",
+  "output_csv": "E:\\作业\\欧莱雅比赛项目\\项目3\\ColorBoundless\\data\\processed\\style_recommendations\\fashion_style_cleaned.csv",
+  "rows_generated": 15120,
+  "schema": [
+    "hair_color",
+    "eye_color",
+    "skin_tone",
+    "undertone",
+    "torso_length",
+    "body_proportion",
+    "recommended_colors",
+    "avoid_colors",
+    "recommended_fitting_style",
+    "recommended_materials",
+    "recommended_patterns",
+    "recommended_jewelry_metal",
+    "recommended_shoes",
+    "recommended_color_wheel_region",
+    "avoid_color_wheel_region",
+    "fabric_nature",
+    "do_exaggerate",
+    "dont_exaggerate",
+    "source_file"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "total_rules": 15120,
+  "core_features": [
+    "hair_color",
+    "eye_color",
+    "skin_tone",
+    "undertone"
+  ],
+  "all_features": [
+    "hair_color",
+    "eye_color",
+    "skin_tone",
+    "undertone",
+    "torso_length",
+    "body_proportion"
+  ],
+  "lookup_keys": 720,
+  "created_by": "process_style_recommendations.py"
+}

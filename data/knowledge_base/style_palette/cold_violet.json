@@ -1,0 +1,33 @@
+{
+  "palette_id": "style_cold_violet_01",
+  "style_name": "cold_violet_editorial",
+  "theme": "冷紫高级感",
+  "emotion": ["luxury", "mysterious", "editorial"],
+  "colors": [
+    {
+      "name": "主色",
+      "hex": "#A85DD8",
+      "usage": "lips_or_focus"
+    },
+    {
+      "name": "辅助色",
+      "hex": "#6C4D8E",
+      "usage": "brow_or_shadow"
+    },
+    {
+      "name": "过渡色",
+      "hex": "#F2D9C6",
+      "usage": "blend_or_blush"
+    },
+    {
+      "name": "高光色",
+      "hex": "#F7E9FF",
+      "usage": "highlight"
+    }
+  ],
+  "recommended_skin_tone": ["cool-neutral", "warm-neutral"],
+  "recommended_occasion": ["night", "shooting", "fashion"],
+  "match_rule": "冷紫为主色时，建议用奶油柔和暖中性色做过渡，避免全冷色过强造成压迫感。",
+  "cvd_safe": 0.83,
+  "notes": "适合想要高级、拍摄感和非主流气质的用户。"
+}

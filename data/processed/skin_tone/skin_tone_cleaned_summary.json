@@ -1,0 +1,27 @@
+{
+  "source_root": "e:\\作业\\欧莱雅比赛项目\\download_materials\\skin_tone",
+  "output_csv": "E:\\作业\\欧莱雅比赛项目\\项目3\\ColorBoundless\\data\\processed\\skin_tone\\skin_tone_cleaned.csv",
+  "rows_generated": 12102,
+  "source_files_used": [
+    "Cosmetic Foundation Shades\\allCategories.csv",
+    "Cosmetic Foundation Shades\\allNumbers.csv",
+    "Cosmetic Foundation Shades\\allShades.csv",
+    "Cosmetic Foundation Shades\\sephora.csv",
+    "Cosmetic Foundation Shades\\ulta.csv"
+  ],
+  "schema": [
+    "brand",
+    "product",
+    "name",
+    "specific",
+    "hex",
+    "r",
+    "g",
+    "b",
+    "lightness",
+    "undertone",
+    "categories",
+    "source_dataset",
+    "source_file"
+  ]
+}

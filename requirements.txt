@@ -1,0 +1,9 @@
+numpy
+opencv-python
+Pillow
+pandas
+scikit-learn
+torch
+torchvision
+sentence-transformers   # bge-small-zh 嵌入（scripts/embed_style_recommendations.py）
+
