@@ -1,0 +1,25 @@
+{
+  "total_products": 12102,
+  "undertone_map": {
+    "cool": 0,
+    "warm": 1,
+    "neutral": 2
+  },
+  "lightness_names": [
+    "deep",
+    "medium",
+    "light"
+  ],
+  "lookup_keys": {
+    "0_2": 1225,
+    "2_2": 3810,
+    "2_1": 3021,
+    "0_1": 438,
+    "1_1": 1434,
+    "0_0": 108,
+    "2_0": 582,
+    "1_2": 1398,
+    "1_0": 86
+  },
+  "created_by": "process_skin_tone.py"
+}

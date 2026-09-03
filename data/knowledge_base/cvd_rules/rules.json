@@ -1,0 +1,28 @@
+[
+  {
+    "rule_id": "cvd_01",
+    "name": "red_green_confusion",
+    "description": "红绿误差对比在色盲下往往会消失，建议增加明度差与结构区分。",
+    "avoid_pairs": [["#FF4D6D", "#2E8B57"], ["#D81B60", "#77C29B"]],
+    "safe_pairs": [["#FF4D6D", "#F7E9FF"], ["#8E2A3A", "#F2D9C6"]],
+    "recommended_action": "用明度差异和中性色过渡降低误判。",
+    "cvd_type": "deuteranopia"
+  },
+  {
+    "rule_id": "cvd_02",
+    "name": "blue_yellow_confusion",
+    "description": "蓝黄误差容易在低饱和场景中丢失，需要保留明显明度层次。",
+    "avoid_pairs": [["#4E6EF2", "#EEDC5E"], ["#5B7C99", "#D9B65F"]],
+    "safe_pairs": [["#6C4D8E", "#F7E9FF"], ["#4B3B5A", "#F2D9C6"]],
+    "recommended_action": "选择暖中性色作为过渡，不要让蓝黄直接并置。",
+    "cvd_type": "tritanopia"
+  },
+  {
+    "rule_id": "cvd_03",
+    "name": "grayscale_visibility_check",
+    "description": "将调色方案转为灰阶后，仍需有明显亮度区分。",
+    "threshold": 0.18,
+    "safe_strategy": "保留 18% 以上的亮度差异，避免纯色与肤色过度接近。",
+    "cvd_type": "global"
+  }
+]

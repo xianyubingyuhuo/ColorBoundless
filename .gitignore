@@ -1,0 +1,25 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ===== 大文件：模型权重不入库（见 README「模型权重」下载说明）=====
+models/face_parsing/*.pth
+
+# ===== 运行输出 =====
+results/
+debug_logs/
+*.log
+
+# ===== 敏感信息 =====
+.env
+*.key
+*_config_local.py
+
+# ===== IDE / 系统 =====
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

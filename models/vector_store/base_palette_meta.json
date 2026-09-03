@@ -1,0 +1,35 @@
+{
+  "total_colors": 262144,
+  "n_clusters": 200,
+  "hue_groups": [
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "cyan",
+    "blue",
+    "purple",
+    "magenta",
+    "gray",
+    "black",
+    "white"
+  ],
+  "hue_group_counts": {
+    "red": 21682,
+    "orange": 21680,
+    "yellow": 18141,
+    "green": 64893,
+    "cyan": 25372,
+    "blue": 46896,
+    "purple": 21842,
+    "magenta": 39666,
+    "gray": 1294,
+    "black": 343,
+    "white": 335
+  },
+  "cluster_centers_lab_shape": [
+    200,
+    3
+  ],
+  "created_by": "process_base_palette.py"
+}

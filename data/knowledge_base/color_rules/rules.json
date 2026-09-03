@@ -1,0 +1,35 @@
+[
+  {
+    "rule_id": "rule_01",
+    "name": "split_complementary",
+    "description": "通过分裂互补来保持强对比但降低视觉冲突。",
+    "example_pair": ["#A85DD8", "#E7B38A", "#F4E7FF"],
+    "best_for": ["editorial", "night", "luxury"],
+    "notes": "主色和对比色不直接冲突，而是通过过渡色控制层次。"
+  },
+  {
+    "rule_id": "rule_02",
+    "name": "analogous_soft",
+    "description": "利用相邻色相提升统一感，适合温柔妆感。",
+    "example_pair": ["#E75480", "#F2B6C5", "#D9B7FF"],
+    "best_for": ["daily", "romantic", "soft-glam"],
+    "notes": "适合需要自然、柔和和协调的整体妆容。"
+  },
+  {
+    "rule_id": "rule_03",
+    "name": "monochrome_balance",
+    "description": "单色搭配通过明度差异创造层次，而不破坏统一性。",
+    "example_pair": ["#8E2A3A", "#B75E67", "#E9C4C8"],
+    "best_for": ["minimal", "classic", "formal"],
+    "notes": "适合高级感、低饱和但有纹理感的妆容。"
+  },
+  {
+    "rule_id": "rule_04",
+    "name": "warm_cool_balance",
+    "description": "冷调主色配暖中性色，平衡整体气质。",
+    "example_pair": ["#6C4D8E", "#F2D9C6", "#7A5635"],
+    "best_for": ["balanced", "neutral-luxury", "soft-
+      glam"],
+    "notes": "在强冷调色中加入适度暖中性色，避免“死冷”。"
+  }
+]
