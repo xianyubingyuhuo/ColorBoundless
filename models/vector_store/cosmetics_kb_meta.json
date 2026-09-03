@@ -1,0 +1,20 @@
+{
+  "total_entries": 10,
+  "source_files": [
+    "seed_techniques.jsonl"
+  ],
+  "category_stats": {
+    "color_theory": 5,
+    "cvd": 1,
+    "product": 1,
+    "style": 2,
+    "vocab": 1
+  },
+  "retrieval_text_fields": [
+    "title",
+    "content",
+    "tags"
+  ],
+  "schema_version": 1,
+  "created_by": "build_cosmetics_kb.py"
+}
