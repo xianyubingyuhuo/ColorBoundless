@@ -4,14 +4,28 @@
     "name": "冷紫",
     "category": "lip",
     "hex": "#A85DD8",
-    "rgb": [168, 93, 216],
-    "lab": [52.1, 52.4, -41.5],
+    "rgb": [
+      168,
+      93,
+      216
+    ],
+    "lab": [
+      53.1,
+      51.8,
+      -51.3
+    ],
     "hue_family": "purple",
     "undertone": "cool",
     "lightness": "medium",
     "saturation": "high",
-    "emotion": ["mysterious", "elegant"],
-    "occasion": ["night", "photo"],
+    "emotion": [
+      "mysterious",
+      "elegant"
+    ],
+    "occasion": [
+      "night",
+      "photo"
+    ],
     "cvd_safe": 0.8,
     "notes": "冷感高级紫，适合拍摄和高级质感妆容。"
   },
@@ -20,14 +34,28 @@
     "name": "紫红",
     "category": "lip",
     "hex": "#C71585",
-    "rgb": [199, 21, 133],
-    "lab": [40.3, 62.8, -13.6],
+    "rgb": [
+      199,
+      21,
+      133
+    ],
+    "lab": [
+      44.8,
+      71.0,
+      -15.2
+    ],
     "hue_family": "purple",
     "undertone": "cool",
     "lightness": "medium",
     "saturation": "high",
-    "emotion": ["bold", "dramatic"],
-    "occasion": ["party", "night"],
+    "emotion": [
+      "bold",
+      "dramatic"
+    ],
+    "occasion": [
+      "party",
+      "night"
+    ],
     "cvd_safe": 0.76,
     "notes": "带张力的紫红色，适合强戏剧感妆容。"
   },
@@ -36,14 +64,28 @@
     "name": "灰紫",
     "category": "eyebrow",
     "hex": "#6C4D8E",
-    "rgb": [108, 77, 142],
-    "lab": [37.5, 24.7, -22.6],
+    "rgb": [
+      108,
+      77,
+      142
+    ],
+    "lab": [
+      38.6,
+      26.8,
+      -31.3
+    ],
     "hue_family": "purple",
     "undertone": "cool",
     "lightness": "dim",
     "saturation": "medium",
-    "emotion": ["minimal", "neutral"],
-    "occasion": ["daily", "work"],
+    "emotion": [
+      "minimal",
+      "neutral"
+    ],
+    "occasion": [
+      "daily",
+      "work"
+    ],
     "cvd_safe": 0.9,
     "notes": "更适合柔和高级感的渐变眉和低饱和妆容。"
   },
@@ -52,14 +94,29 @@
     "name": "烟熏紫",
     "category": "eyeshadow",
     "hex": "#4B3B5A",
-    "rgb": [75, 59, 90],
-    "lab": [26.8, 13.3, -10.9],
+    "rgb": [
+      75,
+      59,
+      90
+    ],
+    "lab": [
+      27.7,
+      13.9,
+      -15.9
+    ],
     "hue_family": "purple",
     "undertone": "cool",
     "lightness": "dark",
     "saturation": "medium",
-    "emotion": ["mysterious", "smoky"],
-    "occasion": ["night", "party", "photo"],
+    "emotion": [
+      "mysterious",
+      "smoky"
+    ],
+    "occasion": [
+      "night",
+      "party",
+      "photo"
+    ],
     "cvd_safe": 0.91,
     "notes": "烟熏系列常用色，适合眼妆层次和光影结构。"
   }
