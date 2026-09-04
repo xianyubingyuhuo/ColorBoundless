@@ -21,7 +21,7 @@
 | `content` | str | ✅ | 正文，**检索友好改写**：口语化提问开头 + 同义词嵌入，200~600 字 |
 | `tags` | list[str] | ✅ | 口语词/同义词/俗称（提升召回率的关键，如"黄皮""浆果色"） |
 | `source` | str | ✅ | 来源出处（版权 + 可信度，答辩可引用） |
-| `occasion` | list[str] | ➖ | 统一词汇表：`daily` / `work` / `date` / `night` / `formal` / `all` |
+| `occasion` | list[str] | ➖ | 统一词汇表：`daily` / `work` / `date` / `party` / `night` / `formal` / `photo` / `all` |
 | `hue_family` | str | ➖ | 所属色系（如 `cool_violet`、`warm_red`） |
 
 ## 写作原则（决定 RAG 质量）
@@ -43,7 +43,13 @@
 - **D 社区/教材**（高风险，人工转写）：B站文字稿、小红书/知乎（价值在口语问法 → tags）、
   美妆教材（转写不复制）
 
-## 场合词汇约定（与 base_palette 对齐，解决词汇漂移）
+## 场合词汇约定（全项目统一：shades.json / base_palette / 本语料，build 脚本强制校验）
 
-`occasion` 只允许：`daily` / `work` / `date` / `night` / `formal` / `all`。
-中文语境映射：晚宴→`formal`，夜场→`night`，约会→`date`，通勤/日常→`work`/`daily`。
+`occasion` 只允许 8 词：`daily` / `work` / `date` / `party` / `night` / `formal` / `photo` / `all`。
+
+旧词 → 新词映射：evening→`night`，social/event→`party`，
+portrait/shooting/editorial/stage/fashion→`photo`，soft-glam/travel→`daily`。
+中文对照：日常→`daily`，通勤/上班→`work`，约会→`date`，派对→`party`，
+晚宴/夜场→`night`，正式/宴会/婚礼→`formal`，拍照/出片/舞台→`photo`。
+
+风格词（气场/温柔/复古等）**不进 occasion**——放 `emotion`（或 tags），场合与风格两维正交。

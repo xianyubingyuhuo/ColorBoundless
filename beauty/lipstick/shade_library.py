@@ -4,51 +4,35 @@
   from lipstick.shade_library import search_shade, hex2lab, ciede2000
   best = search_shade("#FF4D6D", top_k=3)   # 输入 HEX, 返回库中最接近的色号
 """
+import json
+from pathlib import Path
+
 import numpy as np
 
-# 色号库: 每个色号含 HEX / 名称 / 色调 / 场合
-SHADES = [
-    {"hex": "A63A2B", "name": "复古红棕", "tone": "warm", "occasion": "晚宴/气场",
-     "desc": "温暖的红棕色，显白不挑皮"},
-    {"hex": "FF4D6D", "name": "元气正红", "tone": "warm", "occasion": "日常/约会",
-     "desc": "明亮的正红色，提气色"},
-    {"hex": "D81B60", "name": "玫红", "tone": "cool", "occasion": "派对/舞台",
-     "desc": "玫粉色，冷调显白"},
-    {"hex": "C2185B", "name": "浆果红", "tone": "cool", "occasion": "秋冬/复古",
-     "desc": "深浆果色，浓郁有质感"},
-    {"hex": "E75480", "name": "蜜桃粉", "tone": "warm", "occasion": "日常/少女",
-     "desc": "柔和蜜桃粉，清透自然"},
-    {"hex": "B22222", "name": "正宫红", "tone": "warm", "occasion": "正式/通勤",
-     "desc": "经典正红，端庄大气"},
-    {"hex": "8E2A3A", "name": "红酒", "tone": "cool", "occasion": "晚宴/高冷",
-     "desc": "深沉酒红色，高级感"},
-    {"hex": "DB7093", "name": "豆沙粉", "tone": "warm", "occasion": "通勤/温柔",
-     "desc": "温柔豆沙粉，日常百搭"},
-    {"hex": "CD5C5C", "name": "珊瑚红", "tone": "warm", "occasion": "春夏/活力",
-     "desc": "珊瑚色，活泼显气色"},
-    {"hex": "AD1457", "name": "车厘子", "tone": "cool", "occasion": "秋冬/复古",
-     "desc": "深车厘子红，浓郁显白"},
-    {"hex": "E0115F", "name": "桃红", "tone": "cool", "occasion": "派对/亮眼",
-     "desc": "亮桃红，张扬有活力"},
-    {"hex": "722F37", "name": "干枯玫瑰", "tone": "cool", "occasion": "通勤/温柔",
-     "desc": "干枯玫瑰色，低调温柔"},
-    {"hex": "C71585", "name": "紫红", "tone": "cool", "occasion": "舞台/个性",
-     "desc": "紫调口红，个性十足"},
-    {"hex": "FF4040", "name": "炽热红", "tone": "warm", "occasion": "舞台/亮眼",
-     "desc": "高饱和亮红，吸睛"},
-    {"hex": "960018", "name": "胭脂红", "tone": "warm", "occasion": "复古/浓郁",
-     "desc": "深胭脂红，有韵味"},
-    {"hex": "DA70D6", "name": "樱花粉", "tone": "cool", "occasion": "少女/日常",
-     "desc": "樱花粉，甜美清透"},
-    {"hex": "800000", "name": "枫叶红", "tone": "warm", "occasion": "秋冬/气质",
-     "desc": "深枫叶红，沉稳显白"},
-    {"hex": "FF69B4", "name": "芭比粉", "tone": "cool", "occasion": "少女/潮流",
-     "desc": "芭比粉，甜酷风"},
-    {"hex": "9C2542", "name": "石榴红", "tone": "cool", "occasion": "宴会/复古",
-     "desc": "石榴红，浓郁饱满"},
-    {"hex": "E30B5D", "name": "莓果红", "tone": "cool", "occasion": "日常/活力",
-     "desc": "莓果红，显白提气"},
-]
+# ----------------------------- 色号库（单一数据源） -----------------------------
+# 数据正本: data/shades/shades.json —— beauty 试妆 / 未来 agent 工具 / RAG 三方共用。
+# 禁止在代码里再硬编码色号（避免双份数据漂移）。
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SHADES_JSON = PROJECT_ROOT / "data" / "shades" / "shades.json"
+
+
+def _load_shades() -> list:
+    """模块级加载一次。缺文件 / 缺字段直接报错（fail fast，不静默降级）。"""
+    if not SHADES_JSON.exists():
+        raise FileNotFoundError(
+            f"色号库不存在: {SHADES_JSON}\n"
+            "（数据正本在 data/shades/shades.json，请勿在代码里硬编码色号）"
+        )
+    data = json.loads(SHADES_JSON.read_text(encoding="utf-8"))
+    required = {"hex", "name", "tone", "occasion", "desc"}
+    for i, item in enumerate(data, 1):
+        missing = required - set(item)
+        if missing:
+            raise KeyError(f"{SHADES_JSON.name} 第 {i} 条缺少字段: {missing}")
+    return data
+
+
+SHADES: list = _load_shades()
 
 
 def hex2rgb(h):
@@ -127,7 +111,8 @@ def ciede2000(lab1, lab2):
 
 def search_shade(query_hex, top_k=3):
     """输入 HEX 色号, 用 CIEDE2000 从色号库筛选最接近的 top_k 个
-    返回: [{"hex","name","tone","occasion","desc","dE"}, ...] 按色差升序
+    返回: [{"hex","name","tone","occasion","emotion","desc","dE"}, ...] 按色差升序
+    occasion 为闭集数组（daily/work/date/party/night/formal/photo/all），emotion 为风格词数组
     """
     q_lab = hex2lab(query_hex)
     results = []
@@ -142,4 +127,5 @@ if __name__ == "__main__":
     for q in ["FF4D6D", "A63A2B", "E75480"]:
         print("输入 #%s 最近色号:" % q)
         for r in search_shade(q, top_k=3):
-            print("  #%s %s  dE=%.2f  (%s)" % (r["hex"], r["name"], r["dE"], r["occasion"]))
+            print("  #%s %s  dE=%.2f  (%s | %s)" % (r["hex"], r["name"], r["dE"],
+                  "/".join(r["occasion"]), "/".join(r.get("emotion", []))))

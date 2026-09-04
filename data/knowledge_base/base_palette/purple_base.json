@@ -11,7 +11,7 @@
     "lightness": "medium",
     "saturation": "high",
     "emotion": ["mysterious", "elegant"],
-    "occasion": ["night", "editorial", "fashion"],
+    "occasion": ["night", "photo"],
     "cvd_safe": 0.8,
     "notes": "冷感高级紫，适合拍摄和高级质感妆容。"
   },
@@ -27,7 +27,7 @@
     "lightness": "medium",
     "saturation": "high",
     "emotion": ["bold", "dramatic"],
-    "occasion": ["party", "night", "stage"],
+    "occasion": ["party", "night"],
     "cvd_safe": 0.76,
     "notes": "带张力的紫红色，适合强戏剧感妆容。"
   },
@@ -43,7 +43,7 @@
     "lightness": "dim",
     "saturation": "medium",
     "emotion": ["minimal", "neutral"],
-    "occasion": ["daily", "work", "soft-glam"],
+    "occasion": ["daily", "work"],
     "cvd_safe": 0.9,
     "notes": "更适合柔和高级感的渐变眉和低饱和妆容。"
   },
@@ -59,7 +59,7 @@
     "lightness": "dark",
     "saturation": "medium",
     "emotion": ["mysterious", "smoky"],
-    "occasion": ["night", "event", "editorial"],
+    "occasion": ["night", "party", "photo"],
     "cvd_safe": 0.91,
     "notes": "烟熏系列常用色，适合眼妆层次和光影结构。"
   }
