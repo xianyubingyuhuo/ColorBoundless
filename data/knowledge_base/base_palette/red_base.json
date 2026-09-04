@@ -11,7 +11,7 @@
     "lightness": "bright",
     "saturation": "high",
     "emotion": ["vibrant", "confident"],
-    "occasion": ["daily", "date", "portrait"],
+    "occasion": ["daily", "date", "photo"],
     "cvd_safe": 0.82,
     "notes": "经典提气色，适合日常和亮眼妆容。"
   },
@@ -27,7 +27,7 @@
     "lightness": "medium",
     "saturation": "high",
     "emotion": ["romantic", "soft"],
-    "occasion": ["party", "evening", "photo"],
+    "occasion": ["party", "night", "photo"],
     "cvd_safe": 0.86,
     "notes": "偏冷调玫瑰感，适合显白与高级感。"
   },
@@ -43,7 +43,7 @@
     "lightness": "medium",
     "saturation": "high",
     "emotion": ["fresh", "youthful"],
-    "occasion": ["daily", "social", "travel"],
+    "occasion": ["daily", "party"],
     "cvd_safe": 0.84,
     "notes": "带一点新鲜果感，适合年轻气息。"
   },
@@ -59,7 +59,7 @@
     "lightness": "dark",
     "saturation": "medium",
     "emotion": ["mature", "luxury"],
-    "occasion": ["night", "formal", "editorial"],
+    "occasion": ["night", "formal", "photo"],
     "cvd_safe": 0.88,
     "notes": "高级感和夜场气质的经典深红。"
   }

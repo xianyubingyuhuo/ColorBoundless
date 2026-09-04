@@ -34,7 +34,7 @@ OUTPUT_META = PROJECT_ROOT / "models" / "vector_store" / "cosmetics_kb_meta.json
 # schema 校验
 REQUIRED_FIELDS = {"id", "category", "title", "content", "tags", "source"}
 VALID_CATEGORIES = {"color_theory", "technique", "style", "cvd", "product", "vocab"}
-VALID_OCCASIONS = {"daily", "work", "date", "night", "formal", "all"}
+VALID_OCCASIONS = {"daily", "work", "date", "party", "night", "formal", "photo", "all"}
 
 
 def load_jsonl(path: Path) -> list[dict]:
