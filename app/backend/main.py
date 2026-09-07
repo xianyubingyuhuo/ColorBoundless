@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from agents.tools.search_shade import search_shade_tool
 from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool
-from llm_client import llm_chat
+from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
 
 
 @asynccontextmanager
@@ -63,8 +63,8 @@ def api_palette_search(hex: str, hue_group: str = None, top_k: int = 5):
 
 @app.post("/api/chat")
 def api_chat(body: ChatIn):
-    """大脑直通版（def 10 换成 function calling 工具循环）"""
-    return llm_chat([{"role": "user", "content": body.message}])
+    """def 11 · 大脑循环版：自动选工具 → 代码执行 → 结果喂回 → 正文"""
+    return agent_reply(body.message)
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）
