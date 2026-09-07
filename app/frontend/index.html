@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ColorBoundless 工具测试台</title>
+<style>
+ body{font-family:system-ui,"Microsoft YaHei";max-width:880px;margin:24px auto;padding:0 16px;background:#faf7f5;color:#333}
+ h1{font-size:22px;margin-bottom:2px} .sub{color:#888;font-size:13px}
+ .card{background:#fff;border:1px solid #e8e0da;border-radius:10px;padding:16px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+ input,select,button{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px}
+ button{background:#c4475d;color:#fff;border:none;cursor:pointer} button:hover{background:#a83a4e}
+ .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+ .res{margin-top:10px} .item{display:flex;gap:10px;align-items:center;background:#fafafa;border-radius:8px;padding:6px 10px;margin:6px 0}
+ .sw{display:inline-block;width:44px;height:44px;border-radius:8px;border:1px solid #ddd;flex:none}
+ .meta{font-size:12px;color:#888} .ms{font-size:12px;color:#2a7}
+ .err{color:#c0392b;font-size:13px}
+ details{margin-top:8px;font-size:12px} pre{background:#f4f4f4;padding:8px;border-radius:6px;overflow:auto;max-height:240px}
+ #chatlog{border:1px solid #eee;border-radius:8px;min-height:80px;padding:8px;margin-top:8px;font-size:14px}
+ .u{color:#c4475d;margin:4px 0} .a{margin:4px 0;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>💄 ColorBoundless 工具测试台</h1>
+<p class="sub">工具①②③ + 大脑直通 · 后端 FastAPI · 一切数字均由代码计算，LLM 只引用不心算</p>
+
+<div class="card"><b>工具① search_shade · 官方色号匹配</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
+  <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
+  <button onclick="t1()">查询</button><span id="s1ms" class="ms"></span></div>
+ <div id="s1res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
+</div>
+
+<div class="card"><b>工具③ palette_search · 全库 262,144 色板检索</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s3hex" value="#FF4D6D" size="10">
+  <input id="s3hg" list="hglist" placeholder="色相族(可空)" size="12">
+  <datalist id="hglist"><option>red</option><option>orange</option><option>yellow</option><option>green</option><option>blue</option><option>purple</option><option>pink</option><option>brown</option><option>black</option><option>white</option><option>gray</option></datalist>
+  <input id="s3k" type="number" value="5" min="1" max="20" style="width:60px">
+  <button onclick="t3()">检索</button><span id="s3ms" class="ms"></span></div>
+ <div id="s3res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s3json"></pre></details>
+</div>
+
+<div class="card"><b>工具② kb_search · 知识库语义检索</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s2q" style="flex:1;min-width:220px" placeholder="例如：冷白皮怎么选粉底？">
+  <input id="s2k" type="number" value="3" min="1" max="10" style="width:60px">
+  <button onclick="t2()">检索</button><span id="s2ms" class="ms"></span></div>
+ <div id="s2res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s2json"></pre></details>
+</div>
+
+<div class="card"><b>🧠 大脑直通 /api/chat</b>
+ <div class="row" style="margin-top:8px"><input id="chatin" style="flex:1;min-width:220px" placeholder="例如：黄黑皮适合什么颜色的口红？">
+ <button onclick="chat()">发送</button></div>
+ <div id="chatlog"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
+
+function swatch(r, extra){
+  return `<div class="item"><span class="sw" style="background:#${r.hex}"></span><div><b>#${r.hex}</b> 　dE=${r.dE}` +
+    (r.name?`　<span style="color:#c4475d">${r.name}</span>`:"") +
+    (r.tone?`　<span class="meta">[${r.tone}]</span>`:"") +
+    (r.rgb?`　<span class="meta">rgb(${r.rgb.join(",")}) · ${r.hue_group}</span>`:"") +
+    `<div class="meta">${extra||r.desc||r.content||""}</div></div></div>`;
+}
+
+function render(pid, jid, mid, j, fmt){
+  $(mid).textContent = j._ms + "ms · ok=" + j.ok;
+  $(jid).textContent = JSON.stringify(j, null, 2);
+  const el = $(pid); el.innerHTML = "";
+  if(!j.ok){el.innerHTML = `<span class="err">⛔ ${j.error || j._error || "调用失败"}</span>`; return}
+  j.results.forEach(r => el.insertAdjacentHTML("beforeend", fmt(r)));
+}
+
+async function t1(){
+  const{j,ms} = await getJSON(`/api/tools/search_shade?hex=${encodeURIComponent($("s1hex").value)}&top_k=${$("s1k").value}`);
+  j._ms = ms; render("s1res","s1json","s1ms", j, r=>swatch(r));
+}
+async function t3(){
+  const hg = $("s3hg").value;
+  const{j,ms} = await getJSON(`/api/tools/palette_search?hex=${encodeURIComponent($("s3hex").value)}&hue_group=${encodeURIComponent(hg)}&top_k=${$("s3k").value}`);
+  j._ms = ms; render("s3res","s3json","s3ms", j, r=>swatch(r));
+}
+async function t2(){
+  const{j,ms} = await getJSON(`/api/tools/kb_search?query=${encodeURIComponent($("s2q").value)}&top_k=${$("s2k").value}`);
+  j._ms = ms; render("s2res","s2json","s2ms", j, r=>
+    `<div class="item"><div><b>${r.title}</b>　<span class="ms">sim=${r.sim}</span><div class="meta">${r.content}</div><div class="meta">tags: ${r.tags}</div></div></div>`);
+}
+
+async function chat(){
+  const m = $("chatin").value.trim(); if(!m) return;
+  $("chatlog").insertAdjacentHTML("beforeend", `<div class="u">🙋 ${m}</div>`);
+  $("chatin").value = "";
+  const r = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
+  const j = await r.json();
+  $("chatlog").insertAdjacentHTML("beforeend", `<div class="a">🤖 ${j.content ?? `<span class="err">⛔ ${j._error||"无内容"}</span>`}</div>`);
+  $("chatlog").scrollTop = $("chatlog").scrollHeight;
+}
+$("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
+</script>
+</body>
+</html>
