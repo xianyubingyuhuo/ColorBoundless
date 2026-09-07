@@ -22,9 +22,12 @@
 - `app/backend` 起骨架：健康检查 + `POST /search` 直连 `shade_library.search_shade`
 - 不依赖 vLLM，随时可插队
 
-### P1 · 工具层 ②③ 纯函数（`agents/tools/`）
-- ② kb RAG top-k：query → bge → 内积 → top-k（`cosmetics_kb_embeddings.npz` 已就绪）
-- ③ npz 簇内过滤：hue_group 预筛 → 簇内 CIEDE2000（`base_palette_index.npz` 已就绪）
+### ~~P1 · 工具层 ①②③ 纯函数~~ ✅ 已完成（2026-09-07，commit 77c5bce / eddbe50 / 05e4b34）
+- ① `agents/tools/search_shade.py`：normalize_hex + search_shade_tool（importlib 直载算法层，避开 torch/cv2 重依赖链）
+- ② `agents/tools/kb_search.py`：embed_query（bge 惰性单例，首问 62s → 后续 6ms）+ kb_search_tool（归一化点积 top-k）
+- ③ `agents/tools/palette_search.py`：coarse_candidates（Lab 欧氏粗排 262K→5K）+ palette_search_tool（CIEDE2000 精排，全流程 178ms）
+- 统一契约：ok/tool/query/results/error 五件套、错误不穿透、数字由代码算、np 类型转原生
+- 备注：② 模型加载慢，FastAPI 启动时需预热一次 embed_query
 
 ### P2 · vLLM 迁移 + function calling（R-02 后置）
 - 工具①②③④ 注册 function calling，挂 OpenAI 兼容 `/chat/completions`
