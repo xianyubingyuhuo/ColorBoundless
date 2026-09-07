@@ -96,12 +96,18 @@ async function t2(){
 
 async function chat(){
   const m = $("chatin").value.trim(); if(!m) return;
-  $("chatlog").insertAdjacentHTML("beforeend", `<div class="u">🙋 ${m}</div>`);
+  const log = $("chatlog");
+  log.insertAdjacentHTML("beforeend", `<div class="u">🙋 ${m}</div>`);
+  log.insertAdjacentHTML("beforeend", `<div class="meta" id="thinking">🧠 大脑思考中…（推理型模型约 10~40s）</div>`);
   $("chatin").value = "";
   const r = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
   const j = await r.json();
-  $("chatlog").insertAdjacentHTML("beforeend", `<div class="a">🤖 ${j.content ?? `<span class="err">⛔ ${j._error||"无内容"}</span>`}</div>`);
-  $("chatlog").scrollTop = $("chatlog").scrollHeight;
+  const th = document.getElementById("thinking"); if(th) th.remove();
+  (j.steps||[]).forEach(s=>log.insertAdjacentHTML("beforeend",
+    `<div class="meta">🔧 ${s.tool}(${JSON.stringify(s.args)}) ${s.ok?"✅":"⛔"}</div>`));
+  if(j.error){ log.insertAdjacentHTML("beforeend", `<div class="a">🤖 <span class="err">⛔ ${j.error}</span></div>`); }
+  else{ log.insertAdjacentHTML("beforeend", `<div class="a">🤖 ${j.content ?? ""}</div>`); }
+  log.scrollTop = log.scrollHeight;
 }
 $("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
 </script>
