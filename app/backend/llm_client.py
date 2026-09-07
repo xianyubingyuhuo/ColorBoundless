@@ -12,11 +12,14 @@ import urllib.request
 from config import current_provider
 
 
-def llm_chat(messages, tools=None, tool_choice=None, timeout=60):
+def llm_chat(messages, tools=None, tool_choice=None, timeout=60, max_tokens=4096):
     """def 8 · 一次对话补全调用。
 
     入参：messages = [{"role": "system"|"user"|"assistant"|"tool", "content": ...}]
           tools / tool_choice = OpenAI function calling 格式，原样透传
+          max_tokens = 上限。注意它包含推理型模型的思维链 token——
+          GLM-5.3-flash 思维链约 1000~2000 tokens，给小了正文会被截成空
+          （实测 max_tokens=1024 时 finish=length 且 content=''）。
     出参（形状统一，永不 raise）：
           {"role": "assistant", "content": str|None,
            "tool_calls": [...] 仅当模型请求调工具,
@@ -24,7 +27,7 @@ def llm_chat(messages, tools=None, tool_choice=None, timeout=60):
            "_usage": {"prompt_tokens", "completion_tokens", "total_tokens"}}
     """
     p = current_provider()
-    payload = {"model": p["model"], "messages": messages}
+    payload = {"model": p["model"], "messages": messages, "max_tokens": max_tokens}
     if tools:
         payload["tools"] = tools
     if tool_choice is not None:
