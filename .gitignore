@@ -17,6 +17,7 @@ debug_logs/
 .env
 *.key
 *_config_local.py
+secrets.local.json
 
 # ===== IDE / 系统 =====
 .vscode/
