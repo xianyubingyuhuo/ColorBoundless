@@ -2,7 +2,7 @@
 
 > 计划库：记录排期决策与待办功能。新想法先入此库评审，动工时再拆任务。
 > 配套文档：系统设计见 `DESIGN.md`，数据流见 `architecture_flow.md`，踩坑见根目录 `避坑注释.md`。
-> 最近更新：2026-09-06
+> 最近更新：2026-09-07
 
 ## 一、排期决策（带日期，防止遗忘动机）
 
@@ -10,6 +10,7 @@
 |---|---|---|---|
 | R-01 | 2026-09-06 | **核心功能优先**，后端/FastAPI 顺延 | 核心功能未完成，后端离当前交付还有距离 |
 | R-02 | 2026-09-06 | **vLLM 迁移后置**，不阻塞任何设计 | 换引擎不动架构：OpenAI 兼容接口定了随时可插；被阻塞的只有 function calling 注册这一步 |
+| R-03 | 2026-09-07 | **大脑走云端 API**：DeepSeek 实测可用 → 智谱 GLM-5.3-flash 定稿（用户指定），provider 配置可切换 | OpenAI 兼容协议 + 配置中枢（def 7）保证换引擎零改码；API key 实测可用即用 |
 
 ## 二、当前主线（P0）
 
@@ -18,9 +19,12 @@
 
 ## 三、待办池（按优先级）
 
-### P1 · FastAPI 骨架 + `/search`（原定 9/6，因 R-01 顺延）
-- `app/backend` 起骨架：健康检查 + `POST /search` 直连 `shade_library.search_shade`
-- 不依赖 vLLM，随时可插队
+### ~~P1 · FastAPI 骨架 + `/search`~~ ✅ 超额完成（2026-09-07，commit 4022bd0 / 9beb443 / 2bffd4e）
+- def 7 `app/backend/config.py`：provider 可切换配置中枢（secrets.local.json 入 gitignore，fail-fast 校验）
+- def 8 `app/backend/llm_client.py`：OpenAI 兼容最薄封装（max_tokens=4096 防推理型模型思维链挤占正文；_error 不穿透）
+- def 9 `app/backend/main.py`：三工具 GET 端点 + `/api/chat` + 静态页挂载 + lifespan 预热（kb 模型热加载仅 4s）
+- def 10 `app/frontend/index.html`：单文件原生 JS 测试台（三工具卡 + 对话区 + 原始 JSON 折叠 + 工具轨迹展示）
+- 一键启动：`.venv/Scripts/python.exe app/backend/main.py` → http://127.0.0.1:8000
 
 ### ~~P1 · 工具层 ①②③ 纯函数~~ ✅ 已完成（2026-09-07，commit 77c5bce / eddbe50 / 05e4b34）
 - ① `agents/tools/search_shade.py`：normalize_hex + search_shade_tool（importlib 直载算法层，避开 torch/cv2 重依赖链）
@@ -29,8 +33,12 @@
 - 统一契约：ok/tool/query/results/error 五件套、错误不穿透、数字由代码算、np 类型转原生
 - 备注：② 模型加载慢，FastAPI 启动时需预热一次 embed_query
 
-### P2 · vLLM 迁移 + function calling（R-02 后置）
-- 工具①②③④ 注册 function calling，挂 OpenAI 兼容 `/chat/completions`
+### ~~P2 · function calling 工具循环~~ ✅ 已完成（2026-09-07，commit 14d4a71）；vLLM 本地迁移仍按 R-03 后置
+- def 11 `agents/tools/registry.py`：get_tools_schema（三工具 OpenAI 格式，hue_group enum 动态生成）+ dispatch_tool（未知工具/坏参数兜底五件套 JSON）
+- def 11 `app/backend/agent_loop.py`：agent_reply（MAX_ROUNDS=5 防失控、发回消息清洗标准字段、steps 工具轨迹供前端展示）
+- `CHAT_SYSTEM` 入 prompt.py（话术资产集中管理；数字原样引用/失败如实转述/闲聊不调工具三条铁律）
+- 实测：色号型/知识型/闲聊型三类 + HTTP 端到端全绿；GLM-5.3-flash 会自己带 top_k 参数、引用 dE 数字零心算
+- 剩余仅 vLLM 本地部署本身（云端 API 已满足开发与演示）
 
 ### P2 · 定制功能（2026-09-06 新增，完整规格见第四节）
 
