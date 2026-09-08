@@ -4,10 +4,10 @@ embed_cosmetics_kb.py
 =====================
 把 cosmetics_kb 文本索引（build_cosmetics_kb.py 的产物）向量化，供 RAG 语义检索。
 
-输入 : models/vector_store/cosmetics_kb_index.npz  （retrieval_texts）
+输入 : models/vector_store/cosmetics_kb_index.npz （retrieval_texts）
 输出 : models/vector_store/cosmetics_kb_embeddings.npz
         - embeddings : (N, 512) bge-small-zh-v1.5 归一化向量（余弦相似度 = 点积）
-        - row_ids    : (N,)     指回 index.npz 的行号（0..N-1）
+        - row_ids : (N,) 指回 index.npz 的行号（0..N-1）
 
 附带检索自测：用一条典型口语 query（"黄皮涂什么口红显白"）验证语义空间可用。
 
@@ -30,7 +30,7 @@ OUTPUT_NPZ = PROJECT_ROOT / "models" / "vector_store" / "cosmetics_kb_embeddings
 # bge-small-zh-v1.5 模型（本地路径，与 embed_style_recommendations.py 保持一致）
 MODEL_PATH = Path(r"e:\作业\vscoding学习\models\bge-small-zh-v1.5")
 
-BATCH_SIZE = 64   # 分批大小（防止 GPU OOM）
+BATCH_SIZE = 64 # 分批大小（防止 GPU OOM）
 
 # 检索自测 query（口语 → 应命中 undertone/vocab 相关条目）
 TEST_QUERIES = [
@@ -62,24 +62,24 @@ def self_test(
     top_k: int = 3,
 ) -> None:
     """点积检索自测（条目量 < 1 万直接全量算）"""
-    sims = embeddings @ query_vec                      # (N,) 归一化后点积 = 余弦
+    sims = embeddings @ query_vec # (N,) 归一化后点积 = 余弦
     top_idx = np.argsort(-sims)[:top_k]
-    print(f"\n   query: 「{query}」")
+    print(f"\n query: 「{query}」")
     for rank, i in enumerate(top_idx, start=1):
-        print(f"   Top{rank} [{sims[i]:.3f}] {ids[i]}  {titles[i]}")
+        print(f" Top{rank} [{sims[i]:.3f}] {ids[i]} {titles[i]}")
 
 
 def main() -> None:
     # ---------- 1. 加载文本索引 ----------
     print(f"[1/3] 加载索引: {INDEX_NPZ}")
     if not INDEX_NPZ.exists():
-        raise SystemExit(f"❌ 找不到 {INDEX_NPZ}\n   请先运行 scripts/build_cosmetics_kb.py")
+        raise SystemExit(f"[NG] 找不到 {INDEX_NPZ}\n 请先运行 scripts/build_cosmetics_kb.py")
     data = np.load(INDEX_NPZ, allow_pickle=True)
     texts = data["retrieval_texts"]
     ids = data["ids"]
     titles = data["titles"]
     n = len(texts)
-    print(f"      共 {n} 条检索文本")
+    print(f" 共 {n} 条检索文本")
 
     # ---------- 2. 向量化 ----------
     print("[2/3] 加载 bge-small-zh-v1.5...")
@@ -93,10 +93,10 @@ def main() -> None:
         texts.tolist(),
         batch_size=BATCH_SIZE,
         show_progress_bar=True,
-        normalize_embeddings=True,  # bge 推荐归一化，余弦相似度 = 点积
+        normalize_embeddings=True, # bge 推荐归一化，余弦相似度 = 点积
     )
     embeddings = np.asarray(embeddings, dtype=np.float32)
-    print(f"      embeddings shape: {embeddings.shape}")
+    print(f" embeddings shape: {embeddings.shape}")
 
     # ---------- 3. 检索自测 + 保存 ----------
     print("[3/3] 检索自测（口语 query → top3）...")
@@ -113,9 +113,9 @@ def main() -> None:
         embeddings=embeddings,
         row_ids=np.arange(n, dtype=np.int32),
     )
-    print("\n✅ cosmetics_kb 语义向量生成完成！")
-    print(f"   embeddings: {embeddings.shape} (float32)")
-    print(f"   row_ids   : {n} 条 → 指回 cosmetics_kb_index.npz")
+    print("\n[OK] cosmetics_kb 语义向量生成完成！")
+    print(f" embeddings: {embeddings.shape} (float32)")
+    print(f" row_ids : {n} 条 → 指回 cosmetics_kb_index.npz")
 
 
 if __name__ == "__main__":

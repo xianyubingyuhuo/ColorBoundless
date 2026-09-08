@@ -33,22 +33,22 @@ import torchvision.transforms as transforms
 
 # ---------- 引用 lipstick.tryon 的复用函数 ----------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))  # 使 cv.face_parsing / beauty 包可导入
+sys.path.insert(0, str(PROJECT_ROOT)) # 使 cv.face_parsing / beauty 包可导入
 LIPSTICK_DIR = PROJECT_ROOT / "beauty" / "lipstick"
 sys.path.insert(0, str(LIPSTICK_DIR))
-from tryon import hex2bgr, save_img, segment  # noqa: E402
+from tryon import hex2bgr, save_img, segment # noqa: E402
 
 # 人脸解析模型（已 vendor 进仓库，见 cv/face_parsing/README.md）
-from cv.face_parsing import BiSeNet  # noqa: E402
+from cv.face_parsing import BiSeNet # noqa: E402
 
 WEIGHTS = PROJECT_ROOT / "models" / "face_parsing" / "79999_iter.pth"
 TEST_IMG = PROJECT_ROOT / "data" / "faces" / "11053.jpg"
 RESULT_DIR = PROJECT_ROOT / "results" / "tryon_regions"
 
 # 类别
-BROWS = (2, 3)    # 左眉 + 右眉
-EYES = (4, 5)     # 左眼 + 右眼（作为眼影区域近似）
-LIPS = (12, 13)   # 上唇 + 下唇
+BROWS = (2, 3) # 左眉 + 右眉
+EYES = (4, 5) # 左眼 + 右眼（作为眼影区域近似）
+LIPS = (12, 13) # 上唇 + 下唇
 
 
 def apply_region_color(image_bgr, mask, color_bgr,
@@ -87,11 +87,11 @@ def get_eyeshadow_mask(parsing, eye_parts=(4, 5)):
 
     for i in range(1, n):
         x, y, w, h, area = stats[i]
-        if area < 50:  # 忽略噪声
+        if area < 50: # 忽略噪声
             continue
-        band_h = int(round(h * 0.9))       # 带高 = 眼睛高度
-        top = max(0, y - band_h)           # 眼睛上边界往上
-        pad_w = max(4, int(w * 0.1))       # 左右略扩
+        band_h = int(round(h * 0.9)) # 带高 = 眼睛高度
+        top = max(0, y - band_h) # 眼睛上边界往上
+        pad_w = max(4, int(w * 0.1)) # 左右略扩
         shadow_mask[top:y, max(0, x - pad_w):min(eye_mask.shape[1], x + w + pad_w)] = 1
 
     # 排除眉毛（part 2, 3），避免眼影和眉毛重叠
@@ -118,7 +118,7 @@ def main() -> None:
 
     # ---------- 2. 分割 ----------
     img = Image.open(str(TEST_IMG))
-    parsing = segment(net, img, device)  # (512, 512) 类别图
+    parsing = segment(net, img, device) # (512, 512) 类别图
     img_bgr = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
     H, W = img_bgr.shape[:2]
     p = cv2.resize(parsing, (W, H), interpolation=cv2.INTER_NEAREST)
@@ -126,17 +126,17 @@ def main() -> None:
     # 统计各部位像素数，确认分割是否命中
     for name, parts in [("眉毛", BROWS), ("眼睛/眼影", EYES), ("嘴唇", LIPS)]:
         cnt = int(np.isin(p, parts).sum())
-        print(f"  [{name}] parts={parts} 命中像素: {cnt}")
+        print(f" [{name}] parts={parts} 命中像素: {cnt}")
         if cnt < 50:
-            print(f"    ⚠️ 像素太少，可能没检测到该部位！")
+            print(f" [注意] 像素太少，可能没检测到该部位！")
 
     # ---------- 3. 分别上妆 ----------
-    brow_color = hex2bgr("6B4A2B")     # 深棕色眉毛
-    eye_color = hex2bgr("F2B6C5")      # 粉色眼影
-    lip_color = hex2bgr("D81B60")      # 玫红嘴唇（对照）
+    brow_color = hex2bgr("6B4A2B") # 深棕色眉毛
+    eye_color = hex2bgr("F2B6C5") # 粉色眼影
+    lip_color = hex2bgr("D81B60") # 玫红嘴唇（对照）
 
     mask_brows = np.isin(p, BROWS).astype(np.float32)
-    mask_eyes = get_eyeshadow_mask(p)  # 眼皮区域（避开眼球）
+    mask_eyes = get_eyeshadow_mask(p) # 眼皮区域（避开眼球）
     mask_lips = np.isin(p, LIPS).astype(np.float32)
 
     img_brows = apply_region_color(img_bgr, mask_brows, brow_color, alpha=0.8, feather=2.0)
@@ -165,11 +165,11 @@ def main() -> None:
     save_img(str(RESULT_DIR / "compare_lip.jpg"),
              np.hstack([img_bgr, img_lips]), ".jpg", 95)
 
-    print(f"\n✅ 完成！结果目录: {RESULT_DIR}")
-    print("  compare_brow.jpg      = 原图 vs 棕色眉毛")
-    print("  compare_eyeshadow.jpg = 原图 vs 粉色眼影")
-    print("  compare_lip.jpg       = 原图 vs 玫红嘴唇（对照）")
-    print("  *_mask.png            = 各部位分割掩膜（检查命中区域）")
+    print(f"\n[OK] 完成！结果目录: {RESULT_DIR}")
+    print(" compare_brow.jpg = 原图 vs 棕色眉毛")
+    print(" compare_eyeshadow.jpg = 原图 vs 粉色眼影")
+    print(" compare_lip.jpg = 原图 vs 玫红嘴唇（对照）")
+    print(" *_mask.png = 各部位分割掩膜（检查命中区域）")
 
 
 if __name__ == "__main__":

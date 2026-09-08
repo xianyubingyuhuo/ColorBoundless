@@ -5,28 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ColorBoundless 工具测试台</title>
 <style>
- body{font-family:system-ui,"Microsoft YaHei";max-width:880px;margin:24px auto;padding:0 16px;background:#faf7f5;color:#333}
- h1{font-size:22px;margin-bottom:2px} .sub{color:#888;font-size:13px}
- .card{background:#fff;border:1px solid #e8e0da;border-radius:10px;padding:16px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
- input,select,button{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px}
- button{background:#c4475d;color:#fff;border:none;cursor:pointer} button:hover{background:#a83a4e}
+ :root{--ac:#e5476d;--ac2:#ff9ab5;--tx:#ece7e4;--tx2:rgba(236,231,228,.55);--bd:rgba(255,255,255,.11)}
+ *{box-sizing:border-box}
+ body{font-family:system-ui,"Microsoft YaHei";max-width:900px;margin:0 auto;padding:34px 18px 64px;color:var(--tx);min-height:100vh;
+  background:radial-gradient(560px 380px at 10% 4%,rgba(229,71,109,.30),transparent 62%),
+             radial-gradient(640px 430px at 92% 16%,rgba(118,84,255,.26),transparent 62%),
+             radial-gradient(560px 440px at 50% 98%,rgba(255,150,80,.15),transparent 60%),
+             linear-gradient(158deg,#181220 0%,#1e1424 46%,#120f1a 100%);
+  background-attachment:fixed}
+ h1{font-size:24px;margin-bottom:2px;letter-spacing:.5px} .sub{color:var(--tx2);font-size:13px;margin:0 0 4px}
+ .flow{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 2px}
+ .flow a,.flow .off{flex:1;min-width:150px;text-decoration:none;color:var(--tx);background:rgba(255,255,255,.05);border:1px solid var(--bd);padding:10px 12px;backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
+ .flow .off{opacity:.45}
+ .flow a:hover{border-color:rgba(229,71,109,.65)}
+ .flow .n{font-size:11px;color:var(--ac2);letter-spacing:2px}
+ .flow .t{font-size:14px;margin-top:3px}
+ .flow .d{font-size:12px;color:var(--tx2);margin-top:2px}
+ .card{background:rgba(255,255,255,.055);border:1px solid var(--bd);padding:16px 18px;margin:16px 0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 36px rgba(0,0,0,.35)}
+ .card>b{display:block;margin-bottom:2px}
+ .step{display:inline-block;font-size:11px;letter-spacing:1.5px;color:var(--ac2);border:1px solid rgba(229,71,109,.5);padding:1px 8px;margin-right:9px;vertical-align:1px}
+ input,select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--tx);padding:7px 10px;font-size:14px}
+ input:focus,select:focus{outline:1px solid var(--ac);border-color:transparent}
+ ::placeholder{color:rgba(236,231,228,.35)}
+ button{background:rgba(229,71,109,.82);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 16px;font-size:14px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+ button:hover{background:rgba(229,71,109,1)} button:active{transform:translateY(1px)}
  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
- .res{margin-top:10px} .item{display:flex;gap:10px;align-items:center;background:#fafafa;border-radius:8px;padding:6px 10px;margin:6px 0}
- .sw{display:inline-block;width:44px;height:44px;border-radius:8px;border:1px solid #ddd;flex:none}
- .meta{font-size:12px;color:#888} .ms{font-size:12px;color:#2a7}
- .imgbox{margin:0;text-align:center} .imgbox img{width:300px;max-width:100%;border-radius:8px;border:1px solid #ddd}
- figcaption{font-size:12px;color:#888;margin-top:2px}
- .err{color:#c0392b;font-size:13px}
- details{margin-top:8px;font-size:12px} pre{background:#f4f4f4;padding:8px;border-radius:6px;overflow:auto;max-height:240px}
- #chatlog{border:1px solid #eee;border-radius:8px;min-height:80px;padding:8px;margin-top:8px;font-size:14px}
- .u{color:#c4475d;margin:4px 0} .a{margin:4px 0;white-space:pre-wrap}
+ .res{margin-top:10px}
+ .item{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 10px;margin:6px 0}
+ .sw{display:inline-block;width:44px;height:44px;border:1px solid rgba(255,255,255,.25);flex:none}
+ .meta{font-size:12px;color:var(--tx2)} .ms{font-size:12px;color:#7de0a6}
+ .imgbox{margin:0;text-align:center} .imgbox img{width:300px;max-width:100%;border:1px solid rgba(255,255,255,.16)}
+ figcaption{font-size:12px;color:var(--tx2);margin-top:4px}
+ .err{color:#ff8a80;font-size:13px}
+ details{margin-top:8px;font-size:12px}
+ pre{background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.08);padding:8px;overflow:auto;max-height:240px;color:#d5cfcc}
+ #chatlog{border:1px solid var(--bd);background:rgba(0,0,0,.22);min-height:90px;padding:10px;margin-top:8px;font-size:14px}
+ .u{color:var(--ac2);margin:4px 0} .a{margin:4px 0;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<h1>💄 ColorBoundless 工具测试台</h1>
-<p class="sub">工具①②③ + 大脑直通 · 后端 FastAPI · 一切数字均由代码计算，LLM 只引用不心算</p>
+<h1>ColorBoundless 控制台</h1>
+<p class="sub">一切数字均由代码计算，LLM 只引用不心算 · 后端 FastAPI</p>
 
-<div class="card"><b>💋 虚拟试妆 /api/tryon · 上传照片 → AI 上妆</b>
+<div class="flow">
+ <a href="#card-s1"><div class="n">01</div><div class="t">选色</div><div class="d">官方色号 / 全库 26 万色</div></a>
+ <a href="#card-tryon"><div class="n">02</div><div class="t">上脸试妆</div><div class="d">AI 唇妆 · 即时对比</div></a>
+ <div class="off"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">模拟预览 · 接入中</div></div>
+ <a href="#card-chat"><div class="n">04</div><div class="t">大脑陪聊</div><div class="d">function calling</div></a>
+</div>
+
+<div class="card" id="card-tryon"><b><span class="step">STEP 2</span>虚拟试妆 /api/tryon · 上传照片 → AI 上妆</b>
  <div class="row" style="margin-top:8px">
   <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
   <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
@@ -36,7 +64,7 @@
  <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
 </div>
 
-<div class="card"><b>工具① search_shade · 官方色号匹配</b>
+<div class="card" id="card-s1"><b><span class="step">STEP 1</span>工具① search_shade · 官方色号匹配</b>
  <div class="row" style="margin-top:8px">
   <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
   <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
@@ -45,7 +73,7 @@
  <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
 </div>
 
-<div class="card"><b>工具③ palette_search · 全库 262,144 色板检索</b>
+<div class="card" id="card-s3"><b><span class="step">STEP 1</span>工具③ palette_search · 全库 262,144 色板检索</b>
  <div class="row" style="margin-top:8px">
   <input id="s3hex" value="#FF4D6D" size="10">
   <input id="s3hg" list="hglist" placeholder="色相族(可空)" size="12">
@@ -56,7 +84,7 @@
  <details><summary>原始 JSON</summary><pre id="s3json"></pre></details>
 </div>
 
-<div class="card"><b>工具② kb_search · 知识库语义检索</b>
+<div class="card" id="card-s2"><b><span class="step">STEP 4</span>工具② kb_search · 知识库语义检索</b>
  <div class="row" style="margin-top:8px">
   <input id="s2q" style="flex:1;min-width:220px" placeholder="例如：冷白皮怎么选粉底？">
   <input id="s2k" type="number" value="3" min="1" max="10" style="width:60px">
@@ -65,7 +93,7 @@
  <details><summary>原始 JSON</summary><pre id="s2json"></pre></details>
 </div>
 
-<div class="card"><b>🧠 大脑直通 /api/chat</b>
+<div class="card" id="card-chat"><b><span class="step">STEP 4</span>大脑直通 /api/chat</b>
  <div class="row" style="margin-top:8px"><input id="chatin" style="flex:1;min-width:220px" placeholder="例如：黄黑皮适合什么颜色的口红？">
  <button onclick="chat()">发送</button></div>
  <div id="chatlog"></div>
@@ -87,7 +115,7 @@ function render(pid, jid, mid, j, fmt){
   $(mid).textContent = j._ms + "ms · ok=" + j.ok;
   $(jid).textContent = JSON.stringify(j, null, 2);
   const el = $(pid); el.innerHTML = "";
-  if(!j.ok){el.innerHTML = `<span class="err">⛔ ${j.error || j._error || "调用失败"}</span>`; return}
+  if(!j.ok){el.innerHTML = `<span class="err">[错误] ${j.error || j._error || "调用失败"}</span>`; return}
   j.results.forEach(r => el.insertAdjacentHTML("beforeend", fmt(r)));
 }
 
@@ -109,28 +137,28 @@ async function t2(){
 async function chat(){
   const m = $("chatin").value.trim(); if(!m) return;
   const log = $("chatlog");
-  log.insertAdjacentHTML("beforeend", `<div class="u">🙋 ${m}</div>`);
-  log.insertAdjacentHTML("beforeend", `<div class="meta" id="thinking">🧠 大脑思考中…（推理型模型约 10~40s）</div>`);
+  log.insertAdjacentHTML("beforeend", `<div class="u"> ${m}</div>`);
+  log.insertAdjacentHTML("beforeend", `<div class="meta" id="thinking"> 大脑思考中…（推理型模型约 10~40s）</div>`);
   $("chatin").value = "";
   const r = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
   const j = await r.json();
   const th = document.getElementById("thinking"); if(th) th.remove();
   (j.steps||[]).forEach(s=>log.insertAdjacentHTML("beforeend",
-    `<div class="meta">🔧 ${s.tool}(${JSON.stringify(s.args)}) ${s.ok?"✅":"⛔"}</div>`));
-  if(j.error){ log.insertAdjacentHTML("beforeend", `<div class="a">🤖 <span class="err">⛔ ${j.error}</span></div>`); }
-  else{ log.insertAdjacentHTML("beforeend", `<div class="a">🤖 ${j.content ?? ""}</div>`); }
+    `<div class="meta">[工具] ${s.tool}(${JSON.stringify(s.args)}) ${s.ok?"[OK]":"[错误]"}</div>`));
+  if(j.error){ log.insertAdjacentHTML("beforeend", `<div class="a"> <span class="err">[错误] ${j.error}</span></div>`); }
+  else{ log.insertAdjacentHTML("beforeend", `<div class="a"> ${j.content ?? ""}</div>`); }
   log.scrollTop = log.scrollHeight;
 }
 $("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
 async function ty(){
   const f = $("tyfile").files[0];
-  if(!f){ $("tyres").innerHTML = `<span class="err">⛔ 先选一张照片（jpg/png）</span>`; return; }
+  if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
   const fd = new FormData();
   fd.append("file", f);
   fd.append("hex_color", $("tyhex").value.trim());
   fd.append("alpha", $("tyalpha").value);
   $("tyms").textContent = "";
-  $("tyres").innerHTML = `<div class="meta">⏳ 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
+  $("tyres").innerHTML = `<div class="meta">[等待] 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
   const t0 = performance.now();
   try{
     const r = await fetch("/api/tryon", {method:"POST", body: fd});
@@ -140,13 +168,13 @@ async function ty(){
       .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${j.results&&j.results.original_b64 ? Math.floor(j.results.original_b64.length*3/4/1024)+"KB 图>" : ""}"`)
       .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
     $("tyms").textContent = ms + "ms";
-    if(!j.ok){ $("tyres").innerHTML = `<span class="err">⛔ ${j.error}</span>`; return; }
+    if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
     $("tyms").textContent += " · device=" + j.query.device;
     $("tyres").innerHTML =
       `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
       `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>`;
   }catch(e){
-    $("tyres").innerHTML = `<span class="err">⛔ 请求失败: ${e}</span>`;
+    $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
   }
 }
 </script>

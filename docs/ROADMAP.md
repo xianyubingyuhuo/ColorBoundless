@@ -2,7 +2,7 @@
 
 > 计划库：记录排期决策与待办功能。新想法先入此库评审，动工时再拆任务。
 > 配套文档：系统设计见 `DESIGN.md`，数据流见 `architecture_flow.md`，踩坑见根目录 `避坑注释.md`。
-> 最近更新：2026-09-07
+> 最近更新：2026-09-08
 
 ## 一、排期决策（带日期，防止遗忘动机）
 
@@ -14,33 +14,33 @@
 
 ## 二、当前主线（P0）
 
-- [ ] 核心功能主链路（试妆体验）—— 见下方 def 12 ✅
+- [x] 核心功能主链路（试妆体验）—— 见下方 def 12，已完成
 - [ ] 5 概念总结笔记（用户交付）
 
 ## 三、待办池（按优先级）
 
-### ~~P1 · FastAPI 骨架 + `/search`~~ ✅ 超额完成（2026-09-07，commit 4022bd0 / 9beb443 / 2bffd4e）
+### ~~P1 · FastAPI 骨架 + `/search`~~ [OK] 超额完成（2026-09-07，commit 4022bd0 / 9beb443 / 2bffd4e）
 - def 7 `app/backend/config.py`：provider 可切换配置中枢（secrets.local.json 入 gitignore，fail-fast 校验）
 - def 8 `app/backend/llm_client.py`：OpenAI 兼容最薄封装（max_tokens=4096 防推理型模型思维链挤占正文；_error 不穿透）
 - def 9 `app/backend/main.py`：三工具 GET 端点 + `/api/chat` + 静态页挂载 + lifespan 预热（kb 模型热加载仅 4s）
 - def 10 `app/frontend/index.html`：单文件原生 JS 测试台（三工具卡 + 对话区 + 原始 JSON 折叠 + 工具轨迹展示）
 - 一键启动：`.venv/Scripts/python.exe app/backend/main.py` → http://127.0.0.1:8000
 
-### ~~P1 · 工具层 ①②③ 纯函数~~ ✅ 已完成（2026-09-07，commit 77c5bce / eddbe50 / 05e4b34）
+### ~~P1 · 工具层 ①②③ 纯函数~~ [OK] 已完成（2026-09-07，commit 77c5bce / eddbe50 / 05e4b34）
 - ① `agents/tools/search_shade.py`：normalize_hex + search_shade_tool（importlib 直载算法层，避开 torch/cv2 重依赖链）
 - ② `agents/tools/kb_search.py`：embed_query（bge 惰性单例，首问 62s → 后续 6ms）+ kb_search_tool（归一化点积 top-k）
 - ③ `agents/tools/palette_search.py`：coarse_candidates（Lab 欧氏粗排 262K→5K）+ palette_search_tool（CIEDE2000 精排，全流程 178ms）
 - 统一契约：ok/tool/query/results/error 五件套、错误不穿透、数字由代码算、np 类型转原生
 - 备注：② 模型加载慢，FastAPI 启动时需预热一次 embed_query
 
-### ~~P2 · function calling 工具循环~~ ✅ 已完成（2026-09-07，commit 14d4a71）；vLLM 本地迁移仍按 R-03 后置
+### ~~P2 · function calling 工具循环~~ [OK] 已完成（2026-09-07，commit 14d4a71）；vLLM 本地迁移仍按 R-03 后置
 - def 11 `agents/tools/registry.py`：get_tools_schema（三工具 OpenAI 格式，hue_group enum 动态生成）+ dispatch_tool（未知工具/坏参数兜底五件套 JSON）
 - def 11 `app/backend/agent_loop.py`：agent_reply（MAX_ROUNDS=5 防失控、发回消息清洗标准字段、steps 工具轨迹供前端展示）
 - `CHAT_SYSTEM` 入 prompt.py（话术资产集中管理；数字原样引用/失败如实转述/闲聊不调工具三条铁律）
 - 实测：色号型/知识型/闲聊型三类 + HTTP 端到端全绿；GLM-5.3-flash 会自己带 top_k 参数、引用 dE 数字零心算
 - 剩余仅 vLLM 本地部署本身（云端 API 已满足开发与演示）
 
-### ~~P0 · 核心功能主链路（试妆体验）~~ ✅ 已完成（2026-09-08，def 12a-d）
+### ~~P0 · 核心功能主链路（试妆体验）~~ [OK] 已完成（2026-09-08，def 12a-d）
 - def 12a `app/backend/tryon_service.py`：run_tryon 五件套（BiSeNet lru_cache 单例，修掉算法层每次调用重载模型的坑；torch 全延迟导入，main.py 启动零负担；base64 出图免静态目录管理；hex 清洗复用工具①门卫 normalize_hex）
 - def 12b `main.py` POST /api/tryon：multipart 照片+色号+强度 → run_in_threadpool（冷推理不卡 event loop，chat 并行无损）+ 10MB 限制；新依赖 python-multipart（0.0.32，已入 requirements）
 - def 12c `index.html` 试妆卡（门面位）：文件选择 + 色号 + 强度滑条 → 原图/上妆图并排对比 + b64 截断的原始 JSON
@@ -49,10 +49,19 @@
 - 测试照片源：`datasets/CelebAMask-HQ/CelebA-HQ-img/`（512×512 人脸 3 万张）
 - 已知边界：Lab 迁移只动色度保留原唇明度（保纹理不做塑料唇），深色号视觉偏亮属算法层设计预期
 
+### ~~P0 · def 13 · 全局去 emoji + 前端毛玻璃改版 + CVD 模块自检~~ [OK] 已完成（2026-09-08）
+- 全局清理：项目内 24 个文件 emoji 清零（状态符映射 ASCII 标记 [OK]/[NG]/[注意]/[进行中]，装饰符直接删除；vendor 与产物目录不动），规范：今后项目内标题一律不带 emoji
+- 前端改版 index.html：全面去圆角（卡片/控件/色块/图片零 border-radius）+ 深色毛玻璃主题（玫红/紫/橙渐变色斑底 + backdrop-filter blur 玻璃卡 + 全方角）
+- 体验主流程落地（前端叙事）：页面顶部流程条 01 选色（工具①③）→ 02 上脸试妆 → 03 色盲视角校验（占位，接入中）→ 04 大脑陪聊；五张卡加 STEP 徽标 + 锚点跳转
+- def 13a `cvd_test/selftest.py`：色觉测评链自检 22/22 全绿——color_diff 锚点（Lab 标准值、CIEDE2000=Sharma 官方对 2.0425）、cvd_matrix 数学性质（灰轴不动/severity=0 恒等/混淆对 normal ΔE 12.1 vs sim 0.00/protan 红色明度塌陷 L47→36）、石原板正常可见 8.5 vs deutan 隐身 0.2、网格阶梯三维收敛、排列测试 deutan→red-green（轴 170.6°）、triage 快筛三分支 + 档案投票置信封顶
+- def 13b 规则库校准（联测真发现）：rules.json cvd_02/cvd_04 的 avoid_pairs 与模拟器行为不符（所选色对明度差大，CVD 下本就不混淆）→ 用 confusion_direction 零空间方向重新生成（tritan：#54857A/#6172B2、#51886A/#646EBA；protan：#BB003A/#3C433A、#C30039/#00473B），source 注明校准来源——"规则库 × 模拟器"闭环是答辩新素材
+- 顺手修复：scripts/extract_palette_from_images.py 双 docstring 历史 SyntaxError（git HEAD 即破损）→ 编译通过
+
 ### P2 · 定制功能（2026-09-06 新增，完整规格见第四节）
 
 ### P2 · AccessibilityValidator（原有规划）
 - WCAG 对比度 + CVD 校验，读 `cvd_rules/rules.json`（4 条规则含 protanopia）
+- 进展（2026-09-08，def 13）：算法层已就绪并被 selftest 验证（Machado 模拟器 × 规则库闭环 22/22）；剩余：API 端点（模拟预览 /api/cvd/preview + 规则校验 /api/cvd/check）与前端流程 03 步接入
 
 ---
 
@@ -72,13 +81,13 @@
 用户选号（hex / 场景 / 描述）
    │
    ├─ intent = normal_view「以正常人色感选」→ CVD 模拟预览（看别人眼中的效果）
-   └─ intent = self_view    「面向自己选」  → AccessibilityValidator 校验（CVD 下可区分）
+   └─ intent = self_view 「面向自己选」 → AccessibilityValidator 校验（CVD 下可区分）
    │
    ▼
 search_shade() → 库内最近色号 + dE
    │
-   ├─ dE < 2.0  → 推荐库内产品（接 products.json）
-   └─ dE ≥ 2.0  → 自动建议定制（用户也可强制提交）
+   ├─ dE < 2.0 → 推荐库内产品（接 products.json）
+   └─ dE ≥ 2.0 → 自动建议定制（用户也可强制提交）
                      │
                      ▼
               POST /custom-requests → 定制单落盘 → 商家接单（status 流转）

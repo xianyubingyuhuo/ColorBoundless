@@ -13,14 +13,14 @@ process_style_recommendations.py
     → 走 RAG：语义匹配用户需求 → 但必须"少而精"（去重、筛选、控量）
 
 产出（写入 models/vector_store/style_recommendations_index.npz）：
-    - feature_encoded     : (N, 6)  6 个特征编码（hair/eye/skin/undertone/torso/body）
-    - core_encoded        : (N, 4)  核心 4 特征编码（hair/eye/skin/undertone）
-    - recommended_colors  : (N,)    推荐颜色列表（解析后）
-    - avoid_colors        : (N,)    避免颜色列表（解析后）
-    - style_tags          : (N,)    推荐风格等标签
-    - rule_texts          : (N,)    自然语言化规则（供 embedding/RAG）
-    - lookup              : dict    {(hair,eye,skin,undertone): [索引列表]}
-    - feature_names       : dict    各特征列的取值 → ID 映射
+    - feature_encoded : (N, 6) 6 个特征编码（hair/eye/skin/undertone/torso/body）
+    - core_encoded : (N, 4) 核心 4 特征编码（hair/eye/skin/undertone）
+    - recommended_colors : (N,) 推荐颜色列表（解析后）
+    - avoid_colors : (N,) 避免颜色列表（解析后）
+    - style_tags : (N,) 推荐风格等标签
+    - rule_texts : (N,) 自然语言化规则（供 embedding/RAG）
+    - lookup : dict {(hair,eye,skin,undertone): [索引列表]}
+    - feature_names : dict 各特征列的取值 → ID 映射
 
 为什么这样做？
     1. 核心 4 特征（发色/眼色/肤色/肤色温度）是用户最常见的输入
@@ -64,20 +64,20 @@ def safe_parse_list(s) -> list[str]:
 def main() -> None:
     print(f"[1/4] 读取清洗数据: {INPUT_CSV}")
     df = pd.read_csv(INPUT_CSV)
-    print(f"      原始 {len(df)} 条规则")
+    print(f" 原始 {len(df)} 条规则")
 
     # ------------------- [2/4] 去重 + 质量筛选（精选） -------------------
     print("[2/4] 去重 + 质量筛选...")
     # 去除完全重复的行
     df = df.drop_duplicates().reset_index(drop=True)
-    print(f"      去重后 {len(df)} 条")
+    print(f" 去重后 {len(df)} 条")
 
     # 质量筛选：必须有推荐色，且核心特征完整
     df["_rec_parsed"] = df["recommended_colors"].apply(safe_parse_list)
     df = df[df["_rec_parsed"].apply(len) > 0].reset_index(drop=True)
     for feat in CORE_FEATURES:
         df = df[df[feat].notna() & (df[feat].astype(str).str.len() > 0)].reset_index(drop=True)
-    print(f"      质量筛选后 {len(df)} 条")
+    print(f" 质量筛选后 {len(df)} 条")
 
     # ------------------- [3/4] 特征编码 -------------------
     print("[3/4] 特征编码 + 文本化...")
@@ -88,7 +88,7 @@ def main() -> None:
         codes, uniques = pd.factorize(df[feat].astype(str))
         feature_encoded[:, j] = codes
         feature_names[feat] = {name: int(i) for i, name in enumerate(uniques)}
-        print(f"      {feat:<18}: {len(uniques)} 个取值")
+        print(f" {feat:<18}: {len(uniques)} 个取值")
 
     core_encoded = feature_encoded[:, : len(CORE_FEATURES)]
 
@@ -129,7 +129,7 @@ def main() -> None:
         key = "_".join(str(int(v)) for v in core_encoded[idx])
         lookup.setdefault(key, []).append(idx)
     lookup_np = {key: np.array(vals, dtype=np.int32) for key, vals in lookup.items()}
-    print(f"      核心特征组合数: {len(lookup_np)}")
+    print(f" 核心特征组合数: {len(lookup_np)}")
 
     # ------------------- [4/4] 保存索引 -------------------
     print(f"[4/4] 保存到: {OUTPUT_NPZ}")
@@ -143,7 +143,7 @@ def main() -> None:
         style_tags=style_tags,
         rule_texts=rule_texts,
         lookup=lookup_np,
-        feature_names=feature_names,  # dict[str, dict[str, int]]
+        feature_names=feature_names, # dict[str, dict[str, int]]
     )
 
     meta = {
@@ -156,14 +156,14 @@ def main() -> None:
     with OUTPUT_META.open("w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2, default=str)
 
-    print("\n✅ style_recommendations 索引生成完成！")
-    print(f"   feature_encoded    : {feature_encoded.shape}")
-    print(f"   core_encoded       : {core_encoded.shape}")
-    print(f"   recommended_colors : {recommended_colors.shape}")
-    print(f"   avoid_colors       : {avoid_colors.shape}")
-    print(f"   style_tags         : {style_tags.shape}")
-    print(f"   rule_texts         : {rule_texts.shape}")
-    print(f"   lookup             : {len(lookup_np)} 个组合")
+    print("\n[OK] style_recommendations 索引生成完成！")
+    print(f" feature_encoded : {feature_encoded.shape}")
+    print(f" core_encoded : {core_encoded.shape}")
+    print(f" recommended_colors : {recommended_colors.shape}")
+    print(f" avoid_colors : {avoid_colors.shape}")
+    print(f" style_tags : {style_tags.shape}")
+    print(f" rule_texts : {rule_texts.shape}")
+    print(f" lookup : {len(lookup_np)} 个组合")
 
 
 if __name__ == "__main__":

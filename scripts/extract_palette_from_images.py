@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-⚠️ 已弃用 - 请勿运行 ⚠️
-
-此脚本从原始 "RGB Color Dataset" 的纯色图片提取颜色（rgb_from_images.csv）。
-验证结论：图片颜色 = 文件夹名 = R 通道全 ∈[0,4] → 只有绿/青/蓝，
-缺少红/黄/紫（美妆核心色系），数据集本身偏色，已确认不可用。
-
-→ 正确数据源为 full_palette.csv（全色域），
-  由 scripts/generate_full_palette.py 生成。
-相关文件 rgb_from_images.csv 已删除。
-"""
-
+# [注意] 已弃用 - 请勿运行 [注意]
+#
+# 此脚本从原始 "RGB Color Dataset" 的纯色图片提取颜色（rgb_from_images.csv）。
+# 验证结论：图片颜色 = 文件夹名 = R 通道全 ∈[0,4] → 只有绿/青/蓝，
+# 缺少红/黄/紫（美妆核心色系），数据集本身偏色，已确认不可用。
+#
+# → 正确数据源为 full_palette.csv（全色域），
+#   由 scripts/generate_full_palette.py 生成。
+# 相关文件 rgb_from_images.csv 已删除。
 """
 extract_palette_from_images.py
 ==============================
@@ -42,7 +39,7 @@ RAW_ROOT = Path(r"e:\作业\欧莱雅比赛项目\download_materials\base_palett
 OUTPUT_DIR = Path(r"e:\作业\欧莱雅比赛项目\项目3\ColorBoundless\data\processed\base_palette\parts")
 FINAL_CSV = Path(r"e:\作业\欧莱雅比赛项目\项目3\ColorBoundless\data\processed\base_palette\rgb_from_images.csv")
 
-DEFAULT_BATCH_SIZE = 10_000  # 每批处理 1 万个颜色（用户指定）
+DEFAULT_BATCH_SIZE = 10_000 # 每批处理 1 万个颜色（用户指定）
 
 FIELDNAMES = [
     "hex", "r", "g", "b", "hue_deg", "saturation",
@@ -170,9 +167,9 @@ def merge_parts() -> None:
                 for row in csv.DictReader(f):
                     writer.writerow(row)
                     total += 1
-            pf.unlink()  # 合并后删除 part
+            pf.unlink() # 合并后删除 part
 
-    print(f"✅ 合并完成: {total} 个颜色 → {FINAL_CSV}")
+    print(f"[OK] 合并完成: {total} 个颜色 → {FINAL_CSV}")
 
 
 def main() -> None:

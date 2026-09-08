@@ -28,7 +28,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_CSV = PROJECT_ROOT / "data" / "processed" / "base_palette" / "full_palette.csv"
 
-STEP = 4  # 采样步长：0,4,8,...,252 → 每通道 64 个值
+STEP = 4 # 采样步长：0,4,8,...,252 → 每通道 64 个值
 
 
 def rgb_to_lab(r: int, g: int, b: int) -> tuple[float, float, float]:
@@ -59,8 +59,8 @@ def main() -> None:
         "value", "lightness", "lab_l", "lab_a", "lab_b", "source_dir",
     ]
 
-    values = list(range(0, 256, STEP))  # [0, 4, 8, ..., 252]
-    total = len(values) ** 3  # 64^3 = 262,144
+    values = list(range(0, 256, STEP)) # [0, 4, 8, ..., 252]
+    total = len(values) ** 3 # 64^3 = 262,144
     print(f"采样步长 {STEP} → 每通道 {len(values)} 值 → 共 {total} 色")
 
     count = 0
@@ -88,8 +88,8 @@ def main() -> None:
                     })
                     count += 1
 
-    print(f"✅ 生成完成: {OUTPUT_CSV}")
-    print(f"   共 {count} 种颜色（全色域均匀采样）")
+    print(f"[OK] 生成完成: {OUTPUT_CSV}")
+    print(f" 共 {count} 种颜色（全色域均匀采样）")
 
 
 if __name__ == "__main__":
