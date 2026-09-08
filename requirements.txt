@@ -8,4 +8,5 @@ torchvision
 sentence-transformers   # bge-small-zh 嵌入（scripts/embed_style_recommendations.py）
 fastapi                 # def9 后端骨架：工具①②③ HTTP 端点 + /api/chat + 静态页
 uvicorn                 # def9 的 ASGI 服务器（python app/backend/main.py 一键启动）
+python-multipart        # def12 /api/tryon：multipart 表单（照片上传）解析
 

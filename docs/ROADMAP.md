@@ -14,7 +14,7 @@
 
 ## 二、当前主线（P0）
 
-- [ ] 核心功能主链路（试妆体验）—— 待拆解
+- [ ] 核心功能主链路（试妆体验）—— 见下方 def 12 ✅
 - [ ] 5 概念总结笔记（用户交付）
 
 ## 三、待办池（按优先级）
@@ -39,6 +39,15 @@
 - `CHAT_SYSTEM` 入 prompt.py（话术资产集中管理；数字原样引用/失败如实转述/闲聊不调工具三条铁律）
 - 实测：色号型/知识型/闲聊型三类 + HTTP 端到端全绿；GLM-5.3-flash 会自己带 top_k 参数、引用 dE 数字零心算
 - 剩余仅 vLLM 本地部署本身（云端 API 已满足开发与演示）
+
+### ~~P0 · 核心功能主链路（试妆体验）~~ ✅ 已完成（2026-09-08，def 12a-d）
+- def 12a `app/backend/tryon_service.py`：run_tryon 五件套（BiSeNet lru_cache 单例，修掉算法层每次调用重载模型的坑；torch 全延迟导入，main.py 启动零负担；base64 出图免静态目录管理；hex 清洗复用工具①门卫 normalize_hex）
+- def 12b `main.py` POST /api/tryon：multipart 照片+色号+强度 → run_in_threadpool（冷推理不卡 event loop，chat 并行无损）+ 10MB 限制；新依赖 python-multipart（0.0.32，已入 requirements）
+- def 12c `index.html` 试妆卡（门面位）：文件选择 + 色号 + 强度滑条 → 原图/上妆图并排对比 + b64 截断的原始 JSON
+- def 12d e2e 全绿：冷调用 654ms（kb lifespan 预热顺手带热 torch/CUDA——延迟导入红利，第二个用 torch 的组件近乎免费）、热调用 72ms、坏 hex/坏图/超限五件套错误、kb_search 回归无损
+- 架构决策：试妆走 HTTP 直连，**不进** function calling 注册表——试妆是用户的主动操作（传照片），不是大脑的对话决策
+- 测试照片源：`datasets/CelebAMask-HQ/CelebA-HQ-img/`（512×512 人脸 3 万张）
+- 已知边界：Lab 迁移只动色度保留原唇明度（保纹理不做塑料唇），深色号视觉偏亮属算法层设计预期
 
 ### P2 · 定制功能（2026-09-06 新增，完整规格见第四节）
 

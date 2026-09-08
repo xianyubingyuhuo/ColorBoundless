@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))          # agents.tools.* 的导入链
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -24,6 +25,7 @@ from agents.tools.search_shade import search_shade_tool
 from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
+from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
 
 
 @asynccontextmanager
@@ -65,6 +67,22 @@ def api_palette_search(hex: str, hue_group: str = None, top_k: int = 5):
 def api_chat(body: ChatIn):
     """def 11 · 大脑循环版：自动选工具 → 代码执行 → 结果喂回 → 正文"""
     return agent_reply(body.message)
+
+
+MAX_IMG_BYTES = 10 * 1024 * 1024
+
+
+@app.post("/api/tryon")
+async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
+                    alpha: float = Form(0.75)):
+    """def 12b · 试妆：multipart 照片 + 色号 + 强度 → 原图/上妆图 base64（五件套 JSON）"""
+    data = await file.read()
+    if not data:
+        return {"ok": False, "tool": "tryon", "error": "未收到图片数据", "results": {}}
+    if len(data) > MAX_IMG_BYTES:
+        return {"ok": False, "tool": "tryon", "error": "图片超过 10MB 限制", "results": {}}
+    # 线程池跑同步推理：冷启动约 30s（torch 全链+权重）也不卡 event loop，/api/chat 照常响应
+    return await run_in_threadpool(run_tryon, data, hex_color, alpha)
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）
