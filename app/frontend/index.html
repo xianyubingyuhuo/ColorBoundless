@@ -14,6 +14,8 @@
  .res{margin-top:10px} .item{display:flex;gap:10px;align-items:center;background:#fafafa;border-radius:8px;padding:6px 10px;margin:6px 0}
  .sw{display:inline-block;width:44px;height:44px;border-radius:8px;border:1px solid #ddd;flex:none}
  .meta{font-size:12px;color:#888} .ms{font-size:12px;color:#2a7}
+ .imgbox{margin:0;text-align:center} .imgbox img{width:300px;max-width:100%;border-radius:8px;border:1px solid #ddd}
+ figcaption{font-size:12px;color:#888;margin-top:2px}
  .err{color:#c0392b;font-size:13px}
  details{margin-top:8px;font-size:12px} pre{background:#f4f4f4;padding:8px;border-radius:6px;overflow:auto;max-height:240px}
  #chatlog{border:1px solid #eee;border-radius:8px;min-height:80px;padding:8px;margin-top:8px;font-size:14px}
@@ -23,6 +25,16 @@
 <body>
 <h1>💄 ColorBoundless 工具测试台</h1>
 <p class="sub">工具①②③ + 大脑直通 · 后端 FastAPI · 一切数字均由代码计算，LLM 只引用不心算</p>
+
+<div class="card"><b>💋 虚拟试妆 /api/tryon · 上传照片 → AI 上妆</b>
+ <div class="row" style="margin-top:8px">
+  <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
+  <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
+  <label class="meta">强度 <input id="tyalpha" type="range" min="0.3" max="1" step="0.05" value="0.75" oninput="$('tyav').textContent=this.value"> <span id="tyav">0.75</span></label>
+  <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
+ <div id="tyres" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
+</div>
 
 <div class="card"><b>工具① search_shade · 官方色号匹配</b>
  <div class="row" style="margin-top:8px">
@@ -110,6 +122,33 @@ async function chat(){
   log.scrollTop = log.scrollHeight;
 }
 $("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
+async function ty(){
+  const f = $("tyfile").files[0];
+  if(!f){ $("tyres").innerHTML = `<span class="err">⛔ 先选一张照片（jpg/png）</span>`; return; }
+  const fd = new FormData();
+  fd.append("file", f);
+  fd.append("hex_color", $("tyhex").value.trim());
+  fd.append("alpha", $("tyalpha").value);
+  $("tyms").textContent = "";
+  $("tyres").innerHTML = `<div class="meta">⏳ 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
+  const t0 = performance.now();
+  try{
+    const r = await fetch("/api/tryon", {method:"POST", body: fd});
+    const j = await r.json();
+    const ms = Math.round(performance.now()-t0);
+    $("tyjson").textContent = JSON.stringify(j, null, 2)
+      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${j.results&&j.results.original_b64 ? Math.floor(j.results.original_b64.length*3/4/1024)+"KB 图>" : ""}"`)
+      .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
+    $("tyms").textContent = ms + "ms";
+    if(!j.ok){ $("tyres").innerHTML = `<span class="err">⛔ ${j.error}</span>`; return; }
+    $("tyms").textContent += " · device=" + j.query.device;
+    $("tyres").innerHTML =
+      `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
+      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>`;
+  }catch(e){
+    $("tyres").innerHTML = `<span class="err">⛔ 请求失败: ${e}</span>`;
+  }
+}
 </script>
 </body>
 </html>
