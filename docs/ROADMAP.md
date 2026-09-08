@@ -57,6 +57,13 @@
 - def 13b 规则库校准（联测真发现）：rules.json cvd_02/cvd_04 的 avoid_pairs 与模拟器行为不符（所选色对明度差大，CVD 下本就不混淆）→ 用 confusion_direction 零空间方向重新生成（tritan：#54857A/#6172B2、#51886A/#646EBA；protan：#BB003A/#3C433A、#C30039/#00473B），source 注明校准来源——"规则库 × 模拟器"闭环是答辩新素材
 - 顺手修复：scripts/extract_palette_from_images.py 双 docstring 历史 SyntaxError（git HEAD 即破损）→ 编译通过
 
+### ~~P0 · def 14 · CVD 无障碍进流程（流程 03 真卡）~~ [OK] 已完成（2026-09-08）
+- def 14a `app/backend/cvd_service.py`：服务层五件套契约——preview_hex（单色模拟预览：模拟后 hex/ΔE/明度 L 变化）+ check_pair（色对校验：正常 ΔE vs 完全型模拟 ΔE、差值收缩率、verdict 分档、规则库 avoid/safe 命中 + recommended_action）；hex 宽容解析（# 可省/大小写/3 位缩写）、异常不穿透
+- def 14b `main.py` 两个 GET 端点：`/api/cvd/preview`、`/api/cvd/check`（挂在静态目录 mount 之前）
+- def 14c `index.html`：流程条 03 激活（Machado 模拟 · 规则校验）+ STEP 3 卡（A+B 色对校验 / 清空 B 单色预览双模式，色觉类型下拉 + 严重度滑条）；verdict 阈值 confuse<5 / risky<12 声明为项目启发式（与 selftest safe_pairs 同源），答辩勿引用为行业标准
+- 实测四场景：FF4D6D→protan #7B786D（L 59.6→50.4 明度塌陷复现）；红绿对 deutan ΔE 69.85→14.63（收缩 79%，命中 avoid/cvd_01）；B22222/FFFFFF protan 命中 safe/cvd_04；坏 hex 五件套错误
+- 剩余（可选）：接入大脑 function calling、灰阶规则 cvd_03 暴露 API
+
 ### P2 · 定制功能（2026-09-06 新增，完整规格见第四节）
 
 ### P2 · AccessibilityValidator（原有规划）

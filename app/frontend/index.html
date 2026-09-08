@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ColorBoundless 工具测试台</title>
+<title>ColorBoundless 控制台</title>
 <style>
  :root{--ac:#e5476d;--ac2:#ff9ab5;--tx:#ece7e4;--tx2:rgba(236,231,228,.55);--bd:rgba(255,255,255,.11)}
  *{box-sizing:border-box}
@@ -50,7 +50,7 @@
 <div class="flow">
  <a href="#card-s1"><div class="n">01</div><div class="t">选色</div><div class="d">官方色号 / 全库 26 万色</div></a>
  <a href="#card-tryon"><div class="n">02</div><div class="t">上脸试妆</div><div class="d">AI 唇妆 · 即时对比</div></a>
- <div class="off"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">模拟预览 · 接入中</div></div>
+ <a href="#card-cvd"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">Machado 模拟 · 规则校验</div></a>
  <a href="#card-chat"><div class="n">04</div><div class="t">大脑陪聊</div><div class="d">function calling</div></a>
 </div>
 
@@ -62,6 +62,22 @@
   <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
  <div id="tyres" class="res"></div>
  <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
+</div>
+
+<div class="card" id="card-cvd"><b><span class="step">STEP 3</span>色盲视角校验 /api/cvd · Machado 2009 模拟 + 规则库</b>
+ <div class="row" style="margin-top:8px">
+  <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
+  <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
+  <select id="cvdtype">
+   <option value="deuteranopia">绿色盲 deutan（最常见）</option>
+   <option value="protanopia">红色盲 protan</option>
+   <option value="tritanopia">蓝黄色盲 tritan</option>
+  </select>
+  <label class="meta">严重度 <input id="cvdsev" type="range" min="0" max="1" step="0.05" value="1" style="width:90px" oninput="$('cvdsevv').textContent=parseFloat(this.value).toFixed(2)"> <span id="cvdsevv">1.00</span></label>
+  <button onclick="cvd()">分析</button><span id="cvdms" class="ms"></span></div>
+ <div class="meta" style="margin-top:6px">填 A+B → 色对校验（两色在色盲用户眼中还分得开吗）；清空 B → 单色模拟预览（看明度塌陷）</div>
+ <div id="cvdres" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="cvdjson"></pre></details>
 </div>
 
 <div class="card" id="card-s1"><b><span class="step">STEP 1</span>工具① search_shade · 官方色号匹配</b>
@@ -150,6 +166,38 @@ async function chat(){
   log.scrollTop = log.scrollHeight;
 }
 $("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
+
+function cvdVerdict(v){
+  if(v==="confuse") return '<span class="err">色盲用户几乎看不出区别（ΔE&lt;5）</span>';
+  if(v==="risky") return '<span style="color:#ffc46b">勉强可辨，建议加大明度差（ΔE&lt;12）</span>';
+  return '<span class="ms">可清晰区分</span>';
+}
+async function cvd(){
+  const a=$("cvda").value.trim(), b=$("cvdb").value.trim(), ty=$("cvdtype").value, sev=$("cvdsev").value;
+  $("cvdsevv").textContent=parseFloat(sev).toFixed(2);
+  const el=$("cvdres"); $("cvdjson").textContent=""; $("cvdms").textContent="";
+  try{
+    if(b){
+      const{j,ms}=await getJSON(`/api/cvd/check?hex_a=${encodeURIComponent(a)}&hex_b=${encodeURIComponent(b)}&cvd_type=${encodeURIComponent(ty)}`);
+      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
+      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
+      const r=j.results;
+      el.innerHTML=
+        `<div class="item"><span class="sw" style="background:${r.a_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.a_sim_hex}"></span><div><b>${r.a_hex} → ${r.a_sim_hex}</b><div class="meta">A 色在 ${j.query.cvd_type} 用户眼中的等效色</div></div></div>`+
+        `<div class="item"><span class="sw" style="background:${r.b_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.b_sim_hex}"></span><div><b>${r.b_hex} → ${r.b_sim_hex}</b><div class="meta">B 色等效色</div></div></div>`+
+        `<div class="item"><div><b>正常 ΔE=${r.dE_normal} · 模拟后 ΔE=${r.dE_sim}</b>　<span class="meta">差值收缩 ${r.contraction_pct}%</span>`+
+        `<div>${cvdVerdict(r.verdict)}${r.rule_hit==="avoid"?`　<span class="err">[规则命中] ${r.rule_id} 避免并置</span>`:""}${r.rule_hit==="safe"?`　<span class="ms">[规则命中] ${r.rule_id} 安全组合</span>`:""}</div>`+
+        (r.recommended_action?`<div class="meta">建议：${r.recommended_action}</div>`:"")+
+        `</div></div>`;
+    }else{
+      const{j,ms}=await getJSON(`/api/cvd/preview?hex=${encodeURIComponent(a)}&cvd_type=${encodeURIComponent(ty)}&severity=${encodeURIComponent(sev)}`);
+      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
+      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
+      const r=j.results;
+      el.innerHTML=`<div class="item"><span class="sw" style="background:${r.original_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.simulated_hex}"></span><div><b>${r.original_hex} → ${r.simulated_hex}</b><div class="meta">${j.query.cvd_type} · 严重度 ${j.query.severity} · ΔE=${r.delta_e} · 明度 L ${r.luminance.original} → ${r.luminance.simulated}${r.luminance.drop>0?"（塌陷 "+r.luminance.drop+"）":""}</div></div></div>`;
+    }
+  }catch(e){el.innerHTML=`<span class="err">[错误] 请求失败: ${e}</span>`}
+}
 async function ty(){
   const f = $("tyfile").files[0];
   if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
