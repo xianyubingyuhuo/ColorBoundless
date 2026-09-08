@@ -13,11 +13,11 @@
     "rule_id": "cvd_02",
     "name": "blue_yellow_confusion",
     "description": "蓝黄误差容易在低饱和场景中丢失，需要保留明显明度层次。",
-    "avoid_pairs": [["#4E6EF2", "#EEDC5E"], ["#5B7C99", "#D9B65F"]],
+    "avoid_pairs": [["#54857A", "#6172B2"], ["#51886A", "#646EBA"]],
     "safe_pairs": [["#6C4D8E", "#F7E9FF"], ["#4B3B5A", "#F2D9C6"]],
     "recommended_action": "选择暖中性色作为过渡，不要让蓝黄直接并置。",
     "cvd_type": "tritanopia",
-    "source": "蓝黄色盲事实（患病率 <0.01%）: Colour Blind Awareness (colourblindawareness.org)；模拟实现: cvd_test/cvd_matrix.py"
+    "source": "蓝黄色盲事实（患病率 <0.01%）: Colour Blind Awareness (colourblindawareness.org)；模拟实现: cvd_test/cvd_matrix.py；avoid_pairs 已由模拟器闭环校准（2026-09-08, cvd_test/selftest）"
   },
   {
     "rule_id": "cvd_03",
@@ -32,10 +32,10 @@
     "rule_id": "cvd_04",
     "name": "red_darkness_confusion",
     "description": "protanopia（L 锥缺失）下红色明度塌陷：红色显著变暗，深红与深绿/棕褐易混淆，紫色向蓝色偏移；红白对比度会被高估。",
-    "avoid_pairs": [["#8E2A3A", "#2E8B57"], ["#B22222", "#3A6B47"]],
+    "avoid_pairs": [["#BB003A", "#3C433A"], ["#C30039", "#00473B"]],
     "safe_pairs": [["#B22222", "#FFFFFF"], ["#FF4D6D", "#1F2937"]],
     "recommended_action": "红色系必须搭配明度差（很浅或很深的背景）；重要信息用形状/位置/文字冗余编码，不能只靠红色；避免深红与深绿、棕褐直接并置。",
     "cvd_type": "protanopia",
-    "source": "protanopia 红色明度塌陷为公认临床事实: Colour Blind Awareness (colourblindawareness.org)；模拟实现: cvd_test/cvd_matrix.py"
+    "source": "protanopia 红色明度塌陷为公认临床事实: Colour Blind Awareness (colourblindawareness.org)；模拟实现: cvd_test/cvd_matrix.py；avoid_pairs 已由模拟器闭环校准（2026-09-08, cvd_test/selftest）"
   }
 ]

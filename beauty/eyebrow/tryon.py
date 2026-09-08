@@ -29,12 +29,12 @@ def tryon(img_path, color="6B4A2B", weights=common.DEFAULT_WEIGHTS, out="",
 
     参数：
         img_path : 输入图片路径
-        color    : 眉色 HEX（如 '6B4A2B' 深棕）
-        weights  : BiSeNet 权重路径
-        out      : 输出子目录名（默认用色号名）
-        alpha    : 颜色强度（眉毛建议 0.7~0.9）
-        feather  : 边缘羽化 sigma
-        device   : 'cuda'/'cpu'，默认自动
+        color : 眉色 HEX（如 '6B4A2B' 深棕）
+        weights : BiSeNet 权重路径
+        out : 输出子目录名（默认用色号名）
+        alpha : 颜色强度（眉毛建议 0.7~0.9）
+        feather : 边缘羽化 sigma
+        device : 'cuda'/'cpu'，默认自动
     示例：tryon("photo.jpg", color="6B4A2B", alpha=0.8)
     """
     net, device = common.load_parsing_net(weights, device)
@@ -50,7 +50,7 @@ def tryon(img_path, color="6B4A2B", weights=common.DEFAULT_WEIGHTS, out="",
     mask = np.isin(p, BROWS).astype(np.float32)
     cnt = int(mask.sum())
     if cnt < 50:
-        print(f"⚠️ 眉毛像素太少（{cnt}），可能没检测到眉毛，效果可能不佳")
+        print(f"[注意] 眉毛像素太少（{cnt}），可能没检测到眉毛，效果可能不佳")
 
     out_img = common.apply_region_color(img_bgr, mask, bgr, alpha=alpha, feather=feather)
 

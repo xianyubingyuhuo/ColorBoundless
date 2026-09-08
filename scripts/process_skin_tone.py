@@ -13,15 +13,15 @@ process_skin_tone.py
     → 不用全量塞进 RAG；仅当需要"语义搜索产品文案"时才用少量 embedding
 
 产出（写入 models/vector_store/skin_tone_index.npz）：
-    - brand_array       : (N,)    品牌
-    - product_array     : (N,)    产品名
-    - name_array        : (N,)    色号名
-    - hex_array         : (N,)    十六进制颜色
-    - rgb_array         : (N, 3)  RGB
-    - lab_array         : (N, 3)  Lab（用于和肤色做色差匹配）
-    - undertone_encoded : (N,)    0=cool, 1=warm, 2=neutral
-    - lightness_encoded : (N,)    0=deep, 1=medium, 2=light
-    - lookup            : dict    {(undertone_id, lightness_id): [索引列表]}
+    - brand_array : (N,) 品牌
+    - product_array : (N,) 产品名
+    - name_array : (N,) 色号名
+    - hex_array : (N,) 十六进制颜色
+    - rgb_array : (N, 3) RGB
+    - lab_array : (N, 3) Lab（用于和肤色做色差匹配）
+    - undertone_encoded : (N,) 0=cool, 1=warm, 2=neutral
+    - lightness_encoded : (N,) 0=deep, 1=medium, 2=light
+    - lookup : dict {(undertone_id, lightness_id): [索引列表]}
 
 为什么这样做？
     1. undertone + lightness 是"肤色→底妆"最关键的快速筛选条件
@@ -79,13 +79,13 @@ def encode_lightness(lightness: float) -> int:
     for i in range(len(LIGHTNESS_BINS) - 1):
         if LIGHTNESS_BINS[i] <= lightness < LIGHTNESS_BINS[i + 1]:
             return i
-    return 2  # 兜底
+    return 2 # 兜底
 
 
 def main() -> None:
     print(f"[1/4] 读取清洗数据: {INPUT_CSV}")
     df = pd.read_csv(INPUT_CSV)
-    print(f"      共 {len(df)} 个产品")
+    print(f" 共 {len(df)} 个产品")
 
     # ------------------- [2/4] 特征编码 + 计算 Lab -------------------
     print("[2/4] 特征编码 + 计算 Lab...")
@@ -112,14 +112,14 @@ def main() -> None:
     print("[3/4] 构建 (undertone, lightness) → 产品索引 查询表...")
     lookup: dict[str, list[int]] = {}
     for idx, (u, l) in enumerate(zip(undertone_encoded, lightness_encoded)):
-        key = f"{int(u)}_{int(l)}"  # 如 "0_2" = cool + light
+        key = f"{int(u)}_{int(l)}" # 如 "0_2" = cool + light
         lookup.setdefault(key, []).append(idx)
     # 转成 numpy 数组（便于检索时索引）
     lookup_np = {key: np.array(vals, dtype=np.int32) for key, vals in lookup.items()}
 
     for key, vals in sorted(lookup_np.items()):
         ut, lt = key.split("_")
-        print(f"      {ID_TO_UNDERTONE[int(ut)]:<8} + {LIGHTNESS_NAMES[int(lt)]:<7}: {len(vals):>5} 个产品")
+        print(f" {ID_TO_UNDERTONE[int(ut)]:<8} + {LIGHTNESS_NAMES[int(lt)]:<7}: {len(vals):>5} 个产品")
 
     # ------------------- [4/4] 保存索引 -------------------
     print(f"[4/4] 保存到: {OUTPUT_NPZ}")
@@ -134,7 +134,7 @@ def main() -> None:
         lab_array=lab_array,
         undertone_encoded=undertone_encoded,
         lightness_encoded=lightness_encoded,
-        lookup=lookup_np,  # dict[str, np.ndarray]
+        lookup=lookup_np, # dict[str, np.ndarray]
     )
 
     meta = {
@@ -147,16 +147,16 @@ def main() -> None:
     with OUTPUT_META.open("w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
-    print("\n✅ skin_tone 索引生成完成！")
-    print(f"   brand_array       : {brand_array.shape}")
-    print(f"   product_array     : {product_array.shape}")
-    print(f"   name_array        : {name_array.shape}")
-    print(f"   hex_array         : {hex_array.shape}")
-    print(f"   rgb_array         : {rgb_array.shape}")
-    print(f"   lab_array         : {lab_array.shape}")
-    print(f"   undertone_encoded : {undertone_encoded.shape}")
-    print(f"   lightness_encoded : {lightness_encoded.shape}")
-    print(f"   lookup            : {len(lookup_np)} 个组合")
+    print("\n[OK] skin_tone 索引生成完成！")
+    print(f" brand_array : {brand_array.shape}")
+    print(f" product_array : {product_array.shape}")
+    print(f" name_array : {name_array.shape}")
+    print(f" hex_array : {hex_array.shape}")
+    print(f" rgb_array : {rgb_array.shape}")
+    print(f" lab_array : {lab_array.shape}")
+    print(f" undertone_encoded : {undertone_encoded.shape}")
+    print(f" lightness_encoded : {lightness_encoded.shape}")
+    print(f" lookup : {len(lookup_np)} 个组合")
 
 
 if __name__ == "__main__":

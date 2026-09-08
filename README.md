@@ -9,20 +9,20 @@
 
 | 模块 | 状态 | 技术 | 验证指标 |
 |---|---|---|---|
-| 色觉测评（CVD Screening） | ✅ | 石原板/色相排列/网格测试 + 规则状态机分诊 | triage 全绿（test_triage.py） |
-| 色号精准推荐 | ✅ | CIEDE2000 色差算法 · CIELab 空间排序 | 正红匹配 ΔLab = 1.1 |
-| AI 虚拟试妆 | ✅ | BiSeNet 人脸解析 + Lab 颜色迁移 + 羽化 | 纯 CPU 0.17s/图（实测） |
-| 双 Agent 对话 | 🔨 进行中 | LangChain 1.x create_agent + LangGraph 工具循环 | — |
-| 检索索引（4 库） | ✅ | 262K 色 KMeans 聚类 + undertone 查询表 + 风格 RAG | 检索 0.1~0.2s |
-| 波浪图可视化 | 🔨 进行中 | 光谱波动模拟（spectrum_wave_demo.py） | — |
+| 色觉测评（CVD Screening） | [OK] | 石原板/色相排列/网格测试 + 规则状态机分诊 | triage 全绿（test_triage.py） |
+| 色号精准推荐 | [OK] | CIEDE2000 色差算法 · CIELab 空间排序 | 正红匹配 ΔLab = 1.1 |
+| AI 虚拟试妆 | [OK] | BiSeNet 人脸解析 + Lab 颜色迁移 + 羽化 | 纯 CPU 0.17s/图（实测） |
+| 双 Agent 对话 | [进行中] 进行中 | LangChain 1.x create_agent + LangGraph 工具循环 | — |
+| 检索索引（4 库） | [OK] | 262K 色 KMeans 聚类 + undertone 查询表 + 风格 RAG | 检索 0.1~0.2s |
+| 波浪图可视化 | [进行中] 进行中 | 光谱波动模拟（spectrum_wave_demo.py） | — |
 
 ## 架构
 
 ```
-数据层          算法层                 Agent 层              应用层
-data/    →     cvd_test/   ──┐                              ┌─ FastAPI
-4 类索引        beauty/     ──┼── agents/（LangGraph） ──→  └─ Gradio
-              models/       ──┘   工具化调用算法层              (9/6 起开发)
+数据层 算法层 Agent 层 应用层
+data/ → cvd_test/ ──┐ ┌─ FastAPI
+4 类索引 beauty/ ──┼── agents/（LangGraph） ──→ └─ Gradio
+              models/ ──┘ 工具化调用算法层 (9/6 起开发)
 ```
 
 **设计原则**：LLM 自由度显式约束在「语言层」，数字与决策全部下沉算法层（CIEDE2000 / 规则状态机）——可解释、可复现、防幻觉。
@@ -55,16 +55,16 @@ tryon("data/faces/11053.jpg", color=chosen["hex"])
 
 ```text
 ColorBoundless/
-├── app/          # 前后端应用（FastAPI + Gradio，开发中）
-├── agents/       # 双 Agent 层：测评诊断 / 美学顾问（开发中）
-├── beauty/       # 试妆能力：lipstick ✅ eyebrow ✅ eyeshadow ⬜ foundation ⬜
-├── cvd_test/     # 色觉测评：ishihara / hue / grid + triage 状态机 ✅
-├── cv/           # 图像与色彩算法层
-├── data/         # 数据层：raw → processed → knowledge_base → 索引
-├── models/       # 权重（不入库）与检索索引（4 个 .npz 已入库）
-├── scripts/      # 一次性数据工厂 + 测试脚本（test_* / diag_*）
-├── results/      # 输出（git 忽略）
-└── docs/         # 设计文档（DESIGN.md：数据落库与配色体系设计）
+├── app/ # 前后端应用（FastAPI + Gradio，开发中）
+├── agents/ # 双 Agent 层：测评诊断 / 美学顾问（开发中）
+├── beauty/ # 试妆能力：lipstick [OK] eyebrow [OK] eyeshadow [待办] foundation [待办]
+├── cvd_test/ # 色觉测评：ishihara / hue / grid + triage 状态机 [OK]
+├── cv/ # 图像与色彩算法层
+├── data/ # 数据层：raw → processed → knowledge_base → 索引
+├── models/ # 权重（不入库）与检索索引（4 个 .npz 已入库）
+├── scripts/ # 一次性数据工厂 + 测试脚本（test_* / diag_*）
+├── results/ # 输出（git 忽略）
+└── docs/ # 设计文档（DESIGN.md：数据落库与配色体系设计）
 ```
 
 ## 技术决策（答辩要点）

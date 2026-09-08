@@ -5,8 +5,8 @@ verify_indexes.py
 验证三个数据处理索引是否可用 —— Day 5（整体流程雏形）
 
 验证内容：
-    1. base_palette         ：按色相族检索 + 用 Lab 找"最接近指定颜色"的颜色
-    2. skin_tone            ：用 (undertone, lightness) 查询表快速圈定产品
+    1. base_palette ：按色相族检索 + 用 Lab 找"最接近指定颜色"的颜色
+    2. skin_tone ：用 (undertone, lightness) 查询表快速圈定产品
     3. style_recommendations：用核心特征组合查规则 + 展示一条自然语言规则
 
 运行：
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import sys
 
-# Windows 终端默认 GBK 编码打不出 emoji（如 ✅），强制用 UTF-8 输出
+# Windows 终端默认 GBK 编码打不出 emoji（如 [OK]），强制用 UTF-8 输出
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -53,10 +53,10 @@ def verify_base_palette() -> None:
     red_mask = idx["hue_group_labels"] == red_label
     red_hex = idx["hex_array"][red_mask]
     print(f"\n红色系颜色: {red_mask.sum()} 个")
-    print(f"  示例: {red_hex[:5].tolist()}")
+    print(f" 示例: {red_hex[:5].tolist()}")
 
     # --- 1b. Lab 找最接近的颜色：目标 = 经典正红 (255, 0, 0) ---
-    target_rgb = np.array([[255, 0, 0]], dtype=np.float32)  # 正红
+    target_rgb = np.array([[255, 0, 0]], dtype=np.float32) # 正红
     # 注意：索引里 lab 是标准 Lab，这里需要把 target 也转成 Lab。
     # 简便起见，直接用索引里的 rgb 做最近邻演示 + Lab 精查。
     # 先用 hue_group 过滤出红色系，再在 Lab 里找最近
@@ -67,7 +67,7 @@ def verify_base_palette() -> None:
     best = int(np.argmin(dists))
     best_hex = idx["hex_array"][red_mask][best]
     best_rgb = idx["rgb_array"][red_mask][best]
-    print(f"\n目标: 正红 (255,0,0)  → 最近色: {best_hex}  RGB={best_rgb.tolist()}  ΔLab={dists[best]:.1f}")
+    print(f"\n目标: 正红 (255,0,0) → 最近色: {best_hex} RGB={best_rgb.tolist()} ΔLab={dists[best]:.1f}")
 
 
 def verify_skin_tone() -> None:
@@ -81,9 +81,9 @@ def verify_skin_tone() -> None:
     key = "1_2"
     indices = lookup[key]
     print(f"\nwarm + light 的产品: {len(indices)} 个")
-    print("  示例（品牌/产品/色号/hex）:")
+    print(" 示例（品牌/产品/色号/hex）:")
     for i in indices[:8]:
-        print(f"    {idx['brand_array'][i]} | {idx['product_array'][i]} "
+        print(f" {idx['brand_array'][i]} | {idx['product_array'][i]} "
               f"| {idx['name_array'][i]} | {idx['hex_array'][i]}")
 
 
@@ -120,7 +120,7 @@ def verify_style_recommendations() -> None:
     if len(indices) > 0:
         first = int(indices[0])
         print("\n示例规则（自然语言文本，供 RAG/embedding）:")
-        print("  " + idx["rule_texts"][first])
+        print(" " + idx["rule_texts"][first])
         print("\n推荐颜色: " + idx["recommended_colors"][first])
         print("避免颜色: " + idx["avoid_colors"][first])
 
@@ -133,7 +133,7 @@ def verify_semantic_search() -> None:
 
     emb_file = VECTOR_STORE / "style_recommendations_embeddings.npz"
     if not emb_file.exists():
-        print("  ⚠️ 未找到 embeddings 文件，请先运行 embed_style_recommendations.py")
+        print(" [注意] 未找到 embeddings 文件，请先运行 embed_style_recommendations.py")
         return
 
     embs = np.load(emb_file, allow_pickle=True)
@@ -156,8 +156,8 @@ def verify_semantic_search() -> None:
 
     print(f"\n查询: {query}")
     for rank, i in enumerate(top_idx, 1):
-        print(f"\n  Top{rank} (相似度 {sims[i]:.3f}) → 规则 #{rule_ids[i]}:")
-        print("   " + rule_texts[i][:120] + "...")
+        print(f"\n Top{rank} (相似度 {sims[i]:.3f}) → 规则 #{rule_ids[i]}:")
+        print(" " + rule_texts[i][:120] + "...")
 
 
 if __name__ == "__main__":
@@ -165,4 +165,4 @@ if __name__ == "__main__":
     verify_skin_tone()
     verify_style_recommendations()
     verify_semantic_search()
-    print("\n✅ 四个验证全部完成！")
+    print("\n[OK] 四个验证全部完成！")

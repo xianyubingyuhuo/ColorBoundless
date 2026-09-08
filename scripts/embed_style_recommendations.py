@@ -10,8 +10,8 @@ embed_style_recommendations.py
     语义检索才能真正可用。
 
 产出（写入 models/vector_store/style_recommendations_embeddings.npz）：
-    - embeddings : (N, 512)  规则文本的向量（bge-small-zh-v1.5，归一化）
-    - rule_ids   : (N,)      对应 style_recommendations_index.npz 的行号
+    - embeddings : (N, 512) 规则文本的向量（bge-small-zh-v1.5，归一化）
+    - rule_ids : (N,) 对应 style_recommendations_index.npz 的行号
 
 用法：
     python scripts/embed_style_recommendations.py
@@ -32,7 +32,7 @@ OUTPUT_NPZ = PROJECT_ROOT / "models" / "vector_store" / "style_recommendations_e
 # bge-small-zh-v1.5 模型（本地路径）
 MODEL_PATH = Path(r"e:\作业\vscoding学习\models\bge-small-zh-v1.5")
 
-BATCH_SIZE = 64   # 分批大小（防止 GPU OOM）
+BATCH_SIZE = 64 # 分批大小（防止 GPU OOM）
 
 
 def get_device() -> str:
@@ -54,7 +54,7 @@ def main() -> None:
     data = np.load(INDEX_NPZ, allow_pickle=True)
     rule_texts = data["rule_texts"]
     n_rules = len(rule_texts)
-    print(f"      共 {n_rules} 条规则文本")
+    print(f" 共 {n_rules} 条规则文本")
 
     # ---------- 2. 加载模型并向量化 ----------
     print("[2/3] 加载 bge-small-zh-v1.5...")
@@ -69,10 +69,10 @@ def main() -> None:
         rule_texts.tolist(),
         batch_size=BATCH_SIZE,
         show_progress_bar=True,
-        normalize_embeddings=True,  # bge 推荐归一化，用余弦相似度
+        normalize_embeddings=True, # bge 推荐归一化，用余弦相似度
     )
     embeddings = np.asarray(embeddings, dtype=np.float32)
-    print(f"      embeddings shape: {embeddings.shape}")
+    print(f" embeddings shape: {embeddings.shape}")
 
     # ---------- 3. 保存 ----------
     print(f"[3/3] 保存到: {OUTPUT_NPZ}")
@@ -82,9 +82,9 @@ def main() -> None:
         embeddings=embeddings,
         rule_ids=np.arange(n_rules, dtype=np.int32),
     )
-    print("\n✅ style_recommendations 语义向量生成完成！")
-    print(f"   embeddings: {embeddings.shape} (float32)")
-    print(f"   rule_ids  : {n_rules} 条")
+    print("\n[OK] style_recommendations 语义向量生成完成！")
+    print(f" embeddings: {embeddings.shape} (float32)")
+    print(f" rule_ids : {n_rules} 条")
 
 
 if __name__ == "__main__":

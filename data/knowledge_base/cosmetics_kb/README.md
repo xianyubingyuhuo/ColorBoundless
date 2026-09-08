@@ -4,7 +4,7 @@
 管线分工与 `style_recommendations` 完全一致：
 
 ```
-本目录 *.jsonl  ──scripts/build_cosmetics_kb.py──▶  models/vector_store/cosmetics_kb_index.npz（文本索引）
+本目录 *.jsonl ──scripts/build_cosmetics_kb.py──▶ models/vector_store/cosmetics_kb_index.npz（文本索引）
                                     │
                                     └──scripts/embed_cosmetics_kb.py──▶ cosmetics_kb_embeddings.npz（bge 向量）
 ```
@@ -15,14 +15,14 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `id` | str | ✅ | 全库唯一，建议来源前缀：`seed_`（自写）/ `wiki_` / `brand_` / `cvd_` |
-| `category` | str | ✅ | `color_theory` / `technique` / `style` / `cvd` / `product` / `vocab` |
-| `title` | str | ✅ | 条目标题（参与检索文本） |
-| `content` | str | ✅ | 正文，**检索友好改写**：口语化提问开头 + 同义词嵌入，200~600 字 |
-| `tags` | list[str] | ✅ | 口语词/同义词/俗称（提升召回率的关键，如"黄皮""浆果色"） |
-| `source` | str | ✅ | 来源出处（版权 + 可信度，答辩可引用） |
-| `occasion` | list[str] | ➖ | 统一词汇表：`daily` / `work` / `date` / `party` / `night` / `formal` / `photo` / `all` |
-| `hue_family` | str | ➖ | 所属色系（如 `cool_violet`、`warm_red`） |
+| `id` | str | [OK] | 全库唯一，建议来源前缀：`seed_`（自写）/ `wiki_` / `brand_` / `cvd_` |
+| `category` | str | [OK] | `color_theory` / `technique` / `style` / `cvd` / `product` / `vocab` |
+| `title` | str | [OK] | 条目标题（参与检索文本） |
+| `content` | str | [OK] | 正文，**检索友好改写**：口语化提问开头 + 同义词嵌入，200~600 字 |
+| `tags` | list[str] | [OK] | 口语词/同义词/俗称（提升召回率的关键，如"黄皮""浆果色"） |
+| `source` | str | [OK] | 来源出处（版权 + 可信度，答辩可引用） |
+| `occasion` | list[str] | - | 统一词汇表：`daily` / `work` / `date` / `party` / `night` / `formal` / `photo` / `all` |
+| `hue_family` | str | - | 所属色系（如 `cool_violet`、`warm_red`） |
 
 ## 写作原则（决定 RAG 质量）
 

@@ -9,45 +9,45 @@
 
 ```text
 ColorBoundless/
-├── app/                          # 前后端交互与应用入口（待开发）
-│   └── ...
-├── agents/                       # 多 Agent 协作层（预留骨架）
-│   ├── __init__.py
-│   ├── tools/                    # Agent 工具注册区（预留，后续放 search_shade 等）
-│   └── README.md
-├── beauty/                       # 美妆能力总入口（四大品类）
-│   ├── __init__.py               # 按品类子包分类导出（不用 __all__，模块名即分类）
-│   ├── common.py                 # 公共层：BiSeNet 加载 / Lab 换色 / 图像工具
-│   ├── lipstick/                 # ✅ 口红（tryon.py + shade_library.py）
-│   ├── eyebrow/                  # ✅ 眉毛（tryon.py，part 2,3）
-│   ├── eyeshadow/                # ⬜ 眼影（待开发，含眼皮掩膜优化）
-│   └── foundation/               # ⬜ 粉底（待开发）
-├── cv/                           # 图像与色彩算法层（待开发）
-│   └── ...
-├── data/                         # 数据层：原始数据 / 处理数据 / 知识库
-│   ├── README.md
-│   ├── raw_sources/              # 原始素材归档（位于项目外 download_materials/）
-│   ├── processed/                # 清洗后的 CSV
-│   ├── knowledge_base/           # 知识规则（配色 / CVD / 风格）
-│   ├── faces/                    # 测试人脸图
-│   └── ...
-├── models/                       # 模型权重与检索索引
-│   ├── README.md
-│   ├── face_parsing/             # BiSeNet 权重 79999_iter.pth
-│   └── vector_store/             # 4 个检索索引（base_palette/skin_tone/style/embeddings）
-├── scripts/                      # 数据处理脚本（"一次性工厂"）
-│   ├── generate_full_palette.py  # 生成全色域色卡
-│   ├── process_base_palette.py   # 262K色 → KMeans + 色相族索引
-│   ├── process_skin_tone.py      # 12K产品 → undertone×lightness 查询表
-│   ├── process_style_recommendations.py  # 15K规则 → 精选RAG索引
-│   ├── embed_style_recommendations.py    # 规则文本 → bge 向量
-│   ├── verify_indexes.py         # 四索引检索验证（改数据/换环境后必跑）
-│   ├── extract_palette_from_images.py    # ⚠️ 已弃用（数据偏色验证）
-│   └── testing_scripts/          # 测试脚本（试妆/接口验证）
-│       ├── test_makeup_regions.py       # 眉毛/眼影/嘴唇换色实验
-│       └── test_beauty_eyebrow.py       # beauty 包接口 + 眉毛上色验证
-├── results/                      # 测试与输出结果
-│   └── tryon/                    # 试妆输出（lipstick/eyebrow/...）
+├── app/ # 前后端交互与应用入口（待开发）
+│ └── ...
+├── agents/ # 多 Agent 协作层（预留骨架）
+│ ├── __init__.py
+│ ├── tools/ # Agent 工具注册区（预留，后续放 search_shade 等）
+│ └── README.md
+├── beauty/ # 美妆能力总入口（四大品类）
+│ ├── __init__.py # 按品类子包分类导出（不用 __all__，模块名即分类）
+│ ├── common.py # 公共层：BiSeNet 加载 / Lab 换色 / 图像工具
+│ ├── lipstick/ # [OK] 口红（tryon.py + shade_library.py）
+│ ├── eyebrow/ # [OK] 眉毛（tryon.py，part 2,3）
+│ ├── eyeshadow/ # [待办] 眼影（待开发，含眼皮掩膜优化）
+│ └── foundation/ # [待办] 粉底（待开发）
+├── cv/ # 图像与色彩算法层（待开发）
+│ └── ...
+├── data/ # 数据层：原始数据 / 处理数据 / 知识库
+│ ├── README.md
+│ ├── raw_sources/ # 原始素材归档（位于项目外 download_materials/）
+│ ├── processed/ # 清洗后的 CSV
+│ ├── knowledge_base/ # 知识规则（配色 / CVD / 风格）
+│ ├── faces/ # 测试人脸图
+│ └── ...
+├── models/ # 模型权重与检索索引
+│ ├── README.md
+│ ├── face_parsing/ # BiSeNet 权重 79999_iter.pth
+│ └── vector_store/ # 4 个检索索引（base_palette/skin_tone/style/embeddings）
+├── scripts/ # 数据处理脚本（"一次性工厂"）
+│ ├── generate_full_palette.py # 生成全色域色卡
+│ ├── process_base_palette.py # 262K色 → KMeans + 色相族索引
+│ ├── process_skin_tone.py # 12K产品 → undertone×lightness 查询表
+│ ├── process_style_recommendations.py # 15K规则 → 精选RAG索引
+│ ├── embed_style_recommendations.py # 规则文本 → bge 向量
+│ ├── verify_indexes.py # 四索引检索验证（改数据/换环境后必跑）
+│ ├── extract_palette_from_images.py # [注意] 已弃用（数据偏色验证）
+│ └── testing_scripts/ # 测试脚本（试妆/接口验证）
+│ ├── test_makeup_regions.py # 眉毛/眼影/嘴唇换色实验
+│ └── test_beauty_eyebrow.py # beauty 包接口 + 眉毛上色验证
+├── results/ # 测试与输出结果
+│ └── tryon/ # 试妆输出（lipstick/eyebrow/...）
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
@@ -69,10 +69,10 @@ download_materials/
 ```
 
 当前已完成的落库状态：
-- ✅ 基础色板：`base_palette_index.npz`（262K 色 + KMeans 200簇 + 11 色相族，正红匹配 ΔLab=1.1）
-- ✅ 肤色/底妆：`skin_tone_index.npz`（12K 产品 + 9 组 undertone×lightness 查询表）
-- ✅ 风格推荐：`style_recommendations_index.npz` + `embeddings.npz`（精选 RAG 双通道）
-- ✅ CV 试妆：唇/眉/眼影换色验证通过（BiSeNet），眉毛已工程化进 `beauty/eyebrow`
+- [OK] 基础色板：`base_palette_index.npz`（262K 色 + KMeans 200簇 + 11 色相族，正红匹配 ΔLab=1.1）
+- [OK] 肤色/底妆：`skin_tone_index.npz`（12K 产品 + 9 组 undertone×lightness 查询表）
+- [OK] 风格推荐：`style_recommendations_index.npz` + `embeddings.npz`（精选 RAG 双通道）
+- [OK] CV 试妆：唇/眉/眼影换色验证通过（BiSeNet），眉毛已工程化进 `beauty/eyebrow`
 
 ---
 

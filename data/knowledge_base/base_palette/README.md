@@ -18,7 +18,7 @@
 | `undertone` / `lightness` / `saturation` | warm-cool / bright-medium-dark(dim) / high-medium |
 | `emotion` | 风格词闭集（见下） |
 | `occasion` | 场合闭集 8 词（见下） |
-| `cvd_safe` | ⚠️ 启发式人工评估分 [0,1]，**未经公式验证**（见下方声明） |
+| `cvd_safe` | [注意] 启发式人工评估分 [0,1]，**未经公式验证**（见下方声明） |
 | `notes` | 一句话适用说明 |
 
 ## occasion 场合闭集（全项目统一，cosmetics_kb 管线强制校验）

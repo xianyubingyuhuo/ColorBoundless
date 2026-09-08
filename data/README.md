@@ -134,8 +134,8 @@
 
 ```
 结构化数据（颜色/产品库） → 算法底层直接检索（快、准、无幻觉，不进 LLM）
-知识性数据（风格/规则）   → Agent 的 RAG 知识库（精选、去噪，防幻觉）
-规则数据（配色/CVD）      → 代码内直接调用（校验器/引擎，确定性逻辑）
+知识性数据（风格/规则） → Agent 的 RAG 知识库（精选、去噪，防幻觉）
+规则数据（配色/CVD） → 代码内直接调用（校验器/引擎，确定性逻辑）
 用户动态信息（偏好/历史） → 记忆系统 memOS（不进 RAG）
 ```
 
@@ -143,30 +143,30 @@
 
 ### 5.1 状态图例
 
-- ✅ 已处理（已生成可检索索引 → `models/vector_store/`）
-- 📝 已整理（人工整理好的 json / 规则，可直接使用）
-- ⬜ 未处理（只有 README 规划或目录为空）
+- [OK] 已处理（已生成可检索索引 → `models/vector_store/`）
+- 已整理（人工整理好的 json / 规则，可直接使用）
+- [待办] 未处理（只有 README 规划或目录为空）
 
 ### 5.2 数据集总览表
 
 | 数据集 | 位置 | 状态 | 接入层 | 接入方式 |
 |---|---|---|---|---|
-| **base_palette** | `processed/base_palette/full_palette.csv` + `models/vector_store/base_palette_index.npz` | ✅ | 算法底层（颜色匹配引擎） | KMeans 簇 + Lab 色差（CIEDE2000） |
-| **skin_tone** | `processed/skin_tone/skin_tone_cleaned.csv` + `skin_tone_index.npz` | ✅ | 算法底层（底妆筛选） | undertone×lightness 查询表 O(1) + Lab 精排 |
-| **style_recommendations** | `processed/style_recommendations/fashion_style_cleaned.csv` + `style_recommendations_index.npz` + `style_recommendations_embeddings.npz` | ✅ | Agent（RAG 知识库） | 特征组合过滤 + rule_texts 语义检索（512维 bge 向量，已验证） |
-| **shades.json** | `shades/shades.json` | 📝 | Agent（产品知识） | 美妆色号精选库：查表 / 转 RAG 文档 |
-| **color_rules** | `knowledge_base/color_rules/rules.json` | 📝 | 算法底层 + Agent | 代码内调用（配色引擎）+ LLM 解释依据 |
-| **cvd_rules** | `knowledge_base/cvd_rules/rules.json` | 📝 | 算法底层（安全校验器） | 输出前 CVD 校验（AccessibilityValidator） |
-| **base_palette/*.json** | `knowledge_base/base_palette/`（red/purple） | 📝 | 算法底层 | 特定色系基础色，供色系检索 |
-| **style_palette/*.json** | `knowledge_base/style_palette/`（cold_violet 等） | 📝 | Agent（RAG） | 风格调色板，语义检索 |
-| **faces/** | `faces/11053.jpg` + mask | 📝 | CV 测试 | 人脸检测/分割/试妆的测试输入 |
-| **color_test_questions** | `color_test_questions/` | ⬜ | 算法底层（评估） | 色盲测试题库，待创建 |
-| **color_cards** | `color_cards/` | ⬜ | — | 空，待规划 |
-| **palettes** | `palettes/` | ⬜ | — | 空，待规划 |
+| **base_palette** | `processed/base_palette/full_palette.csv` + `models/vector_store/base_palette_index.npz` | [OK] | 算法底层（颜色匹配引擎） | KMeans 簇 + Lab 色差（CIEDE2000） |
+| **skin_tone** | `processed/skin_tone/skin_tone_cleaned.csv` + `skin_tone_index.npz` | [OK] | 算法底层（底妆筛选） | undertone×lightness 查询表 O(1) + Lab 精排 |
+| **style_recommendations** | `processed/style_recommendations/fashion_style_cleaned.csv` + `style_recommendations_index.npz` + `style_recommendations_embeddings.npz` | [OK] | Agent（RAG 知识库） | 特征组合过滤 + rule_texts 语义检索（512维 bge 向量，已验证） |
+| **shades.json** | `shades/shades.json` | | Agent（产品知识） | 美妆色号精选库：查表 / 转 RAG 文档 |
+| **color_rules** | `knowledge_base/color_rules/rules.json` | | 算法底层 + Agent | 代码内调用（配色引擎）+ LLM 解释依据 |
+| **cvd_rules** | `knowledge_base/cvd_rules/rules.json` | | 算法底层（安全校验器） | 输出前 CVD 校验（AccessibilityValidator） |
+| **base_palette/*.json** | `knowledge_base/base_palette/`（red/purple） | | 算法底层 | 特定色系基础色，供色系检索 |
+| **style_palette/*.json** | `knowledge_base/style_palette/`（cold_violet 等） | | Agent（RAG） | 风格调色板，语义检索 |
+| **faces/** | `faces/11053.jpg` + mask | | CV 测试 | 人脸检测/分割/试妆的测试输入 |
+| **color_test_questions** | `color_test_questions/` | [待办] | 算法底层（评估） | 色盲测试题库，待创建 |
+| **color_cards** | `color_cards/` | [待办] | — | 空，待规划 |
+| **palettes** | `palettes/` | [待办] | — | 空，待规划 |
 
 ### 5.3 各数据集详细接入方式
 
-#### 5.3.1 base_palette（颜色库）✅
+#### 5.3.1 base_palette（颜色库）[OK]
 
 - **接入层**：算法底层 → `beauty/` 或 `cv/` 的颜色匹配引擎
 - **接入方式**：纯结构化检索，**不进 LLM / RAG**
@@ -180,7 +180,7 @@
   ```
 - **谁在用**：推荐系统的"颜色匹配模块"（把理论颜色 → 具体色号）
 
-#### 5.3.2 skin_tone（产品库）✅
+#### 5.3.2 skin_tone（产品库）[OK]
 
 - **接入层**：算法底层 → `beauty/foundation` 底妆模块
 - **接入方式**：结构化过滤 + Lab 精排
@@ -194,13 +194,13 @@
   ```
 - **谁在用**：底妆推荐（用户肤色 → 合适色号）
 
-#### 5.3.3 style_recommendations（风格规则库）✅
+#### 5.3.3 style_recommendations（风格规则库）[OK]
 
 - **接入层**：Agent → 推荐 Agent 的 RAG context
 - **接入方式**：双通道（结构化 + 语义）
   ```python
   # 通道1：特征组合过滤（用户 发色/眼色/肤色/色调）
-  rules = idx["lookup"]["0_1_2_0"]   # 精确匹配
+  rules = idx["lookup"]["0_1_2_0"] # 精确匹配
 
   # 通道2：语义检索（rule_texts 转 embedding，走向量库）
   # 匹配的规则作为 context 喂给 LLM 生成推荐
@@ -208,14 +208,14 @@
   ```
 - **谁在用**：推荐 Agent（LangChain RAG 管道的知识来源）
 
-#### 5.3.4 shades.json（美妆色号精选库）📝
+#### 5.3.4 shades.json（美妆色号精选库）
 
 - **接入层**：Agent → 妆容推荐 Agent
 - **接入方式**：精选口红/妆容色号，可直接查表；也可转成 RAG 文档
 - **用途**：生成"具体口红推荐"（复古红棕、元气正红、玫红…）
 - **后续**：可选将其 embedding 化，纳入向量库做语义搜索
 
-#### 5.3.5 color_rules（配色规则）📝
+#### 5.3.5 color_rules（配色规则）
 
 - **接入层**：算法底层（配色引擎）+ Agent（解释依据）
 - **接入方式**：每条规则是确定性逻辑，代码内直接调用
@@ -225,7 +225,7 @@
   ```
 - **谁在用**：beauty 层配色引擎；同时规则文本可给 LLM 作"为什么这样配"的依据
 
-#### 5.3.6 cvd_rules（色盲安全规则）📝
+#### 5.3.6 cvd_rules（色盲安全规则）
 
 - **接入层**：算法底层（安全校验器）→ `AccessibilityValidator`
 - **接入方式**：推荐输出前强制校验
@@ -235,13 +235,13 @@
   ```
 - **谁在用**：推荐管线最后的"安全过滤"环节（防色盲用户误判）
 
-#### 5.3.7 faces/（测试人脸）📝
+#### 5.3.7 faces/（测试人脸）
 
 - **接入层**：CV 测试
 - **接入方式**：MediaPipe / OpenCV 人脸检测、分割、虚拟试妆的**测试输入**
 - **用途**：验证 `cv/` 层算法正确性
 
-#### 5.3.8 color_test_questions（色盲测试题库）⬜ 未处理
+#### 5.3.8 color_test_questions（色盲测试题库）[待办] 未处理
 
 - **状态**：仅 README 规划，无数据
 - **计划**：生成色盲 / 可访问性测试题库，用于规则验证和安全评估

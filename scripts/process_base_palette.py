@@ -13,12 +13,12 @@ process_base_palette.py
     → 不做 embedding，不进 RAG，LLM 不参与颜色计算
 
 产出（写入 models/vector_store/base_palette_index.npz）：
-    - hex_array        : (N,)     十六进制颜色
-    - rgb_array        : (N, 3)   RGB 值
-    - lab_array        : (N, 3)   Lab 值（感知均匀，用于色差匹配）
-    - hue_group_labels : (N,)     色相族标签（红/橙/黄/绿/青/蓝/紫/粉/灰/黑/白）
-    - cluster_labels   : (N,)     KMeans 簇标签（每个颜色属于哪个簇）
-    - cluster_centers  : (K, 3)   簇中心（Lab 空间）
+    - hex_array : (N,) 十六进制颜色
+    - rgb_array : (N, 3) RGB 值
+    - lab_array : (N, 3) Lab 值（感知均匀，用于色差匹配）
+    - hue_group_labels : (N,) 色相族标签（红/橙/黄/绿/青/蓝/紫/粉/灰/黑/白）
+    - cluster_labels : (N,) KMeans 簇标签（每个颜色属于哪个簇）
+    - cluster_centers : (K, 3) 簇中心（Lab 空间）
 
 为什么这样做？
     1. hue_group：快速按"色系"过滤（用户说"想要红色系"→ 直接筛 hue_group==red）
@@ -38,17 +38,17 @@ from sklearn.cluster import KMeans
 # ----------------------------- 路径配置 -----------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# ⚠️ 数据源说明：
-#   原始 "RGB Color Dataset"（rgb_cleaned.csv）R 通道全 ∈[0,4]，只有绿/青/蓝
-#   没有红/黄/紫（美妆核心色系）→ 已弃用并删除。
-#   唯一数据源 = generate_full_palette.py 生成的全色域色卡（262,144 色）。
+# [注意] 数据源说明：
+# 原始 "RGB Color Dataset"（rgb_cleaned.csv）R 通道全 ∈[0,4]，只有绿/青/蓝
+# 没有红/黄/紫（美妆核心色系）→ 已弃用并删除。
+# 唯一数据源 = generate_full_palette.py 生成的全色域色卡（262,144 色）。
 BASE_PALETTE_DIR = PROJECT_ROOT / "data" / "processed" / "base_palette"
 INPUT_CSV = BASE_PALETTE_DIR / "full_palette.csv"
 
 OUTPUT_NPZ = PROJECT_ROOT / "models" / "vector_store" / "base_palette_index.npz"
 OUTPUT_META = PROJECT_ROOT / "models" / "vector_store" / "base_palette_meta.json"
 
-N_CLUSTERS = 200  # KMeans 簇数量
+N_CLUSTERS = 200 # KMeans 簇数量
 
 # 色相族定义（按 hue_deg / saturation / value 分类）
 HUE_GROUPS = ["red", "orange", "yellow", "green", "cyan", "blue",
@@ -88,7 +88,7 @@ def classify_hue_group(hue: float, sat: float, val: float) -> str:
 def main() -> None:
     print(f"[1/4] 读取清洗数据: {INPUT_CSV}")
     df = pd.read_csv(INPUT_CSV)
-    print(f"      共 {len(df)} 个颜色")
+    print(f" 共 {len(df)} 个颜色")
 
     # ------------------- 提取特征列 -------------------
     hex_array = df["hex"].astype(str).to_numpy()
@@ -108,7 +108,7 @@ def main() -> None:
     # 统计每个色相族的数量
     for name in HUE_GROUPS:
         cnt = int((hue_group_labels == HUE_GROUP_TO_ID[name]).sum())
-        print(f"      {name:<10}: {cnt:>8} 个颜色")
+        print(f" {name:<10}: {cnt:>8} 个颜色")
 
     # ------------------- [3/4] KMeans 聚类（用 Lab） -------------------
     print(f"[3/4] KMeans 聚类 (k={N_CLUSTERS}, 用 Lab 特征)...")
@@ -117,7 +117,7 @@ def main() -> None:
     kmeans.fit(lab_array)
     cluster_labels = kmeans.labels_.astype(np.int32)
     cluster_centers = kmeans.cluster_centers_.astype(np.float32)
-    print(f"      聚类完成，{N_CLUSTERS} 个簇中心")
+    print(f" 聚类完成，{N_CLUSTERS} 个簇中心")
 
     # ------------------- [4/4] 保存索引 -------------------
     print(f"[4/4] 保存到: {OUTPUT_NPZ}")
@@ -146,13 +146,13 @@ def main() -> None:
     with OUTPUT_META.open("w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
-    print("\n✅ base_palette 索引生成完成！")
-    print(f"   hex_array       : {hex_array.shape}")
-    print(f"   rgb_array       : {rgb_array.shape}")
-    print(f"   lab_array       : {lab_array.shape}")
-    print(f"   hue_group_labels: {hue_group_labels.shape}")
-    print(f"   cluster_labels  : {cluster_labels.shape}")
-    print(f"   cluster_centers : {cluster_centers.shape}")
+    print("\n[OK] base_palette 索引生成完成！")
+    print(f" hex_array : {hex_array.shape}")
+    print(f" rgb_array : {rgb_array.shape}")
+    print(f" lab_array : {lab_array.shape}")
+    print(f" hue_group_labels: {hue_group_labels.shape}")
+    print(f" cluster_labels : {cluster_labels.shape}")
+    print(f" cluster_centers : {cluster_centers.shape}")
 
 
 if __name__ == "__main__":
