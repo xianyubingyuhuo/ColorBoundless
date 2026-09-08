@@ -26,6 +26,7 @@ from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
 from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
+from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 
 
 @asynccontextmanager
@@ -83,6 +84,18 @@ async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
         return {"ok": False, "tool": "tryon", "error": "图片超过 10MB 限制", "results": {}}
     # 线程池跑同步推理：冷启动约 30s（torch 全链+权重）也不卡 event loop，/api/chat 照常响应
     return await run_in_threadpool(run_tryon, data, hex_color, alpha)
+
+
+@app.get("/api/cvd/preview")
+def api_cvd_preview(hex: str, cvd_type: str = "deuteranopia", severity: float = 1.0):
+    """def 14 · 色盲视角预览：该色号在指定色觉缺陷用户眼中的等效颜色"""
+    return preview_hex(hex, cvd_type, severity)
+
+
+@app.get("/api/cvd/check")
+def api_cvd_check(hex_a: str, hex_b: str, cvd_type: str = "deuteranopia"):
+    """def 14 · 色对校验：正常 ΔE vs 模拟 ΔE + 规则库命中（avoid/safe）"""
+    return check_pair(hex_a, hex_b, cvd_type)
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）
