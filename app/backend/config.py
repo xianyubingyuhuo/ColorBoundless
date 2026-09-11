@@ -22,7 +22,7 @@ _DEFAULTS = {
         "zhipu": {
             "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
             "api_key": "",
-            "model": "glm-4.5-flash",
+            "model": "glm-5.3-flash",
         },
     },
 }

@@ -3,228 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ColorBoundless TEST</title>
-<style>
- :root{--ac:#e5476d;--ac2:#ff9ab5;--tx:#ece7e4;--tx2:rgba(236,231,228,.55);--bd:rgba(255,255,255,.11)}
- *{box-sizing:border-box}
- body{font-family:system-ui,"Microsoft YaHei";max-width:900px;margin:0 auto;padding:34px 18px 64px;color:var(--tx);min-height:100vh;
-  background:radial-gradient(560px 380px at 10% 4%,rgba(229,71,109,.30),transparent 62%),
-             radial-gradient(640px 430px at 92% 16%,rgba(118,84,255,.26),transparent 62%),
-             radial-gradient(560px 440px at 50% 98%,rgba(255,150,80,.15),transparent 60%),
-             linear-gradient(158deg,#181220 0%,#1e1424 46%,#120f1a 100%);
-  background-attachment:fixed}
- h1{font-size:24px;margin-bottom:2px;letter-spacing:.5px} .sub{color:var(--tx2);font-size:13px;margin:0 0 4px}
- .flow{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 2px}
- .flow a,.flow .off{flex:1;min-width:150px;text-decoration:none;color:var(--tx);background:rgba(255,255,255,.05);border:1px solid var(--bd);padding:10px 12px;backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
- .flow .off{opacity:.45}
- .flow a:hover{border-color:rgba(229,71,109,.65)}
- .flow .n{font-size:11px;color:var(--ac2);letter-spacing:2px}
- .flow .t{font-size:14px;margin-top:3px}
- .flow .d{font-size:12px;color:var(--tx2);margin-top:2px}
- .card{background:rgba(255,255,255,.055);border:1px solid var(--bd);padding:16px 18px;margin:16px 0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 36px rgba(0,0,0,.35)}
- .card>b{display:block;margin-bottom:2px}
- .step{display:inline-block;font-size:11px;letter-spacing:1.5px;color:var(--ac2);border:1px solid rgba(229,71,109,.5);padding:1px 8px;margin-right:9px;vertical-align:1px}
- input,select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--tx);padding:7px 10px;font-size:14px}
- input:focus,select:focus{outline:1px solid var(--ac);border-color:transparent}
- ::placeholder{color:rgba(236,231,228,.35)}
- button{background:rgba(229,71,109,.82);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 16px;font-size:14px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
- button:hover{background:rgba(229,71,109,1)} button:active{transform:translateY(1px)}
- .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
- .res{margin-top:10px}
- .item{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 10px;margin:6px 0}
- .sw{display:inline-block;width:44px;height:44px;border:1px solid rgba(255,255,255,.25);flex:none}
- .meta{font-size:12px;color:var(--tx2)} .ms{font-size:12px;color:#7de0a6}
- .imgbox{margin:0;text-align:center} .imgbox img{width:300px;max-width:100%;border:1px solid rgba(255,255,255,.16)}
- figcaption{font-size:12px;color:var(--tx2);margin-top:4px}
- .err{color:#ff8a80;font-size:13px}
- details{margin-top:8px;font-size:12px}
- pre{background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.08);padding:8px;overflow:auto;max-height:240px;color:#d5cfcc}
- #chatlog{border:1px solid var(--bd);background:rgba(0,0,0,.22);min-height:90px;padding:10px;margin-top:8px;font-size:14px}
- .u{color:var(--ac2);margin:4px 0} .a{margin:4px 0;white-space:pre-wrap}
-</style>
+<title>ColorBoundless · 无边界美妆</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>ColorBoundless 组件测试</h1>
-<p class="sub">一切数字均由代码计算，LLM 只引用不心算 · 后端 FastAPI</p>
+<h1>ColorBoundless</h1>
+<p class="sub">一切数字均由代码计算，LLM 只引用不心算 · 后端 FastAPI · 算法层 selftest 22/22</p>
+
+<p class="meta" style="margin-top:14px;max-width:640px;line-height:1.8">
+让美妆对每一位用户成立——包括 8% 的色觉异常人群。官方色号检索、26 万色全库匹配、
+AI 虚拟试妆、色盲视角模拟与配色安全校验：每个数字都有算法出处，每次 AI 调用都有可见的工具轨迹。
+</p>
 
 <div class="flow">
- <a href="#card-s1"><div class="n">01</div><div class="t">选色</div><div class="d">官方色号 / 全库 26 万色</div></a>
- <a href="#card-tryon"><div class="n">02</div><div class="t">上脸试妆</div><div class="d">AI 唇妆 · 即时对比</div></a>
- <a href="#card-cvd"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">Machado 模拟 · 规则校验</div></a>
- <a href="#card-chat"><div class="n">04</div><div class="t">大脑陪聊</div><div class="d">function calling</div></a>
+ <a href="/palette.html"><div class="n">01</div><div class="t">选色</div><div class="d">官方色号 / 全库 26 万色 / 配色知识库</div></a>
+ <a href="/tryon.html"><div class="n">02</div><div class="t">上脸试妆</div><div class="d">AI 唇妆 · 即时对比</div></a>
+ <a href="/cvd.html"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">Machado 模拟 · 规则校验</div></a>
+ <a href="#" onclick="return false" class="off" title="任意页面右下角"><div class="n">04</div><div class="t">伴随 AI</div><div class="d">任意页面右下角 · 全程陪伴</div></a>
 </div>
 
-<div class="card" id="card-tryon"><b><span class="step">STEP 2</span>虚拟试妆 /api/tryon · 上传照片 → AI 上妆</b>
- <div class="row" style="margin-top:8px">
-  <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
-  <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
-  <label class="meta">强度 <input id="tyalpha" type="range" min="0.3" max="1" step="0.05" value="0.75" oninput="$('tyav').textContent=this.value"> <span id="tyav">0.75</span></label>
-  <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
- <div id="tyres" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
+<div class="card"><b><span class="step">底座</span>算法底座（答辩硬货，数字可复现）</b>
+ <div class="meta" style="line-height:1.9;margin-top:6px">
+  · 色差引擎 <b style="color:var(--tx)">CIEDE2000</b>，以 Sharma 2005 官方 34 组数据锚定，自检 <b style="color:#7de0a6">22/22 全绿</b>（含 CDC-b/CDC-c 退化容忍）<br>
+  · 色盲模拟 <b style="color:var(--tx)">Machado 2009</b>（severity 0~1 插值，实盘可复现），模拟矩阵×规则库闭环校准（12 组 avoid/safe 对）<br>
+  · 色号检索在 <b style="color:var(--tx)">Lab 空间</b>做 ΔE 排序：官方库 + 262,144 色全库，178ms 级响应<br>
+  · 工具契约统一五件套（ok/tool/query/results/error），前端只渲染不心算
+ </div>
 </div>
 
-<div class="card" id="card-cvd"><b><span class="step">STEP 3</span>色盲视角校验 /api/cvd · Machado 2009 模拟 + 规则库</b>
- <div class="row" style="margin-top:8px">
-  <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
-  <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
-  <select id="cvdtype">
-   <option value="deuteranopia">绿色盲 deutan（最常见）</option>
-   <option value="protanopia">红色盲 protan</option>
-   <option value="tritanopia">蓝黄色盲 tritan</option>
-  </select>
-  <label class="meta">严重度 <input id="cvdsev" type="range" min="0" max="1" step="0.05" value="1" style="width:90px" oninput="$('cvdsevv').textContent=parseFloat(this.value).toFixed(2)"> <span id="cvdsevv">1.00</span></label>
-  <button onclick="cvd()">分析</button><span id="cvdms" class="ms"></span></div>
- <div class="meta" style="margin-top:6px">填 A+B → 色对校验（两色在色盲用户眼中还分得开吗）；清空 B → 单色模拟预览（看明度塌陷）</div>
- <div id="cvdres" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="cvdjson"></pre></details>
+<div class="card"><b><span class="step">演示</span>怎么逛</b>
+ <div class="meta" style="line-height:1.9;margin-top:6px">
+  从上方入口进入任意模块；每个页面右下角都有<b style="color:var(--ac2)">伴随 AI</b>，
+  它能自己调工具查色号、查知识库，也会主动带你去合适的页面——但每一步都让你看见，方向盘始终在你手里。
+ </div>
 </div>
 
-<div class="card" id="card-s1"><b><span class="step">STEP 1</span>工具① search_shade · 官方色号匹配</b>
- <div class="row" style="margin-top:8px">
-  <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
-  <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
-  <button onclick="t1()">查询</button><span id="s1ms" class="ms"></span></div>
- <div id="s1res" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
-</div>
-
-<div class="card" id="card-s3"><b><span class="step">STEP 1</span>工具③ palette_search · 全库 262,144 色板检索</b>
- <div class="row" style="margin-top:8px">
-  <input id="s3hex" value="#FF4D6D" size="10">
-  <input id="s3hg" list="hglist" placeholder="色相族(可空)" size="12">
-  <datalist id="hglist"><option>red</option><option>orange</option><option>yellow</option><option>green</option><option>blue</option><option>purple</option><option>pink</option><option>brown</option><option>black</option><option>white</option><option>gray</option></datalist>
-  <input id="s3k" type="number" value="5" min="1" max="20" style="width:60px">
-  <button onclick="t3()">检索</button><span id="s3ms" class="ms"></span></div>
- <div id="s3res" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="s3json"></pre></details>
-</div>
-
-<div class="card" id="card-s2"><b><span class="step">STEP 4</span>工具② kb_search · 知识库语义检索</b>
- <div class="row" style="margin-top:8px">
-  <input id="s2q" style="flex:1;min-width:220px" placeholder="例如：冷白皮怎么选粉底？">
-  <input id="s2k" type="number" value="3" min="1" max="10" style="width:60px">
-  <button onclick="t2()">检索</button><span id="s2ms" class="ms"></span></div>
- <div id="s2res" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="s2json"></pre></details>
-</div>
-
-<div class="card" id="card-chat"><b><span class="step">STEP 4</span>大脑直通 /api/chat</b>
- <div class="row" style="margin-top:8px"><input id="chatin" style="flex:1;min-width:220px" placeholder="例如：黄黑皮适合什么颜色的口红？">
- <button onclick="chat()">发送</button></div>
- <div id="chatlog"></div>
-</div>
-
-<script>
-const $ = id => document.getElementById(id);
-async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
-
-function swatch(r, extra){
-  return `<div class="item"><span class="sw" style="background:#${r.hex}"></span><div><b>#${r.hex}</b> 　dE=${r.dE}` +
-    (r.name?`　<span style="color:#c4475d">${r.name}</span>`:"") +
-    (r.tone?`　<span class="meta">[${r.tone}]</span>`:"") +
-    (r.rgb?`　<span class="meta">rgb(${r.rgb.join(",")}) · ${r.hue_group}</span>`:"") +
-    `<div class="meta">${extra||r.desc||r.content||""}</div></div></div>`;
-}
-
-function render(pid, jid, mid, j, fmt){
-  $(mid).textContent = j._ms + "ms · ok=" + j.ok;
-  $(jid).textContent = JSON.stringify(j, null, 2);
-  const el = $(pid); el.innerHTML = "";
-  if(!j.ok){el.innerHTML = `<span class="err">[错误] ${j.error || j._error || "调用失败"}</span>`; return}
-  j.results.forEach(r => el.insertAdjacentHTML("beforeend", fmt(r)));
-}
-
-async function t1(){
-  const{j,ms} = await getJSON(`/api/tools/search_shade?hex=${encodeURIComponent($("s1hex").value)}&top_k=${$("s1k").value}`);
-  j._ms = ms; render("s1res","s1json","s1ms", j, r=>swatch(r));
-}
-async function t3(){
-  const hg = $("s3hg").value;
-  const{j,ms} = await getJSON(`/api/tools/palette_search?hex=${encodeURIComponent($("s3hex").value)}&hue_group=${encodeURIComponent(hg)}&top_k=${$("s3k").value}`);
-  j._ms = ms; render("s3res","s3json","s3ms", j, r=>swatch(r));
-}
-async function t2(){
-  const{j,ms} = await getJSON(`/api/tools/kb_search?query=${encodeURIComponent($("s2q").value)}&top_k=${$("s2k").value}`);
-  j._ms = ms; render("s2res","s2json","s2ms", j, r=>
-    `<div class="item"><div><b>${r.title}</b>　<span class="ms">sim=${r.sim}</span><div class="meta">${r.content}</div><div class="meta">tags: ${r.tags}</div></div></div>`);
-}
-
-async function chat(){
-  const m = $("chatin").value.trim(); if(!m) return;
-  const log = $("chatlog");
-  log.insertAdjacentHTML("beforeend", `<div class="u"> ${m}</div>`);
-  log.insertAdjacentHTML("beforeend", `<div class="meta" id="thinking"> 大脑思考中…（推理型模型约 10~40s）</div>`);
-  $("chatin").value = "";
-  const r = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
-  const j = await r.json();
-  const th = document.getElementById("thinking"); if(th) th.remove();
-  (j.steps||[]).forEach(s=>log.insertAdjacentHTML("beforeend",
-    `<div class="meta">[工具] ${s.tool}(${JSON.stringify(s.args)}) ${s.ok?"[OK]":"[错误]"}</div>`));
-  if(j.error){ log.insertAdjacentHTML("beforeend", `<div class="a"> <span class="err">[错误] ${j.error}</span></div>`); }
-  else{ log.insertAdjacentHTML("beforeend", `<div class="a"> ${j.content ?? ""}</div>`); }
-  log.scrollTop = log.scrollHeight;
-}
-$("chatin").addEventListener("keydown", e=>{ if(e.key==="Enter") chat() });
-
-function cvdVerdict(v){
-  if(v==="confuse") return '<span class="err">色盲用户几乎看不出区别（ΔE&lt;5）</span>';
-  if(v==="risky") return '<span style="color:#ffc46b">勉强可辨，建议加大明度差（ΔE&lt;12）</span>';
-  return '<span class="ms">可清晰区分</span>';
-}
-async function cvd(){
-  const a=$("cvda").value.trim(), b=$("cvdb").value.trim(), ty=$("cvdtype").value, sev=$("cvdsev").value;
-  $("cvdsevv").textContent=parseFloat(sev).toFixed(2);
-  const el=$("cvdres"); $("cvdjson").textContent=""; $("cvdms").textContent="";
-  try{
-    if(b){
-      const{j,ms}=await getJSON(`/api/cvd/check?hex_a=${encodeURIComponent(a)}&hex_b=${encodeURIComponent(b)}&cvd_type=${encodeURIComponent(ty)}`);
-      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
-      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
-      const r=j.results;
-      el.innerHTML=
-        `<div class="item"><span class="sw" style="background:${r.a_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.a_sim_hex}"></span><div><b>${r.a_hex} → ${r.a_sim_hex}</b><div class="meta">A 色在 ${j.query.cvd_type} 用户眼中的等效色</div></div></div>`+
-        `<div class="item"><span class="sw" style="background:${r.b_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.b_sim_hex}"></span><div><b>${r.b_hex} → ${r.b_sim_hex}</b><div class="meta">B 色等效色</div></div></div>`+
-        `<div class="item"><div><b>正常 ΔE=${r.dE_normal} · 模拟后 ΔE=${r.dE_sim}</b>　<span class="meta">差值收缩 ${r.contraction_pct}%</span>`+
-        `<div>${cvdVerdict(r.verdict)}${r.rule_hit==="avoid"?`　<span class="err">[规则命中] ${r.rule_id} 避免并置</span>`:""}${r.rule_hit==="safe"?`　<span class="ms">[规则命中] ${r.rule_id} 安全组合</span>`:""}</div>`+
-        (r.recommended_action?`<div class="meta">建议：${r.recommended_action}</div>`:"")+
-        `</div></div>`;
-    }else{
-      const{j,ms}=await getJSON(`/api/cvd/preview?hex=${encodeURIComponent(a)}&cvd_type=${encodeURIComponent(ty)}&severity=${encodeURIComponent(sev)}`);
-      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
-      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
-      const r=j.results;
-      el.innerHTML=`<div class="item"><span class="sw" style="background:${r.original_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.simulated_hex}"></span><div><b>${r.original_hex} → ${r.simulated_hex}</b><div class="meta">${j.query.cvd_type} · 严重度 ${j.query.severity} · ΔE=${r.delta_e} · 明度 L ${r.luminance.original} → ${r.luminance.simulated}${r.luminance.drop>0?"（塌陷 "+r.luminance.drop+"）":""}</div></div></div>`;
-    }
-  }catch(e){el.innerHTML=`<span class="err">[错误] 请求失败: ${e}</span>`}
-}
-async function ty(){
-  const f = $("tyfile").files[0];
-  if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
-  const fd = new FormData();
-  fd.append("file", f);
-  fd.append("hex_color", $("tyhex").value.trim());
-  fd.append("alpha", $("tyalpha").value);
-  $("tyms").textContent = "";
-  $("tyres").innerHTML = `<div class="meta">[等待] 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
-  const t0 = performance.now();
-  try{
-    const r = await fetch("/api/tryon", {method:"POST", body: fd});
-    const j = await r.json();
-    const ms = Math.round(performance.now()-t0);
-    $("tyjson").textContent = JSON.stringify(j, null, 2)
-      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${j.results&&j.results.original_b64 ? Math.floor(j.results.original_b64.length*3/4/1024)+"KB 图>" : ""}"`)
-      .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
-    $("tyms").textContent = ms + "ms";
-    if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
-    $("tyms").textContent += " · device=" + j.query.device;
-    $("tyres").innerHTML =
-      `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
-      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>`;
-  }catch(e){
-    $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
-  }
-}
-</script>
+<footer>判定阈值（如 CVD confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
+色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
+Machado tritan 矩阵非奇异，纯三刺激下精确模拟 ΔE=0 不可能，工程上以 Lab 收缩率度量。</footer>
 </body>
 </html>

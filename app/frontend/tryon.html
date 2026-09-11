@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>试妆 · ColorBoundless</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav">
+ <a href="/">主页</a><a href="/palette.html">选色</a><a class="on" href="/tryon.html">试妆</a><a href="/cvd.html">色盲校验</a>
+</nav>
+
+<h1>虚拟试妆</h1>
+<p class="sub">上传照片 → AI 上妆 · 图像在本地后端处理，一切由代码计算</p>
+
+<!-- def 12 · 唇妆试妆（已上线） -->
+<div class="card" id="card-tryon"><b><span class="step">STEP 1</span>唇妆 /api/tryon · 上传照片 → AI 上妆</b>
+ <div class="row" style="margin-top:8px">
+  <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
+  <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
+  <label class="meta">强度 <input id="tyalpha" type="range" min="0.3" max="1" step="0.05" value="0.75" oninput="$('tyav').textContent=this.value"> <span id="tyav">0.75</span></label>
+  <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
+ <div id="tyres" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
+</div>
+
+<!-- def 15 预留位：眼影 / 粉底卡片（parts=[{region,hex,alpha}] 参数化，随 def 16 肤色分析接入） -->
+<!-- def 16 预留位：上传即分析 → 自动肤色 → 精确色号回填表单（确认权在用户） -->
+
+<footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
+<script src="chatbox.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+async function ty(){
+  const f = $("tyfile").files[0];
+  if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
+  const fd = new FormData();
+  fd.append("file", f);
+  fd.append("hex_color", $("tyhex").value.trim());
+  fd.append("alpha", $("tyalpha").value);
+  $("tyms").textContent = "";
+  $("tyres").innerHTML = `<div class="meta">[等待] 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
+  const t0 = performance.now();
+  try{
+    const r = await fetch("/api/tryon", {method:"POST", body: fd});
+    const j = await r.json();
+    const ms = Math.round(performance.now()-t0);
+    $("tyjson").textContent = JSON.stringify(j, null, 2)
+      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${j.results&&j.results.original_b64 ? Math.floor(j.results.original_b64.length*3/4/1024)+"KB 图>" : ""}"`)
+      .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
+    $("tyms").textContent = ms + "ms";
+    if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
+    $("tyms").textContent += " · device=" + j.query.device;
+    $("tyres").innerHTML =
+      `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
+      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>`;
+  }catch(e){
+    $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
+  }
+}
+</script>
+</body>
+</html>

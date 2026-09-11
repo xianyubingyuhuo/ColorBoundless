@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>选色 · ColorBoundless</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav">
+ <a href="/">主页</a><a class="on" href="/palette.html">选色</a><a href="/tryon.html">试妆</a><a href="/cvd.html">色盲校验</a>
+</nav>
+
+<h1>选色</h1>
+<p class="sub">官方色号匹配 · 全库 26 万色板 · 配色知识库 · 一切数字由代码计算</p>
+
+<div class="card" id="card-s1"><b><span class="step">工具①</span>search_shade · 官方色号匹配</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
+  <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
+  <button onclick="t1()">查询</button><span id="s1ms" class="ms"></span></div>
+ <div id="s1res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
+</div>
+
+<div class="card" id="card-s3"><b><span class="step">工具③</span>palette_search · 全库 262,144 色板检索</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s3hex" value="#FF4D6D" size="10">
+  <input id="s3hg" list="hglist" placeholder="色相族(可空)" size="12">
+  <datalist id="hglist"><option>red</option><option>orange</option><option>yellow</option><option>green</option><option>blue</option><option>purple</option><option>pink</option><option>brown</option><option>black</option><option>white</option><option>gray</option></datalist>
+  <input id="s3k" type="number" value="5" min="1" max="20" style="width:60px">
+  <button onclick="t3()">检索</button><span id="s3ms" class="ms"></span></div>
+ <div id="s3res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s3json"></pre></details>
+</div>
+
+<div class="card" id="card-s2"><b><span class="step">工具②</span>kb_search · 配色知识库语义检索</b>
+ <div class="row" style="margin-top:8px">
+  <input id="s2q" style="flex:1;min-width:220px" placeholder="例如：冷白皮怎么选粉底？">
+  <input id="s2k" type="number" value="3" min="1" max="10" style="width:60px">
+  <button onclick="t2()">检索</button><span id="s2ms" class="ms"></span></div>
+ <div id="s2res" class="res"></div>
+ <details><summary>原始 JSON</summary><pre id="s2json"></pre></details>
+</div>
+
+<footer>算法锚点：CIEDE2000（Sharma 2005 官方数据锚定，selftest 22/22）· 检索为 Lab 空间 ΔE 排序，LLM 只引用工具结果不心算。</footer>
+<script src="chatbox.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
+
+function swatch(r, extra){
+  return `<div class="item"><span class="sw" style="background:#${r.hex}"></span><div><b>#${r.hex}</b> 　dE=${r.dE}` +
+    (r.name?`　<span style="color:#c4475d">${r.name}</span>`:"") +
+    (r.tone?`　<span class="meta">[${r.tone}]</span>`:"") +
+    (r.rgb?`　<span class="meta">rgb(${r.rgb.join(",")}) · ${r.hue_group}</span>`:"") +
+    `<div class="meta">${extra||r.desc||r.content||""}</div></div></div>`;
+}
+
+function render(pid, jid, mid, j, fmt){
+  $(mid).textContent = j._ms + "ms · ok=" + j.ok;
+  $(jid).textContent = JSON.stringify(j, null, 2);
+  const el = $(pid); el.innerHTML = "";
+  if(!j.ok){el.innerHTML = `<span class="err">[错误] ${j.error || j._error || "调用失败"}</span>`; return}
+  j.results.forEach(r => el.insertAdjacentHTML("beforeend", fmt(r)));
+}
+
+async function t1(){
+  const{j,ms} = await getJSON(`/api/tools/search_shade?hex=${encodeURIComponent($("s1hex").value)}&top_k=${$("s1k").value}`);
+  j._ms = ms; render("s1res","s1json","s1ms", j, r=>swatch(r));
+}
+async function t3(){
+  const hg = $("s3hg").value;
+  const{j,ms} = await getJSON(`/api/tools/palette_search?hex=${encodeURIComponent($("s3hex").value)}&hue_group=${encodeURIComponent(hg)}&top_k=${$("s3k").value}`);
+  j._ms = ms; render("s3res","s3json","s3ms", j, r=>swatch(r));
+}
+async function t2(){
+  const{j,ms} = await getJSON(`/api/tools/kb_search?query=${encodeURIComponent($("s2q").value)}&top_k=${$("s2k").value}`);
+  j._ms = ms; render("s2res","s2json","s2ms", j, r=>
+    `<div class="item"><div><b>${r.title}</b>　<span class="ms">sim=${r.sim}</span><div class="meta">${r.content}</div><div class="meta">tags: ${r.tags}</div></div></div>`);
+}
+</script>
+</body>
+</html>
