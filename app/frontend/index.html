@@ -7,39 +7,80 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>ColorBoundless</h1>
-<p class="sub">一切数字均由代码计算，LLM 只引用不心算 · 后端 FastAPI · 算法层 selftest 22/22</p>
+<!-- def 19b · 主页（R-04：纯介绍+入口，零功能组件） -->
+<header class="site-head">
+ <h1>ColorBoundless</h1>
+ <nav class="nav-x">
+  <a href="/palette.html">选色</a><span class="sep">|</span><a href="/tryon.html">试妆</a><span class="sep">|</span><a href="/cvd.html">色盲校验</a>
+ </nav>
+</header>
+<p class="sub">一切数字均由代码计算，LLM 只引用不心算 · 算法层 selftest 22/22 · 让美妆对每一位用户成立</p>
 
-<p class="meta" style="margin-top:14px;max-width:640px;line-height:1.8">
-让美妆对每一位用户成立——包括 8% 的色觉异常人群。官方色号检索、26 万色全库匹配、
-AI 虚拟试妆、色盲视角模拟与配色安全校验：每个数字都有算法出处，每次 AI 调用都有可见的工具轨迹。
-</p>
-
-<div class="flow">
- <a href="/palette.html"><div class="n">01</div><div class="t">选色</div><div class="d">官方色号 / 全库 26 万色 / 配色知识库</div></a>
- <a href="/tryon.html"><div class="n">02</div><div class="t">上脸试妆</div><div class="d">AI 唇妆 · 即时对比</div></a>
- <a href="/cvd.html"><div class="n">03</div><div class="t">色盲视角校验</div><div class="d">Machado 模拟 · 规则校验</div></a>
- <a href="#" onclick="return false" class="off" title="任意页面右下角"><div class="n">04</div><div class="t">伴随 AI</div><div class="d">任意页面右下角 · 全程陪伴</div></a>
+<!-- 幻灯片：真实图片约定放 app/frontend/slides/01.jpg ~ 03.jpg；缺图时显示文字占位帧 -->
+<div class="slides" id="slides">
+ <div class="slide-ph cur"><b>全库 262,144 色检索</b><span>Lab 空间 ΔE 排序 · 178ms 级响应</span></div>
+ <div class="slide-ph"><b>AI 虚拟试妆</b><span>上传照片 · 即时对比 · 每个数字可复现</span></div>
+ <div class="slide-ph"><b>色盲视角模拟</b><span>Machado 2009 · 让配色对 8% 的人也成立</span></div>
 </div>
+<div class="dots" id="dots"></div>
 
-<div class="card"><b><span class="step">底座</span>算法底座（答辩硬货，数字可复现）</b>
- <div class="meta" style="line-height:1.9;margin-top:6px">
-  · 色差引擎 <b style="color:var(--tx)">CIEDE2000</b>，以 Sharma 2005 官方 34 组数据锚定，自检 <b style="color:#7de0a6">22/22 全绿</b>（含 CDC-b/CDC-c 退化容忍）<br>
-  · 色盲模拟 <b style="color:var(--tx)">Machado 2009</b>（severity 0~1 插值，实盘可复现），模拟矩阵×规则库闭环校准（12 组 avoid/safe 对）<br>
-  · 色号检索在 <b style="color:var(--tx)">Lab 空间</b>做 ΔE 排序：官方库 + 262,144 色全库，178ms 级响应<br>
-  · 工具契约统一五件套（ok/tool/query/results/error），前端只渲染不心算
- </div>
-</div>
+<!-- 科普文本展示框：内容留作未来扩充（色盲转换原理与科普） -->
+<section class="science">
+ <h3>色盲与美妆 · 原理与科普</h3>
+ <p>色觉异常者并非"看不见颜色"，而是三种视锥细胞之一的感光曲线发生偏移——红色在他们眼中塌陷为暗调，
+  绿色与棕色难以区分。ColorBoundless 用 Machado 2009 的转移矩阵模拟这种偏移，再以 CIEDE2000 度量
+  "模拟之后两种颜色还差多远"，把"能不能分开"变成一个可计算的数字。</p>
+ <p>页面上的每一块模拟色，就是色盲用户眼中的世界。<span class="todo">（待扩充：石原色觉检测板原理 /
+  明度塌陷与妆面设计 / 三类色盲的人群占比与日常困扰）</span></p>
+</section>
 
-<div class="card"><b><span class="step">演示</span>怎么逛</b>
- <div class="meta" style="line-height:1.9;margin-top:6px">
-  从上方入口进入任意模块；每个页面右下角都有<b style="color:var(--ac2)">伴随 AI</b>，
-  它能自己调工具查色号、查知识库，也会主动带你去合适的页面——但每一步都让你看见，方向盘始终在你手里。
- </div>
+<div class="support">
+ <span class="meta">支持：</span>
+ <a href="#" title="TODO: 替换为 GitHub 仓库地址">GitHub</a><span class="sep">|</span><a href="#" title="TODO: 替换为反馈渠道">反馈</a><span class="sep">|</span><span class="meta">2026 L'Oréal Hackathon 参赛作品</span>
 </div>
 
 <footer>判定阈值（如 CVD confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
 色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
 Machado tritan 矩阵非奇异，纯三刺激下精确模拟 ΔE=0 不可能，工程上以 Lab 收缩率度量。</footer>
+
+<script>
+/* 幻灯片轮播（原生零依赖）：默认播 3 个占位帧；slides/0N.jpg 存在则动态接管对应帧 */
+(function(){
+  const slides = document.getElementById("slides");
+  const dotsBox = document.getElementById("dots");
+  let order = Array.from(slides.querySelectorAll(".slide-ph"));
+
+  // 尝试加载真实图片：成功则插入并顶替对应占位帧，失败静默保留占位
+  for (let i = 0; i < order.length; i++) {
+    const im = new Image();
+    im.src = `slides/0${i + 1}.jpg`;
+    im.alt = `slide ${i + 1}`;
+    im.addEventListener("load", () => {
+      slides.insertBefore(im, order[i]);          // 叠在占位帧上层
+      order[order.indexOf(order[i])] = im;        // 轮播序列换用真图
+      refreshDots(); show(idx);
+    });
+  }
+
+  let idx = 0;
+  let dots = [];
+  function refreshDots(){
+    dotsBox.innerHTML = "";
+    dots = order.map((_, i) => {
+      const b = document.createElement("button");
+      b.title = `第 ${i + 1} 帧`;
+      b.addEventListener("click", () => { idx = i; show(idx); });
+      dotsBox.appendChild(b);
+      return b;
+    });
+  }
+  function show(n){
+    order.forEach((f, i) => f.classList.toggle("cur", i === n));
+    dots.forEach((d, i) => d.classList.toggle("cur", i === n));
+  }
+  refreshDots(); show(0);
+  setInterval(() => { idx = (idx + 1) % order.length; show(idx); }, 5000);
+})();
+</script>
 </body>
 </html>
