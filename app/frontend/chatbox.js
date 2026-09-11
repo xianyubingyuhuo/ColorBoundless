@@ -68,6 +68,14 @@
 
   const SS_LOG = "cb_log", SS_OPEN = "cb_open", LS_POS = "cb_pos";
 
+  /* 用户规则（2026-09-11）：刷新页面 = 清空 AI 对话；切换子标签 = 保留。
+     区分手段：Navigation Timing 的 type——"reload"=刷新（清空），"navigate"=页面间跳转（保留） */
+  let navType = "navigate";
+  try { navType = (performance.getEntriesByType("navigation")[0] || {}).type || "navigate"; } catch (e) {}
+  if (navType === "reload") {
+    try { sessionStorage.removeItem(SS_LOG); sessionStorage.setItem(SS_OPEN, "0"); } catch (e) {}
+  }
+
   /* ---- 消息：渲染 + 持久化（thinking 等临时行不存） ---- */
   const history = (() => { try { return JSON.parse(sessionStorage.getItem(SS_LOG) || "[]"); } catch (e) { return []; } })();
   function saveLog() { try { sessionStorage.setItem(SS_LOG, JSON.stringify(history.slice(-80))); } catch (e) {} }

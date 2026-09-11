@@ -204,3 +204,30 @@ def get_profile() -> dict:
                 "error": "尚无测评档案，请先在色盲校验页完成测评", "results": {}}
     return {"ok": True, "tool": "cvd_exam", "query": {"source": "最新测评档案"},
             "results": _PROFILE}
+
+
+def calibrate(mode: str) -> dict:
+    """校色确认（def 17b · 旅程第二步）：测评完成后，用户在 cvd 页选择校色模式。
+
+    mode：
+        "correct"  校色模式——试妆时用户所选色号反解为标准视觉等意色（R-06 全站联动同源）
+        "simulate" 模拟模式——全站配色按该用户视角模拟展示（共情演示），试妆色号不反解
+        "off"      关闭——不做任何色彩调整
+    流程纪律（用户 2026-09-11 定稿）：测评 → 校色 → 试妆；试妆端点只消费
+    本函数写入的 calibration 状态，未校色直接试妆会被如实提示。
+    """
+    if not _PROFILE:
+        return {"ok": False, "tool": "cvd_exam",
+                "error": "尚无测评档案，请先完成测评再做校色选择", "results": {}}
+    if mode not in ("correct", "simulate", "off"):
+        return {"ok": False, "tool": "cvd_exam",
+                "error": f"未知校色模式: {mode}（可选 correct/simulate/off）", "results": {}}
+    _PROFILE["calibration"] = {
+        "mode": mode,
+        "kind": _PROFILE.get("cvd_type"),
+        "severity": _PROFILE.get("severity"),
+        "updated": int(time.time()),
+    }
+    return {"ok": True, "tool": "cvd_exam", "query": {"mode": mode},
+            "results": {"calibration": _PROFILE["calibration"],
+                        "advice": _PROFILE.get("advice", "")}}
