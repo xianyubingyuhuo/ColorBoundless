@@ -28,7 +28,7 @@ from agent_loop import agent_reply      # def 11 · 大脑循环（function call
 from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
-from cvd_exam import start_exam, answer_exam, get_profile   # def 17a · 色盲测评会话
+from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a/17b · 色盲测评会话与校色确认
 
 
 @asynccontextmanager
@@ -90,24 +90,34 @@ async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
     if len(data) > MAX_IMG_BYTES:
         return {"ok": False, "tool": "tryon", "error": "图片超过 10MB 限制", "results": {}}
 
-    # ---- def 17b · 校色组合层：档案 → 反解真实色（数字由代码算） ----
+    # ---- def 17b · 校色组合层：流程纪律 = 测评 → 校色 → 试妆 ----
     hex_use = hex_color
     correction = {"applied": False,
                   "reason": "未启用校正" if not correct else "暂无可用测评档案或该档案无需校正"}
     if correct:
         prof = get_profile()
         if prof.get("ok"):
-            try:
-                corrected, info = correct_hex_for_profile(hex_color, prof.get("results") or {})
-                if info:
-                    hex_use = corrected            # 仅在确实需要校正时替换色号
-                    correction = info
-                else:
-                    correction = {"applied": False,
-                                  "reason": (prof.get("results") or {}).get("advice",
-                                              "档案类型无需校正（normal/uncertain）")}
-            except Exception as exc:   # 校正失败不阻塞试妆：退回原色并如实说明
-                correction = {"applied": False, "reason": f"校正计算失败，已用原色: {exc}"}
+            pr = prof.get("results") or {}
+            cal = pr.get("calibration")
+            if not cal:
+                correction = {"applied": False,
+                              "reason": "尚未完成校色步骤——旅程为 测评 → 校色 → 试妆，"
+                                        "请先在色盲校验页完成测评并选择校色模式"}
+            elif cal.get("mode") != "correct":
+                correction = {"applied": False,
+                              "reason": f"当前校色模式为 {cal.get('mode')}，试妆色号不做反解"}
+            else:
+                try:
+                    corrected, info = correct_hex_for_profile(hex_color, pr)
+                    if info:
+                        hex_use = corrected            # 仅在确实需要校正时替换色号
+                        correction = info
+                    else:
+                        correction = {"applied": False,
+                                      "reason": (pr.get("advice") or
+                                                 "档案类型无需校正（normal/uncertain）")}
+                except Exception as exc:   # 校正失败不阻塞试妆：退回原色并如实说明
+                    correction = {"applied": False, "reason": f"校正计算失败，已用原色: {exc}"}
 
     # 线程池跑同步推理：冷启动约 30s（torch 全链+权重）也不卡 event loop，/api/chat 照常响应
     out = await run_in_threadpool(run_tryon, data, hex_use, alpha)
@@ -135,6 +145,10 @@ class ExamAnswerIn(BaseModel):
     answer: object = None   # 石原=数字str / 网格=[row,col] / 排列=[显示位顺序]
 
 
+class CalibrateIn(BaseModel):
+    mode: str   # correct / simulate / off
+
+
 @app.post("/api/cvd/exam/start")
 def api_cvd_exam_start():
     """def 17a · 开新测评会话 → 第一题（12 题快筛：石原×2 + 网格×9 + 排列×1）"""
@@ -151,6 +165,12 @@ def api_cvd_exam_answer(body: ExamAnswerIn):
 def api_cvd_exam_profile():
     """def 17a · 最新色觉档案（AI 引导与校色的数据源）"""
     return get_profile()
+
+
+@app.post("/api/cvd/exam/calibrate")
+def api_cvd_exam_calibrate(body: CalibrateIn):
+    """def 17b · 校色确认（旅程第二步）：测评完成后选择校色模式（correct/simulate/off）"""
+    return calibrate(body.mode)
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）
