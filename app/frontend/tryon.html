@@ -22,8 +22,21 @@
   <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
   <label class="meta">强度 <input id="tyalpha" type="range" min="0.3" max="1" step="0.05" value="0.75" oninput="$('tyav').textContent=this.value"> <span id="tyav">0.75</span></label>
   <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
+ <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
  <div id="tyres" class="res"></div>
  <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
+ <details class="corbox"><summary>高级 · 颜色校正设置（默认跟随测评档案，一般无需改动）</summary>
+  <div class="row" style="margin-top:8px">
+   <label class="meta">校正开关
+    <select id="cormode">
+     <option value="on">跟随测评档案（推荐）</option>
+     <option value="off">关闭校正（用原始所选色号）</option>
+    </select>
+   </label>
+   <span class="meta">校正 = 把你所选色号反解为"标准视觉下的等意色"再上妆，</span>
+   <span class="meta">参数全部来自你的测评档案；手动覆盖后续版本提供逐项调节。</span>
+  </div>
+ </details>
 </div>
 
 <!-- def 15 预留位：眼影 / 粉底卡片（parts=[{region,hex,alpha}] 参数化，随 def 16 肤色分析接入） -->
@@ -33,6 +46,26 @@
 <script src="chatbox.js?v=def20b"></script>
 <script>
 const $ = id => document.getElementById(id);
+
+/* def 17b · 校色联动：页面加载即查测评档案，状态条可见可解释 */
+(async () => {
+  try {
+    const p = await (await fetch("/api/cvd/exam/profile")).json();
+    if (p.ok) {
+      const r = p.results;
+      $("corstatus").innerHTML =
+        `<span class="ms">校正生效中：${r.cvd_type} @ severity ${r.severity}` +
+        `（置信度 ${r.confidence}，来自测评档案）</span>`;
+    } else {
+      $("corstatus").innerHTML =
+        `<span class="meta">暂无测评档案——先去 <a href="/cvd.html" style="color:var(--ac2)">色盲校验</a> 完成测评，` +
+        `试妆颜色将自动按你的色觉特点校正。</span>`;
+    }
+  } catch (e) {
+    $("corstatus").textContent = "校正状态未知（档案服务未响应）";
+  }
+})();
+
 async function ty(){
   const f = $("tyfile").files[0];
   if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
@@ -40,6 +73,7 @@ async function ty(){
   fd.append("file", f);
   fd.append("hex_color", $("tyhex").value.trim());
   fd.append("alpha", $("tyalpha").value);
+  fd.append("correct", $("cormode").value === "on" ? "true" : "false");
   $("tyms").textContent = "";
   $("tyres").innerHTML = `<div class="meta">[等待] 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
   const t0 = performance.now();
@@ -53,9 +87,14 @@ async function ty(){
     $("tyms").textContent = ms + "ms";
     if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
     $("tyms").textContent += " · device=" + j.query.device;
+    const c = (j.results.correction) || {};
+    const corLine = c.applied
+      ? `<div class="meta">已校正：${c.original_hex} → <b style="color:var(--tx)">${c.corrected_hex}</b> · ${c.cvd_type} @ ${c.severity} · 残差 ΔE=${c.delta_e_residual}（数字来自测评档案）</div>`
+      : `<div class="meta">未校正：${c.reason || ""}</div>`;
     $("tyres").innerHTML =
       `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
-      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>`;
+      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>` +
+      corLine;
   }catch(e){
     $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
   }

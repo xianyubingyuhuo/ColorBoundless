@@ -27,6 +27,7 @@ from agents.tools.palette_search import palette_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
 from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
+from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
 from cvd_exam import start_exam, answer_exam, get_profile   # def 17a · 色盲测评会话
 
 
@@ -76,15 +77,45 @@ MAX_IMG_BYTES = 10 * 1024 * 1024
 
 @app.post("/api/tryon")
 async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
-                    alpha: float = Form(0.75)):
-    """def 12b · 试妆：multipart 照片 + 色号 + 强度 → 原图/上妆图 base64（五件套 JSON）"""
+                    alpha: float = Form(0.75), correct: bool = Form(True)):
+    """def 12b/17b · 试妆：multipart 照片 + 色号 + 强度 → 原图/上妆图 base64（五件套 JSON）
+
+    def 17b · 校色联动：correct=True（默认）且存在测评档案时，用户所选色号
+    先反解为"标准视觉等意色"再上妆（数据全部来自测评档案，AI 只总结话术）；
+    校正过程与残差在 results.correction 里可解释。
+    """
     data = await file.read()
     if not data:
         return {"ok": False, "tool": "tryon", "error": "未收到图片数据", "results": {}}
     if len(data) > MAX_IMG_BYTES:
         return {"ok": False, "tool": "tryon", "error": "图片超过 10MB 限制", "results": {}}
+
+    # ---- def 17b · 校色组合层：档案 → 反解真实色（数字由代码算） ----
+    hex_use = hex_color
+    correction = {"applied": False,
+                  "reason": "未启用校正" if not correct else "暂无可用测评档案或该档案无需校正"}
+    if correct:
+        prof = get_profile()
+        if prof.get("ok"):
+            try:
+                corrected, info = correct_hex_for_profile(hex_color, prof.get("results") or {})
+                if info:
+                    hex_use = corrected            # 仅在确实需要校正时替换色号
+                    correction = info
+                else:
+                    correction = {"applied": False,
+                                  "reason": (prof.get("results") or {}).get("advice",
+                                              "档案类型无需校正（normal/uncertain）")}
+            except Exception as exc:   # 校正失败不阻塞试妆：退回原色并如实说明
+                correction = {"applied": False, "reason": f"校正计算失败，已用原色: {exc}"}
+
     # 线程池跑同步推理：冷启动约 30s（torch 全链+权重）也不卡 event loop，/api/chat 照常响应
-    return await run_in_threadpool(run_tryon, data, hex_color, alpha)
+    out = await run_in_threadpool(run_tryon, data, hex_use, alpha)
+    if out.get("ok"):
+        out["results"]["correction"] = correction
+        if correction.get("applied"):
+            out["query"]["hex_requested"] = hex_color     # 用户所选（校正前）留痕
+    return out
 
 
 @app.get("/api/cvd/preview")
