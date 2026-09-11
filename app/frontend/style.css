@@ -44,7 +44,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 
 /* ---- def 19b · 主页专属：右上导航 / 幻灯片 / 科普框 / 支持区 ---- */
 .site-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-.site-head h1{font-size:21px;margin:0}
+.site-head h1{font-size:38px;margin:0;letter-spacing:1px;background:linear-gradient(120deg,var(--tx) 30%,var(--ac2) 75%,var(--ac));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 /* 右上切换标签：透明文本，hover 淡入毛玻璃边框（零圆角锚点） */
 .nav-x{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
 .nav-x a{position:relative;color:var(--tx2);text-decoration:none;font-size:13.5px;padding:5px 12px;transition:color .25s ease}

@@ -32,16 +32,17 @@
   "模拟之后两种颜色还差多远"，把"能不能分开"变成一个可计算的数字。</p>
  <p>页面上的每一块模拟色，就是色盲用户眼中的世界。<span class="todo">（待扩充：石原色觉检测板原理 /
   明度塌陷与妆面设计 / 三类色盲的人群占比与日常困扰）</span></p>
+  <p>判定阈值（如 CVD confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
+  色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
+  Machado tritan 矩阵非奇异，纯三刺激下精确模拟 ΔE=0 不可能，工程上以 Lab 收缩率度量。</span></p>
 </section>
 
+<footer>
 <div class="support">
  <span class="meta">支持：</span>
- <a href="#" title="TODO: 替换为 GitHub 仓库地址">GitHub</a><span class="sep">|</span><a href="#" title="TODO: 替换为反馈渠道">反馈</a><span class="sep">|</span><span class="meta">2026 L'Oréal Hackathon 参赛作品</span>
+ <a href="#" title="TODO: 替换为 GitHub 仓库地址">GitHub</a><span class="sep">|</span><a href="#" title="TODO: 替换为反馈渠道">反馈</a><span class="sep">|</span><span class="meta">2026 欧莱雅黑客松参赛作品</span>
 </div>
-
-<footer>判定阈值（如 CVD confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
-色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
-Machado tritan 矩阵非奇异，纯三刺激下精确模拟 ΔE=0 不可能，工程上以 Lab 收缩率度量。</footer>
+</footer>
 
 <script>
 /* 幻灯片轮播（原生零依赖）：默认播 3 个占位帧；slides/0N.jpg 存在则动态接管对应帧 */
@@ -82,5 +83,7 @@ Machado tritan 矩阵非奇异，纯三刺激下精确模拟 ΔE=0 不可能，�
   setInterval(() => { idx = (idx + 1) % order.length; show(idx); }, 5000);
 })();
 </script>
+<!-- def 20 · 伴随 AI 悬浮窗：全站常驻（用户指示 2026-09-11），主页也挂载 -->
+<script src="chatbox.js"></script>
 </body>
 </html>
