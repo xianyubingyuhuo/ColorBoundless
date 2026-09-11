@@ -23,9 +23,9 @@
     user-select:none;-webkit-user-select:none;touch-action:none;
     transition:transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease} /* hover 缓慢放大 + 发光过渡 */
   #cb-fab::after{content:"";position:absolute;inset:5px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#c2e4ff 0%,#9fd0f7 55%,#7fb8ee 100%)} /* 内部淡蓝实心圆 */
-  #cb-fab span{position:relative;z-index:1;font-size:14px;font-weight:600;color:#2b5d8f;letter-spacing:.5px}
-  #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(159,208,247,.55)} /* 微量发光 */
+    background:radial-gradient(circle at 35% 30%,#2b2138 0%,#1e1424 60%,#150f1d 100%)} /* 内部：背景蓝黑实心圆 */
+  #cb-fab span{position:relative;z-index:1;font-size:14px;font-weight:600;color:#fff;letter-spacing:.5px}
+  #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)} /* 微量发光（品牌粉） */
   #cb-fab:active{cursor:grabbing;transform:scale(1)}   /* 拖动按住时回归原尺寸，避免缩放干扰定位 */
   #cb-panel{position:fixed;right:22px;bottom:84px;width:340px;max-width:calc(100vw - 44px);height:440px;max-height:calc(100vh - 120px);
     display:none;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
