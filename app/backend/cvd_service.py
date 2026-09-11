@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from cvd_test.cvd_matrix import simulate_cvd
-from cvd_test.color_diff import ciede2000, srgb2lab
+from cvd_test.color_diff import ciede2000, lab2srgb, srgb2lab
 
 _ROOT = Path(__file__).resolve().parents[2]
 _RULES_PATH = _ROOT / "data" / "knowledge_base" / "cvd_rules" / "rules.json"
@@ -164,3 +164,88 @@ def check_pair(hex_a, hex_b, cvd_type="deuteranopia"):
         }
     except Exception as exc:  # 错误不穿透
         return _fail(tool, exc)
+
+
+# ---------------------------------------------------------------------------
+# def 17b · 试妆校色：按测评档案反解"标准视觉等意色"
+# ---------------------------------------------------------------------------
+def recover_true_color(rgb_seen, kind, severity):
+    """用户"看到的颜色" → 反解最接近的标准视觉真实色（试妆上妆用）。
+
+    产品语义：色盲用户挑选色号时，TA 眼中的"正红"在标准视觉下可能是偏棕的；
+    上妆前把 TA 的选择映射回"标准视觉下的等意色"，TA 上脸后的效果才符合预期，
+    且他人看到的也是社会共识下的那个颜色。
+
+    数学事实（诚实边界）：Machado 矩阵对二色视存在信息简并（多个真实色映射到
+    同一 seen 色），严格逆映射不存在——此处取 **Lab 空间最小改动解**（坐标下降
+    + 步长减半，目标 = 模拟后与 seen 的 ΔE00 最小），语义即"校正幅度最小、
+    且在该用户眼中观感与所选一致的真实颜色"。
+    """
+    rgb_seen = np.asarray(rgb_seen, dtype=np.uint8)
+    lab_seen = srgb2lab(rgb_seen)
+
+    lab = srgb2lab(rgb_seen).astype(float)      # 初值：seen 本身
+    step = np.array([6.0, 8.0, 8.0])            # L/a/b 初始步长（CIE 单位）
+
+    def loss(lab_v):
+        rgb_t = lab2srgb(np.clip(lab_v, 0, 255))
+        sim = simulate_cvd(rgb_t, kind, severity)
+        return ciede2000(srgb2lab(sim), lab_seen)
+
+    best = loss(lab)
+    for _ in range(24):                          # 坐标下降 + 步长减半
+        improved = False
+        for axis in range(3):
+            for sign in (1.0, -1.0):
+                cand = lab.copy()
+                cand[axis] += sign * step[axis]
+                val = loss(cand)
+                if val < best - 1e-4:
+                    lab, best, improved = cand, val, True
+        if not improved:
+            step = step / 2.0
+            if float(np.max(step)) < 0.25:
+                break
+
+    rgb_true = np.clip(lab2srgb(np.clip(lab, 0, 255)), 0, 255).astype(np.uint8)
+    residual = float(ciede2000(srgb2lab(simulate_cvd(rgb_true, kind, severity)), lab_seen))
+    return rgb_true, round(residual, 2)
+
+
+def correct_hex_for_profile(hex_color: str, profile: dict):
+    """按测评档案把用户所选 hex 校正为标准视觉等意色。
+
+    参数：
+        hex_color 已清洗的 #RRGGBB（用户所选）
+        profile   色觉档案 dict（cvd_exam.get_profile 的 results；可为 None）
+    返回：
+        (corrected_hex | None, info | None)——不需要校正时 (None, None)
+    规则（诚实边界，宁缺毋滥）：
+        normal / uncertain / 档案缺失 → 不校正（uncertain=证据矛盾，强行校正反而失真）；
+        仅 deutan/protan/tritan 且 severity>0 才校正。
+    """
+    if not profile:
+        return None, None
+    cvd_type = str(profile.get("cvd_type", "")).lower()
+    if cvd_type not in ("deutan", "protan", "tritan"):
+        return None, None
+    sev = float(profile.get("severity", 0.0) or 0.0)
+    if sev <= 0.0:
+        return None, None
+
+    rgb_seen = _h2rgb(hex_color)
+    rgb_true, residual = recover_true_color(rgb_seen, cvd_type, sev)
+    corrected = _rgb2hex(rgb_true)
+    if corrected.upper() == _rgb2hex(rgb_seen).upper():
+        return None, None                        # 反解回原色 = 无需校正
+
+    info = {
+        "applied": True,
+        "original_hex": _rgb2hex(rgb_seen),
+        "corrected_hex": corrected,
+        "cvd_type": cvd_type,
+        "severity": round(sev, 2),
+        "delta_e_residual": residual,            # 校正后在该用户眼中与所选的残差（越小越保真）
+        "source": "cvd_exam profile",
+    }
+    return corrected, info

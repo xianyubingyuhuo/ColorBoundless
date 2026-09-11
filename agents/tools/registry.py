@@ -14,6 +14,7 @@ from agents.tools.search_shade import search_shade_tool
 from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool, HUE_GROUPS
 from agents.tools.navigate import navigate_tool, PAGES
+from agents.tools.vision_profile import get_vision_profile_tool
 
 _REGISTRY = {
     "search_shade_tool": {
@@ -102,6 +103,20 @@ _REGISTRY = {
                     },
                     "required": ["page"],
                 },
+            },
+        },
+    },
+    "get_vision_profile_tool": {
+        "fn": get_vision_profile_tool,
+        "schema": {
+            "type": "function",
+            "function": {
+                "name": "get_vision_profile_tool",
+                "description": "读取用户最近一次色盲测评的色觉档案（类型 cvd_type、严重度 severity、"
+                               "明度/彩度/色相三维分辨阈值、置信度、建议 advice）。"
+                               "用户做完测评后让你总结结果、解释 TA 的色彩视觉特点、"
+                               "或给出个性化用色/校色建议时，先用它读档案再说话，禁止凭空推测。",
+                "parameters": {"type": "object", "properties": {}},
             },
         },
     },
