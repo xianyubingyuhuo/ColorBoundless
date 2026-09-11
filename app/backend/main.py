@@ -27,6 +27,7 @@ from agents.tools.palette_search import palette_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
 from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
+from cvd_exam import start_exam, answer_exam, get_profile   # def 17a · 色盲测评会话
 
 
 @asynccontextmanager
@@ -96,6 +97,29 @@ def api_cvd_preview(hex: str, cvd_type: str = "deuteranopia", severity: float = 
 def api_cvd_check(hex_a: str, hex_b: str, cvd_type: str = "deuteranopia"):
     """def 14 · 色对校验：正常 ΔE vs 模拟 ΔE + 规则库命中（avoid/safe）"""
     return check_pair(hex_a, hex_b, cvd_type)
+
+
+class ExamAnswerIn(BaseModel):
+    exam_id: str
+    answer: object = None   # 石原=数字str / 网格=[row,col] / 排列=[显示位顺序]
+
+
+@app.post("/api/cvd/exam/start")
+def api_cvd_exam_start():
+    """def 17a · 开新测评会话 → 第一题（12 题快筛：石原×2 + 网格×9 + 排列×1）"""
+    return start_exam()
+
+
+@app.post("/api/cvd/exam/answer")
+def api_cvd_exam_answer(body: ExamAnswerIn):
+    """def 17a · 收卷当前题 → 下一题 / done+色觉档案"""
+    return answer_exam(body.exam_id, body.answer)
+
+
+@app.get("/api/cvd/exam/profile")
+def api_cvd_exam_profile():
+    """def 17a · 最新色觉档案（AI 引导与校色的数据源）"""
+    return get_profile()
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）

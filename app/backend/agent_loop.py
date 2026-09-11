@@ -27,6 +27,7 @@ def agent_reply(user_message: str, history: list = None) -> dict:
 
     tools = get_tools_schema()
     steps = []
+    action = None                 # def 20 · navigate 工具成功后提升为顶层调度指令
     usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     for _ in range(MAX_ROUNDS):
@@ -35,11 +36,13 @@ def agent_reply(user_message: str, history: list = None) -> dict:
         for k in usage:
             usage[k] += u.get(k) or 0
         if m.get("_error"):
-            return {"content": None, "error": m["_error"], "steps": steps, "usage": usage}
+            return {"content": None, "error": m["_error"], "steps": steps, "usage": usage,
+                    "action": None}
 
         tc = m.get("tool_calls")
         if not tc:                       # 大脑给正文了，循环收敛
-            return {"content": m.get("content"), "error": None, "steps": steps, "usage": usage}
+            return {"content": m.get("content"), "error": None, "steps": steps,
+                    "usage": usage, "action": action}
 
         # 清洗成标准字段再发回（剥掉 index/_usage 等非协议字段，兼容端不挑食）
         clean = [{"id": c.get("id"), "type": "function",
@@ -55,8 +58,13 @@ def agent_reply(user_message: str, history: list = None) -> dict:
                 args = {}
             result = dispatch_tool(c["function"]["name"], args)
             steps.append({"tool": c["function"]["name"], "args": args, "ok": result.get("ok")})
+            # def 20 · navigate 成功 → 提升为顶层 action（同一回复可多次调用，取最后一次）
+            if c["function"]["name"] == "navigate_tool" and result.get("ok"):
+                r = result.get("results") or {}
+                action = {"type": "navigate", "page": r.get("url") or "/",
+                          "page_key": r.get("page_key"), "reason": r.get("reason") or ""}
             messages.append({"role": "tool", "tool_call_id": c.get("id") or "",
                              "content": json.dumps(result, ensure_ascii=False)})
 
     return {"content": None, "error": f"工具调用超过 {MAX_ROUNDS} 轮仍未收敛",
-            "steps": steps, "usage": usage}
+            "steps": steps, "usage": usage, "action": action}

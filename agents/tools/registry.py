@@ -13,6 +13,7 @@ import json
 from agents.tools.search_shade import search_shade_tool
 from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool, HUE_GROUPS
+from agents.tools.navigate import navigate_tool, PAGES
 
 _REGISTRY = {
     "search_shade_tool": {
@@ -74,6 +75,32 @@ _REGISTRY = {
                         "top_k": {"type": "integer", "description": "返回条数，默认 3"},
                     },
                     "required": ["text"],
+                },
+            },
+        },
+    },
+    "navigate_tool": {
+        "fn": navigate_tool,
+        "schema": {
+            "type": "function",
+            "function": {
+                "name": "navigate_tool",
+                "description": "把用户引导到网站对应页面（前端会真的跳转，请先想清楚该去哪）。"
+                               "各页面职责：palette=选色/查色号/全库找色/配色知识；"
+                               "tryon=上传照片虚拟试妆；cvd=色盲自测+色盲视角模拟与校色；"
+                               "products=产品库（建设中）；home=网站主页。"
+                               "用户表达'想去/带我去/帮我在XX功能里弄'，或当前话题属于某页职责时调用；"
+                               "调用后用一句话告诉用户为什么带 TA 去那里。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page": {"type": "string",
+                                 "enum": list(PAGES),
+                                 "description": "目标页面名"},
+                        "reason": {"type": "string",
+                                   "description": "一句话引导理由，如'去这里可以做色盲自测'"},
+                    },
+                    "required": ["page"],
                 },
             },
         },
