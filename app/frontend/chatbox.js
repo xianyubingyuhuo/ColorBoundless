@@ -16,11 +16,17 @@
 
   /* ---- 样式自注入：与 style.css 同一套设计锚点（零圆角/毛玻璃/--ac 品牌色） ---- */
   const css = `
-  #cb-fab{position:fixed;right:22px;bottom:22px;width:52px;height:52px;border:none;cursor:grab;z-index:999;
-    background:linear-gradient(145deg,rgba(229,71,109,.92),rgba(229,71,109,.75));color:#fff;font-size:13px;letter-spacing:1px;
-    border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(229,71,109,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    user-select:none;-webkit-user-select:none;touch-action:none}
-  #cb-fab:active{cursor:grabbing}
+  #cb-fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border:none;cursor:grab;z-index:999;
+    border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#ff9ab5 0%,#e5476d 45%,#7654ff 100%);   /* 外环：页面背景光晕同源配色（粉→品红→紫） */
+    box-shadow:0 10px 28px rgba(229,71,109,.35);
+    user-select:none;-webkit-user-select:none;touch-action:none;
+    transition:transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease} /* hover 缓慢放大 + 发光过渡 */
+  #cb-fab::after{content:"";position:absolute;inset:5px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#c2e4ff 0%,#9fd0f7 55%,#7fb8ee 100%)} /* 内部淡蓝实心圆 */
+  #cb-fab span{position:relative;z-index:1;font-size:14px;font-weight:600;color:#2b5d8f;letter-spacing:.5px}
+  #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(159,208,247,.55)} /* 微量发光 */
+  #cb-fab:active{cursor:grabbing;transform:scale(1)}   /* 拖动按住时回归原尺寸，避免缩放干扰定位 */
   #cb-panel{position:fixed;right:22px;bottom:84px;width:340px;max-width:calc(100vw - 44px);height:440px;max-height:calc(100vh - 120px);
     display:none;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
     backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5)}
@@ -45,7 +51,7 @@
   /* ---- DOM 骨架：fab 按钮 + 面板（头部/消息区/输入行） ---- */
   const wrap = document.createElement("div");
   wrap.innerHTML = `
-  <button id="cb-fab" title="伴随 AI · 点击对话 / 按住拖动">AI</button>
+  <button id="cb-fab" title="伴随 AI · 点击对话 / 按住拖动"><span>AI</span></button>
   <div id="cb-panel">
     <div id="cb-head"><b>伴随 AI · 数字由代码计算</b><button id="cb-close" title="收起">×</button></div>
     <div id="cb-log"></div>
