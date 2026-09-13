@@ -83,18 +83,28 @@ async function t1(){
   const hex = encodeURIComponent($("s1hex").value), k = $("s1k").value;
   $("s1res").innerHTML = `<div class="meta">查询中（官方库 + 全库 26 万色并行）…</div>`;
   try{
+    const safe = async (url) => {
+      try { return await getJSON(url); }
+      catch(e){ return {ok: false, error: "请求失败: " + e, results: []}; }
+    };
     const [off, full] = await Promise.all([
-      getJSON(`/api/tools/search_shade?hex=${hex}&top_k=${k}`),
-      getJSON(`/api/tools/palette_search?hex=${hex}&top_k=${k}`)
+      safe(`/api/tools/search_shade?hex=${hex}&top_k=${k}`),
+      safe(`/api/tools/palette_search?hex=${hex}&top_k=${k}`)
     ]);
-    $("s1ms").textContent = `官方 ${off.ms}ms · 全库 ${full.ms}ms`;
+    $("s1ms").textContent = `官方 ${off.ms ?? "?"}ms · 全库 ${full.ms ?? "?"}ms`;
     $("s1json").textContent = JSON.stringify({official: off, full_palette: full}, null, 2);
-    if(!off.ok){ $("s1res").innerHTML = `<span class="err">[错误] ${off.error}</span>`; return; }
+    if(!off.ok){
+      /* 防御：把真实响应打进错误区，便于定位（正常不应触发） */
+      $("s1res").innerHTML = `<span class="err">[错误] ${off.error || "后端返回异常结构（请展开下方调试信息）"}</span>` +
+        `<details><summary>调试信息（点击展开，截图发我）</summary><pre>${JSON.stringify(off).slice(0, 600)}</pre></details>`;
+      return;
+    }
 
     /* 分区零：GB/T 15608 近似命名（R-07 · 现阶段标注体系） */
-    const gbLine = `<div class="item"><div><b>GB/T 15608 近似命名：${off.query.gb_cn}</b>　` +
-      `<span class="meta">标号 ${off.query.gb_label}</span>` +
-      `<div class="meta">（近似换算；精确标号以《中国颜色体系》国家标准样册为准）</div></div></div>`;
+    const gbLine = off.query && off.query.gb_cn
+      ? `<div class="item"><div><b>GB/T 15608 近似命名：${off.query.gb_cn}</b>　` +
+        `<span class="meta">标号 ${off.query.gb_label}</span>` +
+        `<div class="meta">（近似换算；精确标号以《中国颜色体系》国家标准样册为准）</div></div></div>` : "";
 
     /* 分区一：官方库判定（has_official 由后端按 dE≤1.0 判定） */
     const head = off.query.has_official
@@ -104,7 +114,8 @@ async function t1(){
         `<div class="meta">最接近的官方色号如下（仅供参考）——此色可走定制申请</div></div></div>`;
 
     /* 分区二：全库精确匹配（262K 任意色，定制链路的数据源） */
-    const f0 = (full.results || [])[0];
+    const fullResults = (full.ok && full.results) ? full.results : [];
+    const f0 = fullResults[0];
     const exact = f0 ? `<div class="item" style="border-color:rgba(255,154,181,.5)">` +
       `<span class="sw" style="background:${f0.hex}"></span>` +
       `<div><b>${f0.hex}</b>　<span style="color:var(--ac2)">全库精确匹配</span>` +
@@ -115,7 +126,7 @@ async function t1(){
       `<div><b>#${r.hex}</b>　${r.name ? `<span style="color:#c4475d">${r.name}</span>` : ""}${r.tone ? `　<span class="meta">[${r.tone}]</span>` : ""}` +
       `<div class="meta">dE=${r.dE} · ${r.desc || ""}</div></div>` +
       `<span style="margin-left:auto;flex:none;font-size:12px;${r.dE <= 1 ? "color:#7de0a6" : "color:var(--tx2)"}">${r.dE <= 1 ? "官方有 ✓" : "最近替代"}</span></div>`).join("");
-    const fullList = (full.results || []).map(r =>
+    const fullList = fullResults.map(r =>
       `<div class="item"><span class="sw" style="background:${r.hex}"></span>` +
       `<div><b>${r.hex}</b>　<span class="meta">dE=${r.dE} · ${r.hue_group || ""} · 非官方色号（可定制）</div></div></div>`).join("");
 
