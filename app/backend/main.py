@@ -21,7 +21,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from agents.tools.search_shade import search_shade_tool
+from agents.tools.search_shade import search_shade_tool, coverage16_tool
 from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
@@ -52,6 +52,12 @@ class ChatIn(BaseModel):
 def api_search_shade(hex: str, top_k: int = 5):
     """工具①：色号 → 最近官方色号"""
     return search_shade_tool(hex, top_k)
+
+
+@app.get("/api/tools/coverage16")
+def api_coverage16():
+    """def 17d · 全色域覆盖检查：16³=4096 采样点 vs 官方色号库（每点标注官方有/无）"""
+    return coverage16_tool()
 
 
 @app.get("/api/tools/kb_search")

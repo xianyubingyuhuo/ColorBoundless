@@ -81,3 +81,55 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
             "query": {"hex": hex_std, "lab": lab},
             "results": rows,
             "error": None}
+
+
+def coverage16_tool() -> dict:
+    """def 17d · 全色域覆盖检查：16³=4096 采样点 vs 官方色号库（shades.json）。
+
+    用户需求（2026-09-13）：查询颜色要求全色——16×16×16 采样点每点标注
+    "官方色号库是否有这个颜色"（与最近官方色号 ΔE00 ≤ 1.0 → 官方有）。
+    用途：暴露官方库（当前 20 条）对全色域的覆盖缺口——缺口清单就是
+    色号图片库（extract_palette_from_images 产物）扩充 shades.json 的目标。
+
+    性能：官方库 N 条 × 4096 点，Lab 欧氏全对广播（分块）取最近，再逐点 ΔE00。
+    """
+    tool = "coverage16"
+    try:
+        import numpy as np
+
+        shades = _core.SHADES
+        if not shades:
+            return {"ok": False, "tool": tool, "error": "官方色号库为空", "results": {}}
+
+        off_lab = np.array([_core.hex2lab(s["hex"]) for s in shades], dtype=np.float64)
+        levels = [round(i * 255 / 15) for i in range(16)]          # 0,17,...,255
+        pts = [(r, g, b) for r in levels for g in levels for b in levels]
+        q_lab = np.array([_core.hex2lab("%02X%02X%02X" % pt) for pt in pts], dtype=np.float64)
+
+        best = np.empty(len(q_lab), dtype=np.int64)
+        CH = 512
+        for s0 in range(0, len(q_lab), CH):                        # 分块广播防内存尖峰
+            d = ((q_lab[s0:s0 + CH, None, :] - off_lab[None, :, :]) ** 2).sum(-1)
+            best[s0:s0 + CH] = d.argmin(1)
+
+        items, hits = [], 0
+        for j, pt in enumerate(pts):
+            k = int(best[j])
+            s = shades[k]
+            dE = float(_core.ciede2000(q_lab[j], off_lab[k]))
+            has = dE <= 1.0                                        # ΔE≤1 视为官方有（JND 内）
+            hits += int(has)
+            items.append({"hex": "%02X%02X%02X" % pt, "rgb": list(pt),
+                          "official_hex": s["hex"], "official_name": s["name"],
+                          "dE": round(dE, 2), "has_official": has})
+
+        miss = len(items) - hits
+        return {"ok": True, "tool": tool,
+                "query": {"sampling": "16x16x16=4096", "official_shades": len(shades),
+                          "threshold_dE": 1.0},
+                "results": {"total": len(items), "hits": hits, "miss": miss,
+                            "coverage_pct": round(100.0 * hits / len(items), 2),
+                            "items": items},
+                "error": None}
+    except Exception as exc:                                       # 错误不穿透
+        return {"ok": False, "tool": tool, "error": str(exc), "results": {}}
