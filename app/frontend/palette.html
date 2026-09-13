@@ -32,6 +32,7 @@
   <button onclick="runCoverage()">检查覆盖</button><span id="covms" class="ms"></span>
   <span class="meta">每点判定：与最近官方色号 ΔE ≤ 1.0 → 官方有</span></div>
  <div id="covstat" class="res"></div>
+ <div id="covdetail" class="res"></div>
  <div id="covgrid" style="margin-top:10px"></div>
  <details><summary>原始 JSON</summary><pre id="covjson"></pre></details>
 </div>
@@ -155,12 +156,30 @@ function renderLayer(){
     html += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
   html += `</div><div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px">`;
   for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
-    const it = map[[levels[ri], levels[gi], b].join(",")];
-    html += `<div title="#${it.hex} → 官方最近: ${it.official_name}(${it.official_hex}) dE=${it.dE} ${it.has_official ? "官方有" : "官方缺"}" ` +
-      `style="aspect-ratio:1;background:#${it.hex};border:2px ${it.has_official ? "solid rgba(125,224,166,.9)" : "solid rgba(255,138,128,.55)"}"></div>`;
+    const cellIdx = ri * 256 + gi * 16 + covLayer;      // items 顺序 = r→g→b 嵌套
+    const it = covData.items[cellIdx];
+    html += `<div data-cell="${cellIdx}" title="#${it.hex} → 官方最近: ${it.official_name}(${it.official_hex}) dE=${it.dE} ${it.has_official ? "官方有" : "官方缺"}"` +
+      ` style="aspect-ratio:1;background:#${it.hex};border:2px ${it.has_official ? "solid rgba(125,224,166,.9)" : "solid rgba(255,138,128,.55)"}"></div>`;
   }
-  html += `</div><div class="meta" style="margin-top:6px">绿框 = 官方有 · 红框 = 官方缺 · 悬停看最近官方色号 · 横轴 R 通道 / 纵轴 G 通道（B 固定当前层）</div>`;
+  html += `</div><div class="meta" style="margin-top:6px">绿框 = 官方有 · 红框 = 官方缺 · <b style="color:var(--tx)">点击色块</b>在上方查看名称与色号详情</div>`;
   $("covgrid").innerHTML = html;
+  [...$("covgrid").querySelectorAll("div[data-cell]")].forEach(d => {
+    d.onclick = () => selectCovCell(covData.items[Number(d.dataset.cell)], d);
+  });
+}
+function selectCovCell(it, el){
+  [...$("covgrid").querySelectorAll("div[data-sel='1']")].forEach(d => { d.dataset.sel = "0"; d.style.outline = "none"; });
+  if(el){ el.dataset.sel = "1"; el.style.outline = "2px solid var(--tx)"; }
+  const name = it.has_official ? it.official_name : `${it.official_name}（最近替代）`;
+  $("covdetail").innerHTML =
+    `<div class="item" style="border-color:${it.has_official ? "rgba(125,224,166,.6)" : "rgba(255,138,128,.6)"}">` +
+    `<span class="sw" style="background:#${it.hex};width:56px;height:56px"></span>` +
+    `<div><b>该颜色：#${it.hex}</b>　<span class="meta">（16³ 采样点）</span>` +
+    `<div style="margin-top:4px"><b style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "官方色号库有此颜色 ✓" : "官方色号库无此颜色 ✗"}</b></div>` +
+    `<div class="meta" style="margin-top:4px">名称（官方定义）：${name}</div>` +
+    `<div class="meta">最近官方色号：#${it.official_hex} · ΔE=${it.dE}（判定阈值 1.0）</div>` +
+    `<div class="meta">${it.has_official ? "可直接用于试妆与定制。" : "此色不在官方库——可走定制申请，或以上述最近官方色号替代。"}</div>` +
+    `</div></div>`;
 }
 </script>
 </body>
