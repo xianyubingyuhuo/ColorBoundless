@@ -15,11 +15,13 @@
 </header>
 <p class="sub">官方色号匹配 · 全库 26 万色板 · 配色知识库 · 一切数字由代码计算</p>
 
-<div class="card" id="card-s1"><b><span class="step">工具①</span>search_shade · 官方色号匹配</b>
+<!-- def 17e · 色号查询统一入口：官方库判定 + 全库精确匹配（全色域任意色） -->
+<div class="card" id="card-s1"><b><span class="step">查询</span>色号查询 · 官方库判定 + 全库精确匹配</b>
  <div class="row" style="margin-top:8px">
   <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
   <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
   <button onclick="t1()">查询</button><span id="s1ms" class="ms"></span></div>
+ <div class="meta" style="margin-top:6px">任意颜色都可查：官方库有 → 直接给官方色号；官方库无 → 如实标注（可申请定制）+ 给全库精确匹配色。判定阈值 ΔE ≤ 1.0。</div>
  <div id="s1res" class="res"></div>
  <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
 </div>
@@ -77,12 +79,43 @@ function render(pid, jid, mid, j, fmt){
 }
 
 async function t1(){
-  const{j,ms} = await getJSON(`/api/tools/search_shade?hex=${encodeURIComponent($("s1hex").value)}&top_k=${$("s1k").value}`);
-  j._ms = ms; render("s1res","s1json","s1ms", j, r=>
-    `<div class="item"><span class="sw" style="background:#${r.hex}"></span>` +
-    `<div><b>#${r.hex}</b>　${r.name?`<span style="color:#c4475d">${r.name}</span>`:""}${r.tone?`　<span class="meta">[${r.tone}]</span>`:""}` +
-    `<div class="meta">dE=${r.dE} · ${r.desc||""}</div></div>` +
-    `<span style="margin-left:auto;flex:none;font-size:12px;${r.dE<=1?"color:#7de0a6":"color:#ff8a80"}">${r.dE<=1?"官方有 ✓":"官方无"}</span></div>`);
+  const hex = encodeURIComponent($("s1hex").value), k = $("s1k").value;
+  $("s1res").innerHTML = `<div class="meta">查询中（官方库 + 全库 26 万色并行）…</div>`;
+  try{
+    const [off, full] = await Promise.all([
+      getJSON(`/api/tools/search_shade?hex=${hex}&top_k=${k}`),
+      getJSON(`/api/tools/palette_search?hex=${hex}&top_k=${k}`)
+    ]);
+    $("s1ms").textContent = `官方 ${off.ms}ms · 全库 ${full.ms}ms`;
+    $("s1json").textContent = JSON.stringify({official: off, full_palette: full}, null, 2);
+    if(!off.ok){ $("s1res").innerHTML = `<span class="err">[错误] ${off.error}</span>`; return; }
+
+    /* 分区一：官方库判定（has_official 由后端按 dE≤1.0 判定） */
+    const head = off.query.has_official
+      ? `<div class="item" style="border-color:rgba(125,224,166,.6)"><div><b style="color:#7de0a6">官方色号库有此颜色 ✓</b>` +
+        `<div class="meta">以下为官方色号（按接近度排序）</div></div></div>`
+      : `<div class="item" style="border-color:rgba(255,138,128,.6)"><div><b class="err">官方色号库无此颜色 ✗</b>` +
+        `<div class="meta">最接近的官方色号如下（仅供参考）——此色可走定制申请</div></div></div>`;
+
+    /* 分区二：全库精确匹配（262K 任意色，定制链路的数据源） */
+    const f0 = (full.results || [])[0];
+    const exact = f0 ? `<div class="item" style="border-color:rgba(255,154,181,.5)">` +
+      `<span class="sw" style="background:${f0.hex}"></span>` +
+      `<div><b>${f0.hex}</b>　<span style="color:var(--ac2)">全库精确匹配</span>` +
+      `<div class="meta">dE=${f0.dE} · 非官方色号 · 可用于定制申请（口红/眼影/粉底任意色）</div></div></div>` : "";
+
+    const offList = off.results.map(r =>
+      `<div class="item"><span class="sw" style="background:#${r.hex}"></span>` +
+      `<div><b>#${r.hex}</b>　${r.name ? `<span style="color:#c4475d">${r.name}</span>` : ""}${r.tone ? `　<span class="meta">[${r.tone}]</span>` : ""}` +
+      `<div class="meta">dE=${r.dE} · ${r.desc || ""}</div></div>` +
+      `<span style="margin-left:auto;flex:none;font-size:12px;${r.dE <= 1 ? "color:#7de0a6" : "color:var(--tx2)"}">${r.dE <= 1 ? "官方有 ✓" : "最近替代"}</span></div>`).join("");
+    const fullList = (full.results || []).map(r =>
+      `<div class="item"><span class="sw" style="background:${r.hex}"></span>` +
+      `<div><b>${r.hex}</b>　<span class="meta">dE=${r.dE} · ${r.hue_group || ""} · 非官方色号（可定制）</div></div></div>`).join("");
+
+    $("s1res").innerHTML = head + offList +
+      `<div class="meta" style="margin:12px 0 4px">── 全库精确匹配（262,144 色全色域，任意色可查）──</div>` + exact + fullList;
+  }catch(e){ $("s1res").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
 }
 async function t3(){
   const hg = $("s3hg").value;

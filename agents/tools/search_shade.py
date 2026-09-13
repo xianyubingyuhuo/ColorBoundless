@@ -77,8 +77,14 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
 
     # 4) 组装契约：query 里的 lab 是代码算的物理量，LLM 只准引用不准心算
     lab = [round(float(x), 2) for x in _core.hex2lab(hex_std)]
+    # def 17e · 官方覆盖判定（用户 2026-09-13 需求）：官方库只有有限色号（当前 20 条），
+    # 查询任意色（如黑色）时最近官方色可能差得很远——必须如实标注"官方无此色号"，
+    # 让定制口红/眼影/粉底的任意色链路有意义，而不是硬把红棕系塞给查黑色的用户。
+    has_official = bool(rows) and float(rows[0].get("dE", 999.0)) <= 1.0
     return {"ok": True, "tool": tool,
-            "query": {"hex": hex_std, "lab": lab},
+            "query": {"hex": hex_std, "lab": lab,
+                      "has_official": has_official,
+                      "official_threshold_dE": 1.0},
             "results": rows,
             "error": None}
 
