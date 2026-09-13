@@ -4,77 +4,142 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>色盲校验 · ColorBoundless</title>
-<link rel="stylesheet" href="style.css?v=def19c">
+<link rel="stylesheet" href="style.css?v=def17b">
+<style>
+/* def 17 · cvd 页专属：左侧选项卡布局 + 顶部校色开关（零圆角锚点） */
+.cvd-layout{display:flex;gap:14px;align-items:stretch;margin-top:16px}
+.cvd-tabs{display:flex;flex-direction:column;gap:6px;min-width:128px}
+.cvd-tab{background:rgba(255,255,255,.05);border:1px solid var(--bd);color:var(--tx2);padding:12px 14px;
+ cursor:pointer;text-align:left;font-size:14px;transition:all .2s ease;font-family:inherit}
+.cvd-tab:hover{color:var(--tx);border-color:rgba(229,71,109,.5)}
+.cvd-tab.on{color:#fff;background:linear-gradient(120deg,rgba(229,71,109,.92),rgba(229,71,109,.6));border-color:transparent}
+.cvd-tab .t-d{font-size:11px;color:var(--tx2);margin-top:3px}
+.cvd-tab.on .t-d{color:rgba(255,255,255,.85)}
+.cvd-content{flex:1;min-width:0;border:1px solid var(--bd);background:rgba(255,255,255,.045);
+ backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);padding:16px 18px}
+.cvd-panel{display:none}
+.cvd-panel.on{display:block}
+.cvd-panel h3{margin:0 0 10px;font-size:14.5px;color:var(--ac2);letter-spacing:1px;font-weight:600}
+/* 顶部校色开关（左=原色 / 右=校色配色，全站生效） */
+.cal-switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.cal-track{width:46px;height:24px;border:1px solid var(--bd);background:rgba(255,255,255,.06);position:relative;transition:background .25s,border-color .25s}
+.cal-knob{position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--tx2);transition:left .25s ease,background .25s ease}
+.cal-switch.on .cal-track{background:rgba(229,71,109,.35);border-color:rgba(229,71,109,.6)}
+.cal-switch.on .cal-knob{left:24px;background:var(--ac2)}
+.cal-label{font-size:12.5px;color:var(--tx2)}
+.cal-switch.on .cal-label{color:var(--tx)}
+@media (max-width:720px){.cvd-layout{flex-direction:column}.cvd-tabs{flex-direction:row;min-width:0}.cvd-tab{flex:1}}
+</style>
 </head>
 <body>
 <header class="site-head">
  <h1><a class="brand" href="/" title="返回主页">ColorBoundless</a></h1>
+ <div class="cal-switch" id="calswitch" onclick="toggleCalSwitch()" title="切换校色配色（需已完成测评）">
+  <span class="cal-label">校色配色</span>
+  <div class="cal-track"><div class="cal-knob"></div></div>
+ </div>
  <nav class="nav-x">
   <a href="/palette.html">选色</a><span class="sep">|</span><a href="/tryon.html">试妆</a><span class="sep">|</span><a class="on" href="/cvd.html">色盲校验</a><span class="sep">|</span><a href="/products.html">产品库</a>
  </nav>
 </header>
-<p class="sub">测评 → 校色 → 试妆 · Machado 2009 模拟 · ΔE 判定 · 规则库避撞 · 一切数字由代码计算</p>
+<p class="sub">测评 → 校色 → 试妆 · 判定全部由规则引擎完成 · 顶部开关控制全站校色配色</p>
 
-<!-- def 17 · 旅程第一步：色盲测评（12 题快筛，规则引擎判定） -->
-<div class="card" id="exam-card"><b><span class="step">STEP 1</span>色盲自测 · 12 题快筛（约 2 分钟）</b>
- <div id="exam-intro">
-  <div class="meta" style="line-height:1.9;margin-top:6px">
-   流程：石原分型图 ×2（报数字）→ 网格找异色 ×9（明度/彩度/色相三维各 3 轮阶梯）→
-   色相渐变排列 ×1（按平滑顺序点击 15 块）。判定全部由规则引擎完成——可解释、可复现，测完出你的色觉档案。
-  </div>
-  <button onclick="startExam()" style="margin-top:10px">开始测评</button>
- </div>
- <div id="exam-area"></div>
-</div>
+<div class="cvd-layout">
+ <aside class="cvd-tabs">
+  <button class="cvd-tab on" id="tab-exam" onclick="showTab('exam')">色盲测评<div class="t-d">22 题快筛 · 约 3 分钟</div></button>
+  <button class="cvd-tab" id="tab-profile" onclick="showTab('profile')">档案与校色<div class="t-d">AI 总结 · 校色模式</div></button>
+  <button class="cvd-tab" id="tab-verify" onclick="showTab('verify')">色彩校验<div class="t-d">模拟预览 · 色对避撞</div></button>
+ </aside>
+ <main class="cvd-content">
 
-<!-- def 17 · 旅程第二步：档案 · AI 总结 · 校色选择 -->
-<div class="card" id="profile-card" style="display:none"><b><span class="step">STEP 2</span>你的色觉档案 · AI 总结 · 校色选择</b>
- <div id="profile-body" style="margin-top:8px"></div>
- <div class="row" style="margin-top:10px">
-  <button onclick="askAI()">让 AI 总结我的色彩视觉</button>
-  <span class="meta">AI 只引用档案数据说话，不做判定</span>
- </div>
- <div id="aisum" class="res"></div>
- <div style="margin-top:14px;border-top:1px solid var(--bd);padding-top:10px">
-  <b class="meta">选择校色模式（旅程第二步 · 试妆通道将消费此选择 · 全站配色联动）：</b>
-  <div class="row" style="margin-top:8px">
-   <button onclick="doCalibrate('correct')">校色模式</button>
-   <button onclick="doCalibrate('simulate')">模拟模式</button>
-   <button onclick="doCalibrate('off')">关闭</button>
-   <span id="calstatus" class="ms"></span>
-  </div>
-  <div class="meta" style="margin-top:6px">
-   校色 = 整站配色为你重新校色（你现在看到的页面变化就是效果），试妆色号同步反解为标准视觉等意色；
-   模拟 = 向你展示"色盲用户眼中的本站"；关闭 = 恢复原色。
-  </div>
- </div>
-</div>
+  <section class="cvd-panel on" id="panel-exam">
+   <h3>色盲自测（22 题：石原 10 · 网格 9 · 排列 2 · 波段 1）</h3>
+   <div id="exam-intro">
+    <div class="meta" style="line-height:1.9">
+     流程：石原分型图 10 张（报数字）→ 网格找异色 9 张（明度/彩度/色相各 3 轮阶梯）→
+     色相渐变排列 2 道（拖拽排序）→ 色彩波段定位 1 题（滑轨对比）。
+     判定全部由规则引擎完成——可解释、可复现，测完出你的色觉档案并自动校色。
+    </div>
+    <button onclick="startExam()" style="margin-top:10px">开始测评</button>
+   </div>
+   <div id="exam-area"></div>
+  </section>
 
-<!-- def 14 · 模拟/校验（保留） -->
-<div class="card" id="card-cvd"><b><span class="step">STEP 3</span>色盲视角校验 /api/cvd · Machado 2009 模拟 + 规则库</b>
- <div class="row" style="margin-top:8px">
-  <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
-  <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
-  <select id="cvdtype">
-   <option value="deuteranopia">绿色盲 deutan（最常见）</option>
-   <option value="protanopia">红色盲 protan</option>
-   <option value="tritanopia">蓝黄色盲 tritan</option>
-  </select>
-  <label class="meta">严重度 <input id="cvdsev" type="range" min="0" max="1" step="0.05" value="1" style="width:90px" oninput="$('cvdsevv').textContent=parseFloat(this.value).toFixed(2)"> <span id="cvdsevv">1.00</span></label>
-  <button onclick="cvd()">分析</button><span id="cvdms" class="ms"></span></div>
- <div class="meta" style="margin-top:6px">填 A+B → 色对校验（两色在色盲用户眼中还分得开吗）；清空 B → 单色模拟预览（看明度塌陷）</div>
- <div id="cvdres" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="cvdjson"></pre></details>
+  <section class="cvd-panel" id="panel-profile">
+   <h3>你的色觉档案</h3>
+   <div id="profile-body"></div>
+   <div class="row" style="margin-top:10px">
+    <button onclick="restartExam()">再测一次</button>
+    <button onclick="askAI()">让 AI 分析档案</button>
+    <span class="meta">AI 只引用档案数据说话，不做判定</span>
+   </div>
+   <div id="aisum" class="res"></div>
+   <h3 style="margin-top:16px">校色模式（试妆通道将消费此选择）</h3>
+   <div class="row" style="margin-top:8px">
+    <button onclick="doCalibrate('correct')">校色模式</button>
+    <button onclick="doCalibrate('simulate')">模拟模式</button>
+    <button onclick="doCalibrate('off')">关闭</button>
+    <span id="calstatus" class="ms"></span>
+   </div>
+   <div class="meta" style="margin-top:6px">
+    校色 = 整站配色为你重新校色 + 试妆色号反解为标准视觉等意色；
+    模拟 = 展示"色盲用户眼中的本站"；关闭 = 恢复原色。顶部开关 = 校色配色的快捷开关。
+   </div>
+  </section>
+
+  <section class="cvd-panel" id="panel-verify">
+   <h3>色盲视角校验（Machado 2009 模拟 + 规则库）</h3>
+   <div class="row">
+    <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
+    <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
+    <select id="cvdtype">
+     <option value="deuteranopia">绿色盲 deutan（最常见）</option>
+     <option value="protanopia">红色盲 protan</option>
+     <option value="tritanopia">蓝黄色盲 tritan</option>
+    </select>
+    <label class="meta">严重度 <input id="cvdsev" type="range" min="0" max="1" step="0.05" value="1" style="width:90px" oninput="$('cvdsevv').textContent=parseFloat(this.value).toFixed(2)"> <span id="cvdsevv">1.00</span></label>
+    <button onclick="cvd()">分析</button><span id="cvdms" class="ms"></span></div>
+   <div class="meta" style="margin-top:6px">填 A+B → 色对校验（两色在色盲用户眼中还分得开吗）；清空 B → 单色模拟预览（看明度塌陷）</div>
+   <div id="cvdres" class="res"></div>
+   <details><summary>原始 JSON</summary><pre id="cvdjson"></pre></details>
+  </section>
+
+ </main>
 </div>
 
 <footer>判定阈值（confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
-色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
-测评判定全部由规则引擎完成（可解释可复现），AI 只引用档案说话。</footer>
+测评判定全部由规则引擎完成（可解释可复现），AI 只引用档案说话 ·
+波段时间轴与排列判定遵循 FM100 临床原型交互。</footer>
 <script src="theme_cvd.js?v=def17"></script>
 <script src="chatbox.js?v=def20d"></script>
 <script>
 const $ = id => document.getElementById(id);
 async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
+
+/* ==== 选项卡切换 + 顶部校色开关 ==== */
+function showTab(name){
+  ["exam","profile","verify"].forEach(n => {
+    $("panel-"+n).classList.toggle("on", n === name);
+    $("tab-"+n).classList.toggle("on", n === name);
+  });
+}
+
+let calBusy = false;
+async function toggleCalSwitch(){
+  if(calBusy) return;
+  const sw = $("calswitch");
+  if(sw.dataset.hasProfile !== "1"){
+    $("calstatus").innerHTML = `<span class="err">暂无测评档案——请先在"色盲测评"完成 22 题</span>`;
+    showTab("exam"); return;
+  }
+  const mode = sw.classList.contains("on") ? "off" : "correct";
+  calBusy = true;
+  await doCalibrate(mode);
+  calBusy = false;
+}
+function syncCalSwitch(mode){
+  $("calswitch").classList.toggle("on", mode === "correct");
+}
 
 /* ==== 测评状态机（前端驱动出题展示，判定在后端规则引擎） ==== */
 let examId = null;
@@ -96,7 +161,7 @@ function renderQ(res){
   const area = $("exam-area");
   if(res.done){ renderProfile(res.profile, {justFinished: true}); return; }
   const q = res.question;
-  const stageCN = {ishihara:"石原分型",grid:"网格找异色",hue:"色相排列"}[q.type] || q.type;
+  const stageCN = {ishihara:"石原分型",grid:"网格找异色",hue:"色相排列",wave:"色彩波段定位"}[q.type] || q.type;
   let body = "";
   if(q.type === "ishihara"){
     body = `<img src="data:image/png;base64,${q.img_b64}" style="max-width:320px;border:1px solid var(--bd)">` +
@@ -123,7 +188,7 @@ function renderQ(res){
       `<span id="wavepreview" style="width:64px;height:44px;border:1px dashed var(--bd);display:inline-block"></span>` +
       `<span class="meta">你的选择</span></div>` +
       `<div id="wavebar" style="display:flex;height:56px;margin-top:12px;cursor:ew-resize;border:1px solid var(--bd);position:relative;touch-action:none"></div>` +
-      `<div class="meta" id="wavemark" style="margin-top:8px">在波段条上**按住拖动**滑块，左边目标色 / 右边你的选择实时对比，觉得一致就提交（有容差，不必强求像素级一致）</div>` +
+      `<div class="meta" id="wavemark" style="margin-top:8px">在波段条上按住拖动滑块，左边目标色 / 右边你的选择实时对比，觉得一致就提交（有容差）</div>` +
       `<div class="row" style="margin-top:8px"><button id="wavesubmit" onclick="submitWave()" disabled>提交</button></div>`;
   }
   area.innerHTML = `<div class="meta">${stageCN} · 第 ${res.question_no}/${res.question_total} 题</div>` +
@@ -143,7 +208,7 @@ function renderQ(res){
   }
   if(q.type === "hue"){
     window.__hueColors = q.colors;
-    window.__hueSlots = new Array(q.colors.length).fill(null);   // 槽位 → 色块下标
+    window.__hueSlots = new Array(q.colors.length).fill(null);
     window.__hueSel = null; window.__hueDone = false;
     renderHueUI();
   }
@@ -176,11 +241,11 @@ function renderQ(res){
       $("wavesubmit").disabled = false;
     };
     bar.onpointerdown = (e) => { bar.setPointerCapture(e.pointerId); setPos(e.clientX); };
-    bar.onpointermove = (e) => { if(e.buttons) setPos(e.clientX); };   // 按住拖动实时更新
+    bar.onpointermove = (e) => { if(e.buttons) setPos(e.clientX); };
   }
 }
 
-/* ---- def 17 · 色相排列：拖拽/点选双模式（FM100 临床原型的交互） ---- */
+/* ==== 拖拽排列（FM100 原型交互）与波段提交 ==== */
 function hueChip(rgb, idx, pos){
   const b = document.createElement("button");
   b.style.cssText = `width:44px;height:64px;background:rgb(${rgb[0]},${rgb[1]},${rgb[2]});padding:0;cursor:grab;border:2px solid transparent`;
@@ -192,10 +257,8 @@ function hueChip(rgb, idx, pos){
 }
 function renderHueUI(){
   const colors = window.__hueColors, slots = window.__hueSlots;
-  const inPool = (i) => !slots.includes(i);
   const poolBox = $("huepool"), slotBox = $("hueslots");
   poolBox.innerHTML = ""; slotBox.innerHTML = "";
-
   const bindDrop = (el, dst) => {
     el.ondragover = (e) => { e.preventDefault(); el.style.borderColor = "rgba(229,71,109,.7)"; };
     el.ondragleave = () => { el.style.borderColor = ""; };
@@ -203,17 +266,15 @@ function renderHueUI(){
       e.preventDefault(); el.style.borderColor = "";
       try { placeChip(JSON.parse(e.dataTransfer.getData("text/plain")), dst); } catch (err) {}
     };
-    el.onclick = () => selectChip(dst);           // 点选模式：选中块后点目标
+    el.onclick = () => selectChip(dst);
   };
-
-  colors.map((_, i) => i).filter(inPool).forEach((idx) => {
+  colors.map((_, i) => i).filter((i) => !slots.includes(i)).forEach((idx) => {
     const chip = hueChip(colors[idx], idx, {zone: "pool"});
     if(window.__hueSel && window.__hueSel.zone === "pool" && window.__hueSel.idx === idx)
       chip.style.borderColor = "var(--ac2)";
     poolBox.appendChild(chip);
   });
   bindDrop(poolBox, {zone: "pool"});
-
   slots.forEach((idx, k) => {
     const d = document.createElement("div");
     d.style.cssText = "width:48px;height:68px;border:1px dashed var(--bd);display:flex;align-items:center;justify-content:center";
@@ -221,7 +282,6 @@ function renderHueUI(){
     bindDrop(d, {zone: "slot", slotIdx: k});
     slotBox.appendChild(d);
   });
-
   const filled = slots.filter(v => v !== null).length;
   $("huesubmit").disabled = filled !== slots.length;
   $("huecount").textContent = `已放置 ${filled}/${slots.length}` +
@@ -235,11 +295,11 @@ function selectChip(pos){
 function placeChip(src, dst){
   const s = window.__hueSlots;
   if(src.zone === "slot" && dst.zone === "slot"){
-    const tmp = s[dst.slotIdx]; s[dst.slotIdx] = s[src.slotIdx]; s[src.slotIdx] = tmp;   // 槽间交换
+    const tmp = s[dst.slotIdx]; s[dst.slotIdx] = s[src.slotIdx]; s[src.slotIdx] = tmp;
   } else if(src.zone === "slot" && dst.zone === "pool"){
-    s[src.slotIdx] = null;                                                               // 取回色块池
+    s[src.slotIdx] = null;
   } else if(src.zone === "pool" && dst.zone === "slot"){
-    s[dst.slotIdx] = src.idx;                                                            // 放入（原槽块自动回池）
+    s[dst.slotIdx] = src.idx;
   } else { window.__hueSel = null; renderHueUI(); return; }
   window.__hueSel = null;
   renderHueUI();
@@ -247,16 +307,16 @@ function placeChip(src, dst){
 function submitHue(){
   if(window.__hueDone) return;
   window.__hueDone = true;
-  submitAnswer(window.__hueSlots.slice());       // 槽位顺序 = 色块下标序列（后端判分接口不变）
-}
-function submitWave(){
-  if(window.__waveSel === null) return;
-  submitAnswer(window.__waveSel);                // 点击位置比例（0~1），后端换算色相角判轴
+  submitAnswer(window.__hueSlots.slice());
 }
 function resetHue(){
   window.__hueSlots = new Array(window.__hueColors.length).fill(null);
   window.__hueSel = null; window.__hueDone = false;
   renderHueUI();
+}
+function submitWave(){
+  if(window.__waveSel === null) return;
+  submitAnswer(window.__waveSel);
 }
 
 async function submitAnswer(ans){
@@ -269,10 +329,10 @@ async function submitAnswer(ans){
   }catch(e){ $("exam-area").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
 }
 
+/* ==== 档案渲染 / AI 总结 / 校色（含顶部开关同步） ==== */
 function renderProfile(prof, opts){
   examId = null;
   $("exam-area").innerHTML = `<div class="ms">测评完成，档案已生成。</div>`;
-  const pc = $("profile-card"); pc.style.display = "";
   const ev = prof.evidence || {};
   const sevPct = Math.round((prof.severity || 0) * 100);
   $("profile-body").innerHTML =
@@ -280,46 +340,52 @@ function renderProfile(prof, opts){
     `<div class="meta">severity ${prof.severity}（${sevPct}%）· 置信度 ${prof.confidence} · 分诊通道 ${prof.triage_path}</div>` +
     `<div style="height:6px;background:rgba(255,255,255,.08);margin:6px 0"><div style="height:100%;width:${sevPct}%;background:var(--ac)"></div></div>` +
     `<div class="meta">三维分辨阈值：ΔL=${prof.dL_threshold} · ΔC=${prof.dC_threshold} · ΔH=${prof.dH_threshold}（CIE 单位，越小越敏感）</div>` +
-    `<div class="meta">证据：石原 ${ev.n_plates} 张 · 排列判定 ${ev.hue_verdict} · 终档 ${JSON.stringify(ev.final_levels)} · 双证据${ev.consistent ? "一致" : "存在分歧"}</div>` +
+    `<div class="meta">证据：石原 ${ev.n_plates} 张 · 排列判定 ${(ev.hue_verdicts || [ev.hue_verdict]).join(" / ")} · 波段佐证 ${ev.wave ? (ev.wave.axis_hint + "·" + ev.wave.match) : "—"}</div>` +
+    `<div class="meta">终档 ${JSON.stringify(ev.final_levels)} · 双证据${ev.consistent ? "一致" : "存在分歧"}</div>` +
     ((prof.prescriptions || []).length ? `<div class="meta">处方：${prof.prescriptions.join(" / ")}</div>` : "") +
-    `<div class="meta">${prof.advice || ""}</div></div></div>` +
-    `<div class="row" style="margin-top:10px">` +
-    `<button onclick="restartExam()">再测一次</button>` +
-    `<button onclick="askAI()">再次让 AI 分析</button>` +
-    `<span class="meta">校色模式可在下方手动切换；默认已按档案自动校色</span></div>`;
-  pc.scrollIntoView({behavior: "smooth"});
+    `<div class="meta">${prof.advice || ""}</div></div></div>`;
 
-  /* def 17 · 旅程自动化（仅"刚完成测评"触发，页面恢复不触发）：
-     弹出悬浮 AI（动画）→ AI 读档案总结差异值 → 校正值自动填入（correct 全站联动） */
+  /* 校色状态同步（档案自带 calibration 或默认未校色） */
+  const cal = prof.calibration;
+  const mode = cal ? cal.mode : "off";
+  syncCalSwitch(mode);
+  if(cal && cal.mode === "correct" && window.CVDTheme) window.CVDTheme.apply("correct", cal.kind, cal.severity);
+  $("calstatus").innerHTML = cal
+    ? `<span class="ms">当前模式：${cal.mode}（${cal.kind} @ severity ${cal.severity}）</span>`
+    : `<span class="meta">尚未校色——点击上方模式按钮，或用页面顶部开关</span>`;
+
+  const pc = $("panel-profile");
+  showTab("profile");
   if(opts && opts.justFinished){
+    /* 旅程自动化：弹出 AI 总结 → 校正值自动填入（correct 全站联动） */
     setTimeout(async () => {
       try{
         if(!window.CBChat) return;
-        window.CBChat.open();                                   // 动画弹出右下角 AI
+        window.CBChat.open();
         await window.CBChat.send(
           "【测评完成通知】用户刚刚完成全部色盲测评题目，色觉档案已生成。请立即调用 get_vision_profile_tool " +
           "读取档案，然后向用户总结：一、他的色彩视觉特点；二、他与标准色彩视角的差异值（类型/严重度/三维阈值）；" +
           "三、这些差异对选色和试妆的影响。不要调用导航工具——用户已经在测评页面，测完了。");
-        /* AI 总结完毕 → 校正值自动填入（correct 模式，全站换肤联动；手动调整仍保留在 tryon 高级标签） */
         const r = await (await fetch("/api/cvd/exam/calibrate", {method:"POST",
           headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode: "correct"})})).json();
         if(r.ok){
           const cal = r.results.calibration;
           if(window.CVDTheme) window.CVDTheme.apply("correct", cal.kind, cal.severity);
-          const st = $("calstatus");
-          if(st) st.innerHTML =
-            `<span class="ms">已根据测评档案自动完成校色（correct · ${cal.kind} @ severity ${cal.severity}）· 全站配色已联动 · 可在下方手动切换模式</span>`;
+          syncCalSwitch("correct");
+          $("calstatus").innerHTML =
+            `<span class="ms">已根据测评档案自动完成校色（correct · ${cal.kind} @ severity ${cal.severity}）· 全站配色已联动 · 可手动切换模式</span>`;
         }
-      }catch(e){ /* 自动化失败静默：用户仍可手动点按钮完成总结与校色 */ }
+      }catch(e){ /* 自动化失败静默：手动按钮兜底 */ }
     }, 600);
   }
 }
 
 function restartExam(){
-  $("profile-card").style.display = "none";
+  showTab("exam");
+  $("exam-area").innerHTML = "";
   $("exam-intro").style.display = "";
   $("exam-intro").innerHTML =
-    `<div class="meta" style="line-height:1.9;margin-top:6px">重新测评将覆盖当前档案。流程：石原分型图 ×2 → 网格找异色 ×9 → 色相渐变排列 ×1。</div>` +
+    `<div class="meta" style="line-height:1.9;margin-top:6px">重新测评将覆盖当前档案与校色设置。流程：石原 10 → 网格 9 → 排列 2 → 波段 1。</div>` +
     `<button onclick="startExam()" style="margin-top:10px">开始测评</button>`;
   window.scrollTo({top: 0, behavior: "smooth"});
 }
@@ -349,51 +415,22 @@ async function doCalibrate(mode){
       if(mode === "off") window.CVDTheme.reset();
       else window.CVDTheme.apply(mode, cal.kind, cal.severity);
     }
+    syncCalSwitch(mode);
     st.innerHTML = `<span class="ms">已应用：${mode}（${cal.kind} @ severity ${cal.severity}）· 全站配色已联动 · 试妆通道将按此执行</span>`;
   }catch(e){ st.textContent = `[错误] 请求失败: ${e}`; }
 }
 
-/* 页面加载：已有档案则直接展示（可重新校色，无需重测） */
+/* 页面加载：已有档案 → 跳档案与校色 tab（含校色状态恢复）；无 → 停在测评 tab */
 (async () => {
   try{
     const p = await (await fetch("/api/cvd/exam/profile")).json();
-    if(p.ok) renderProfile(p.results);
-  }catch(e){}
-})();
-
-/* ==== def 14 · 模拟/校验（原逻辑保留） ==== */
-function cvdVerdict(v){
-  if(v==="confuse") return '<span class="err">色盲用户几乎看不出区别（ΔE&lt;5）</span>';
-  if(v==="risky") return '<span style="color:#ffc46b">勉强可辨，建议加大明度差（ΔE&lt;12）</span>';
-  return '<span class="ms">可清晰区分</span>';
-}
-async function cvd(){
-  const a=$("cvda").value.trim(), b=$("cvdb").value.trim(), ty=$("cvdtype").value, sev=$("cvdsev").value;
-  $("cvdsevv").textContent=parseFloat(sev).toFixed(2);
-  const el=$("cvdres"); $("cvdjson").textContent=""; $("cvdms").textContent="";
-  try{
-    if(b){
-      const{j,ms}=await getJSON(`/api/cvd/check?hex_a=${encodeURIComponent(a)}&hex_b=${encodeURIComponent(b)}&cvd_type=${encodeURIComponent(ty)}`);
-      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
-      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
-      const r=j.results;
-      el.innerHTML=
-        `<div class="item"><span class="sw" style="background:${r.a_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.a_sim_hex}"></span><div><b>${r.a_hex} → ${r.a_sim_hex}</b><div class="meta">A 色在 ${j.query.cvd_type} 用户眼中的等效色</div></div></div>`+
-        `<div class="item"><span class="sw" style="background:${r.b_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.b_sim_hex}"></span><div><b>${r.b_hex} → ${r.b_sim_hex}</b><div class="meta">B 色等效色</div></div></div>`+
-        `<div class="item"><div><b>正常 ΔE=${r.dE_normal} · 模拟后 ΔE=${r.dE_sim}</b>　<span class="meta">差值收缩 ${r.contraction_pct}%</span>`+
-        `<div>${cvdVerdict(r.verdict)}${r.rule_hit==="avoid"?`　<span class="err">[规则命中] ${r.rule_id} 避免并置</span>`:""}${r.rule_hit==="safe"?`　<span class="ms">[规则命中] ${r.rule_id} 安全组合</span>`:""}</div>`+
-        (r.recommended_action?`<div class="meta">建议：${r.recommended_action}</div>`:"")+
-        `</div></div>`;
-    }else{
-      const{j,ms}=await getJSON(`/api/cvd/preview?hex=${encodeURIComponent(a)}&cvd_type=${encodeURIComponent(ty)}&severity=${encodeURIComponent(sev)}`);
-      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
-      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
-      const r=j.results;
-      el.innerHTML=`<div class="item"><span class="sw" style="background:${r.original_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.simulated_hex}"></span><div><b>${r.original_hex} → ${r.simulated_hex}</b><div class="meta">${j.query.cvd_type} · 严重度 ${j.query.severity} · ΔE=${r.delta_e} · 明度 L ${r.luminance.original} → ${r.luminance.simulated}${r.luminance.drop>0?"（塌陷 "+r.luminance.drop+"）":""}</div></div></div>`;
+    if(p.ok){
+      renderProfile(p.results);
+      $("calswitch").dataset.hasProfile = "1";
     }
-  }catch(e){el.innerHTML=`<span class="err">[错误] 请求失败: ${e}</span>`}
-}
-
+  }catch(e){}
+  $("calswitch").dataset.hasProfile = $("calswitch").dataset.hasProfile || "0";
+})();
 </script>
 </body>
 </html>
