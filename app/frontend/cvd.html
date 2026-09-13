@@ -420,6 +420,39 @@ async function doCalibrate(mode){
   }catch(e){ st.textContent = `[错误] 请求失败: ${e}`; }
 }
 
+/* ==== def 14 · 色盲视角模拟/色对校验（重构时遗漏补回，2026-09-13） ==== */
+function cvdVerdict(v){
+  if(v==="confuse") return '<span class="err">色盲用户几乎看不出区别（ΔE&lt;5）</span>';
+  if(v==="risky") return '<span style="color:#ffc46b">勉强可辨，建议加大明度差（ΔE&lt;12）</span>';
+  return '<span class="ms">可清晰区分</span>';
+}
+async function cvd(){
+  const a=$("cvda").value.trim(), b=$("cvdb").value.trim(), ty=$("cvdtype").value, sev=$("cvdsev").value;
+  $("cvdsevv").textContent=parseFloat(sev).toFixed(2);
+  const el=$("cvdres"); $("cvdjson").textContent=""; $("cvdms").textContent="";
+  try{
+    if(b){
+      const{j,ms}=await getJSON(`/api/cvd/check?hex_a=${encodeURIComponent(a)}&hex_b=${encodeURIComponent(b)}&cvd_type=${encodeURIComponent(ty)}`);
+      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
+      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
+      const r=j.results;
+      el.innerHTML=
+        `<div class="item"><span class="sw" style="background:${r.a_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.a_sim_hex}"></span><div><b>${r.a_hex} → ${r.a_sim_hex}</b><div class="meta">A 色在 ${j.query.cvd_type} 用户眼中的等效色</div></div></div>`+
+        `<div class="item"><span class="sw" style="background:${r.b_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.b_sim_hex}"></span><div><b>${r.b_hex} → ${r.b_sim_hex}</b><div class="meta">B 色等效色</div></div></div>`+
+        `<div class="item"><div><b>正常 ΔE=${r.dE_normal} · 模拟后 ΔE=${r.dE_sim}</b>　<span class="meta">差值收缩 ${r.contraction_pct}%</span>`+
+        `<div>${cvdVerdict(r.verdict)}${r.rule_hit==="avoid"?`　<span class="err">[规则命中] ${r.rule_id} 避免并置</span>`:""}${r.rule_hit==="safe"?`　<span class="ms">[规则命中] ${r.rule_id} 安全组合</span>`:""}</div>`+
+        (r.recommended_action?`<div class="meta">建议：${r.recommended_action}</div>`:"")+
+        `</div></div>`;
+    }else{
+      const{j,ms}=await getJSON(`/api/cvd/preview?hex=${encodeURIComponent(a)}&cvd_type=${encodeURIComponent(ty)}&severity=${encodeURIComponent(sev)}`);
+      $("cvdms").textContent=ms+"ms · ok="+j.ok; $("cvdjson").textContent=JSON.stringify(j,null,2);
+      if(!j.ok){el.innerHTML=`<span class="err">[错误] ${j.error||j._error||"调用失败"}</span>`;return}
+      const r=j.results;
+      el.innerHTML=`<div class="item"><span class="sw" style="background:${r.original_hex}"></span><span class="meta">→</span><span class="sw" style="background:${r.simulated_hex}"></span><div><b>${r.original_hex} → ${r.simulated_hex}</b><div class="meta">${j.query.cvd_type} · 严重度 ${j.query.severity} · ΔE=${r.delta_e} · 明度 L ${r.luminance.original} → ${r.luminance.simulated}${r.luminance.drop>0?"（塌陷 "+r.luminance.drop+"）":""}</div></div></div>`;
+    }
+  }catch(e){el.innerHTML=`<span class="err">[错误] 请求失败: ${e}</span>`}
+}
+
 /* 页面加载：已有档案 → 跳档案与校色 tab（含校色状态恢复）；无 → 停在测评 tab */
 (async () => {
   try{
