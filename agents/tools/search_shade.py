@@ -81,12 +81,58 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
     # 查询任意色（如黑色）时最近官方色可能差得很远——必须如实标注"官方无此色号"，
     # 让定制口红/眼影/粉底的任意色链路有意义，而不是硬把红棕系塞给查黑色的用户。
     has_official = bool(rows) and float(rows[0].get("dE", 999.0)) <= 1.0
+    gb = gb_color_name(lab)
     return {"ok": True, "tool": tool,
             "query": {"hex": hex_std, "lab": lab,
+                      "gb_label": gb["label"], "gb_cn": gb["cn"],
                       "has_official": has_official,
                       "official_threshold_dE": 1.0},
             "results": rows,
             "error": None}
+
+
+def gb_color_name(lab):
+    """GB/T 15608《中国颜色体系》风格近似命名（R-07 口径：现阶段标注体系）。
+
+    输入：Lab (3,)；输出：{label: "5R 4.0/12.0" 标号, cn: "暗红" 中文色名}。
+    诚实边界：色调取 Lab 色相角映射 10 基本色调，明度 V ≈ L*/10、彩度 ≈ 0.4·C*
+    为近似换算——精确标号以《中国颜色体系》国家标准样册为准（PPT 口径已声明）。
+    """
+    import math
+    L, a, b = float(lab[0]), float(lab[1]), float(lab[2])
+    C = math.hypot(a, b)
+    h = math.degrees(math.atan2(b, a)) % 360.0
+    V = max(0.0, min(10.0, L / 10.0))
+    Cm = C * 0.4
+
+    # 中国颜色体系 10 基本色调（每 36° 一档：中心角、中文名、符号）
+    hues = [(0, "红", "R"), (36, "黄红", "YR"), (72, "黄", "Y"), (108, "绿黄", "GY"),
+            (144, "绿", "G"), (180, "蓝绿", "BG"), (216, "蓝", "B"), (252, "紫蓝", "PB"),
+            (288, "紫", "P"), (324, "红紫", "RP")]
+    idx = int(((h + 18.0) % 360.0) // 36.0) % 10
+    pos = ((h - hues[idx][0]) % 360.0) / 36.0
+    hue_num = 10 if pos >= 0.5 else 5
+    label_hue = f"{hue_num}{hues[idx][2]}"
+
+    if C < 2.0:                                   # 非彩色（中性轴）
+        label = f"N {V:.1f}/0"
+        if V >= 8.5:   cn = "白色"
+        elif V >= 7.0: cn = "明灰色"
+        elif V >= 5.0: cn = "浅灰色"
+        elif V >= 3.0: cn = "中灰色"
+        elif V >= 1.0: cn = "暗灰色"
+        else:          cn = "黑色"
+        return {"label": label, "cn": cn}
+
+    if Cm >= 8.0:   cmod = "鲜"
+    elif Cm <= 2.0: cmod = "淡"
+    else:           cmod = ""
+    if V >= 7.5:    vmod = "浅"
+    elif V <= 3.0:  vmod = "暗"
+    else:           vmod = ""
+    cn = f"{cmod}{vmod}{hues[idx][1]}"
+
+    return {"label": f"{label_hue} {V:.1f}/{Cm:.1f}", "cn": cn}
 
 
 def coverage16_tool() -> dict:
@@ -125,9 +171,11 @@ def coverage16_tool() -> dict:
             dE = float(_core.ciede2000(q_lab[j], off_lab[k]))
             has = dE <= 1.0                                        # ΔE≤1 视为官方有（JND 内）
             hits += int(has)
+            gb = gb_color_name(q_lab[j])                           # R-07 · GB/T 15608 近似命名
             items.append({"hex": "%02X%02X%02X" % pt, "rgb": list(pt),
                           "official_hex": s["hex"], "official_name": s["name"],
-                          "dE": round(dE, 2), "has_official": has})
+                          "dE": round(dE, 2), "has_official": has,
+                          "gb_label": gb["label"], "gb_cn": gb["cn"]})
 
         miss = len(items) - hits
         return {"ok": True, "tool": tool,
