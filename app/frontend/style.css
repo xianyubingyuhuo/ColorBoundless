@@ -47,10 +47,11 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 /* 右上切换标签：透明文本，hover 淡入毛玻璃边框（零圆角锚点） */
 .nav-x{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
 .nav-x a{position:relative;color:var(--tx2);text-decoration:none;font-size:13.5px;padding:5px 12px;transition:color .25s ease;z-index:1}
-.nav-x a::before{content:"";position:absolute;inset:0;background:rgba(229,71,109,.10);border:1px solid rgba(229,71,109,.55);
- opacity:0;transition:opacity .25s ease;pointer-events:none}
+/* hover 反馈：品牌色底线滑入（用户 2026-09-13 反馈：方框观感差，改线式） */
+.nav-x a::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:2px;background:var(--ac2);
+ opacity:0;transform:scaleX(.4);transition:opacity .25s ease,transform .25s ease;pointer-events:none}
 .nav-x a:hover{color:var(--tx)}
-.nav-x a:hover::before{opacity:1}
+.nav-x a:hover::after{opacity:1;transform:scaleX(1)}
 /* 当前页标签：品牌渐变实底填充（def 19c） */
 .nav-x a.on{color:#fff;background:linear-gradient(120deg,rgba(229,71,109,.92),rgba(229,71,109,.60));box-shadow:0 4px 16px rgba(229,71,109,.35)}
 .nav-x a.on:hover{color:#fff;background:linear-gradient(120deg,rgba(229,71,109,1),rgba(229,71,109,.75))}
