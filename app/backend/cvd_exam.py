@@ -16,6 +16,7 @@
     - 单用户 MVP：档案存全局最新一份（_PROFILE），多用户留待产品化
 """
 import base64
+import math
 import time
 import uuid
 
@@ -55,8 +56,9 @@ def _start() -> dict:
         "stage": "ishihara",
         "runners": triage.make_screen_runners(),   # 三维快筛 runner（阶梯法有状态）
         "plates": [],                 # [{"kind","correct"}] 石原判定
-        "hue": None,                  # {"perm":[...], "rgbs":[[r,g,b]...]}
-        "hue_result": None,
+        "hue_data": [],               # [{perm, rgbs}] 两道排列的题面数据
+        "hue_results": [],            # 两道排列的判分结果
+        "wave_result": None,          # 波段定位佐证
         "subjective": False,
         "pending": None,              # 当前待答题元信息
     }
@@ -66,30 +68,65 @@ def _start() -> dict:
 
 
 def _ih_sheets():
-    """石原两题：(混淆轴, 题目数字)——deutan/protan 各一张（triage 双证据链之隐身图票）"""
-    return [("deutan", 8), ("protan", 3)]
+    """石原 10 题：deutan/protan 交替 ×5，数字 0-9 每次随机配对（make_plate 内点阵随机，
+    同 digit 不同 seed 图面也不同）——消除"总是那几道相同题目"的重复感"""
+    rng = np.random.default_rng()
+    digits = [int(d) for d in rng.permutation(10)]
+    kinds = ["deutan", "protan"] * 5
+    return list(zip(kinds, digits))
+
+
+# 排列 2 道：全环 + 蓝黄重点半环（第二道专探 blue-yellow 轴）
+HUE_SETS = [(0.0, 360.0), (90.0, 270.0)]
+
+
+def _judge_wave(click_ratio, h_true):
+    """色彩波段定位判定（新增题型）：点击比例 → 色相角误差 + 轴向提示。
+
+    诚实边界：单题误差含噪声（屏幕色差/手抖），仅作类型佐证写入档案证据，
+    不进入 _vote_type 主投票——主判定仍由石原×排列双证据链完成。
+    """
+    h_click = (float(click_ratio) % 1.0) * 360.0
+    ang = (h_click - h_true + 180.0) % 360.0 - 180.0          # [-180, 180)
+    rad = math.radians(ang)
+    if abs(math.cos(rad)) >= 0.7:
+        axis = "red-green"
+    elif abs(math.sin(rad)) >= 0.7:
+        axis = "blue-yellow"
+    else:
+        axis = "mixed"
+    return {"h_true": round(h_true, 1), "h_click": round(h_click, 1),
+            "ang_err": round(ang, 1), "axis_hint": axis,
+            "note": "单题误差含噪声，仅作类型佐证"}
 
 
 def _next_question(state: dict) -> dict:
-    """推进到下一题并生成题面。返回 results（含 question / done / profile）"""
-    total = 12
+    """推进到下一题并生成题面。返回 results（含 question / done / profile）
+
+    题库结构（2026-09-11 扩充：每类 ≥10、排列 2 道、新增波段定位）：
+        Q1-Q10   石原分型图（deutan/protan 交替 ×5，数字 0-9 洗牌，点阵随机）
+        Q11-Q19  网格找异色（DIM_L/C/H × 各 3 轮快筛阶梯；每轮 base 色随机 → 无重复感）
+        Q20-Q21  色相渐变排列（全环 1 道 + 蓝黄半环 1 道，拖拽排序）
+        Q22      色彩波段定位（目标色 → 在波段条上指出位置，轴向佐证）
+    """
+    total = 22
     q = state["q_no"]
 
-    # ---- Q1-Q2 石原分型图 ----
-    if q < 2:
+    # ---- Q1-Q10 石原分型图 ----
+    if q < 10:
         state["stage"] = "ishihara"
         kind, digit = _ih_sheets()[q]
         img, _info = ishihara.make_plate(digit, kind=kind, severity=1.0, size=360)
         state["pending"] = {"type": "ishihara", "kind": kind, "digit": str(digit)}
         return {"stage": state["stage"], "question_no": q + 1, "question_total": total,
                 "question": {"type": "ishihara", "img_b64": _img_b64(img),
-                             "prompt": "这张圆点图里你看到什么数字？（看不清就填 0）"},
+                             "prompt": f"第 {q + 1} 张：这张圆点图里你看到什么数字？（看不清就填 0）"},
                 "done": False}
 
-    # ---- Q3-Q11 网格找异色块（三维度严格分开测，各 3 轮快筛）----
-    if q < 11:
+    # ---- Q11-Q19 网格找异色块（三维度严格分开测，各 3 轮快筛）----
+    if q < 19:
         state["stage"] = "grid"
-        dim = (DIM_L, DIM_C, DIM_H)[(q - 2) // SCREEN_ROUNDS]
+        dim = (DIM_L, DIM_C, DIM_H)[(q - 10) // SCREEN_ROUNDS]
         runner = state["runners"][dim]
         img, info = runner.next_round()
         state["pending"] = {"type": "grid", "dim": dim}
@@ -99,16 +136,42 @@ def _next_question(state: dict) -> dict:
                              "prompt": "哪一块颜色和其他不一样？直接点它。"},
                 "done": False}
 
-    # ---- Q12 色相渐变排列 ----
-    if q < 12:
+    # ---- Q20-Q21 色相渐变排列（2 道：全环 / 蓝黄半环）----
+    if q < 21:
         state["stage"] = "hue"
-        rgbs, hues, c_used = hue_test.make_hue_sequence(HUE_N)
+        seq = q - 19
+        h0, h1 = HUE_SETS[seq]
+        rgbs, hues, c_used = hue_test.make_hue_sequence(HUE_N, h_start=h0, h_end=h1)
         perm = [int(p) for p in np.random.default_rng().permutation(HUE_N)]
-        state["hue"] = {"perm": perm, "rgbs": rgbs.tolist()}
+        state.setdefault("hue_data", []).append({"perm": perm, "rgbs": rgbs.tolist()})
+        state["pending"] = {"type": "hue", "seq": seq}
+        label = "全色相环" if seq == 0 else "蓝黄重点段"
         return {"stage": state["stage"], "question_no": q + 1, "question_total": total,
                 "question": {"type": "hue",
                              "colors": [[int(v) for v in rgbs[p]] for p in perm],
-                             "prompt": "下面 15 个色块是打乱的。按你觉得最平滑的渐变顺序依次点击它们。"},
+                             "prompt": f"排列 {seq + 1}/2（{label}）：把打乱的色块拖进槽位，"
+                                       "按你觉得最平滑的渐变顺序排好。"},
+                "done": False}
+
+    # ---- Q22 色彩波段定位（新增题型）----
+    if q < 22:
+        state["stage"] = "wave"
+        rng = np.random.default_rng()
+        h_true = float(rng.uniform(0.0, 360.0))
+        from cvd_test.color_diff import lab2srgb
+        rgb_t = lab2srgb(np.array([62.0, 30.0 * math.cos(math.radians(h_true)),
+                                   30.0 * math.sin(math.radians(h_true))]))
+        segs = []                                   # 波段条 36 段：Lab 同域生成（L=62/C=30 均匀色相）
+        for i in range(36):
+            hh = math.radians(i * 10.0)
+            segs.append([int(v) for v in lab2srgb(np.array([62.0, 30.0 * math.cos(hh),
+                                                            30.0 * math.sin(hh)]))])
+        state["pending"] = {"type": "wave", "h_true": h_true}
+        return {"stage": state["stage"], "question_no": q + 1, "question_total": total,
+                "question": {"type": "wave",
+                             "target": [int(v) for v in rgb_t],
+                             "segments": segs,
+                             "prompt": "看上方目标色块。在下面的色彩波段条上，点击你认为与目标色相同的位置。"},
                 "done": False}
 
     # ---- 收卷 ----
@@ -134,14 +197,23 @@ def _answer(state: dict, answer):
         runner.submit(pos)
 
     elif t == "hue":
-        perm = state["hue"]["perm"]
-        rgbs = np.array(state["hue"]["rgbs"], dtype=np.uint8)
+        seq = p["seq"]
+        data = state["hue_data"][seq]
+        perm = data["perm"]
+        rgbs = np.array(data["rgbs"], dtype=np.uint8)
         try:
-            disp = [int(v) for v in answer]           # 用户点击的显示位顺序
+            disp = [int(v) for v in answer]           # 槽位顺序 = 色块下标序列
             user_order = [perm[k] for k in disp]      # 位置 k 放的原始块 index
         except Exception:
             user_order = list(range(len(perm)))       # 坏答案按未排序收
-        state["hue_result"] = hue_test.judge_arrangement(user_order, rgbs)
+        state.setdefault("hue_results", []).append(hue_test.judge_arrangement(user_order, rgbs))
+
+    elif t == "wave":
+        try:
+            ratio = float(answer)                     # 点击位置占波段条比例（0~1）
+        except Exception:
+            ratio = 0.0
+        state["wave_result"] = _judge_wave(ratio, p["h_true"])
 
     state["pending"] = None
 
@@ -153,13 +225,20 @@ def _finish(state: dict) -> dict:
 
     tri = triage.triage_stage0(state["plates"], grid_levels, state["subjective"])
 
-    if state.get("hue_result") is None:               # 防御兜底（正常流程 hue 必答）
-        rgbs = np.array((state.get("hue") or {}).get("rgbs",
-                        [[128, 128, 128]] * HUE_N), dtype=np.uint8)
-        state["hue_result"] = hue_test.judge_arrangement(list(range(HUE_N)), rgbs)
+    hrs = state.get("hue_results") or []
+    if hrs:
+        verdicts = [h.get("verdict") for h in hrs]
+        # 两道排列：verdict 一致取第一道；不一致取 total_error 更大者（暴露更充分）
+        hue_main = hrs[0] if len(set(verdicts)) == 1 else max(hrs, key=lambda h: h.get("total_error", 0.0))
+    else:                                             # 防御兜底（正常流程必答）
+        hue_main = hue_test.judge_arrangement(list(range(HUE_N)),
+                                              np.array([[128, 128, 128]] * HUE_N, dtype=np.uint8))
+        verdicts = [hue_main.get("verdict")]
 
     profile = triage.build_user_profile(
-        state["plates"], state["runners"], state["hue_result"], tri["level"])
+        state["plates"], state["runners"], hue_main, tri["level"])
+    profile["evidence"]["hue_verdicts"] = verdicts       # 两道排列的判定链
+    profile["evidence"]["wave"] = state.get("wave_result")  # 波段定位佐证（新增题型）
 
     profile["prescriptions"] = tri.get("prescriptions", [])
     profile["agent_note"] = tri.get("agent_note", "")

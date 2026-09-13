@@ -115,6 +115,13 @@ function renderQ(res){
       `<div id="hueslots" class="row" style="min-height:70px"></div>` +
       `<div class="row" style="margin-top:10px"><button id="huesubmit" onclick="submitHue()" disabled>提交排列</button>` +
       `<button onclick="resetHue()">清空重来</button><span class="meta" id="huecount"></span></div>`;
+  } else if(q.type === "wave"){
+    body = `<div class="row" style="margin-top:6px"><span class="meta">目标色：</span>` +
+      `<span style="width:52px;height:34px;background:rgb(${q.target[0]},${q.target[1]},${q.target[2]});border:1px solid var(--bd);display:inline-block"></span>` +
+      `<span class="meta">在下面的色彩波段条上，点击你认为与目标色相同的位置</span></div>` +
+      `<div id="wavebar" style="display:flex;height:56px;margin-top:10px;cursor:crosshair;border:1px solid var(--bd);position:relative"></div>` +
+      `<div class="meta" id="wavemark" style="margin-top:6px">尚未选择</div>` +
+      `<div class="row" style="margin-top:8px"><button id="wavesubmit" onclick="submitWave()" disabled>提交</button></div>`;
   }
   area.innerHTML = `<div class="meta">${stageCN} · 第 ${res.question_no}/${res.question_total} 题</div>` +
     `<div style="height:6px;background:rgba(255,255,255,.08);margin:6px 0 12px">` +
@@ -136,6 +143,29 @@ function renderQ(res){
     window.__hueSlots = new Array(q.colors.length).fill(null);   // 槽位 → 色块下标
     window.__hueSel = null; window.__hueDone = false;
     renderHueUI();
+  }
+  if(q.type === "wave"){
+    window.__waveSel = null;
+    const bar = $("wavebar");
+    q.segments.forEach((rgb) => {
+      const seg = document.createElement("div");
+      seg.style.cssText = `flex:1;background:rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      bar.appendChild(seg);
+    });
+    bar.onclick = (e) => {
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.min(0.999, Math.max(0, (e.clientX - rect.left) / rect.width));
+      window.__waveSel = ratio;
+      let mark = document.getElementById("wavemarkline");
+      if(!mark){
+        mark = document.createElement("div"); mark.id = "wavemarkline";
+        mark.style.cssText = "position:absolute;top:0;bottom:0;width:3px;background:var(--tx);pointer-events:none";
+        bar.appendChild(mark);
+      }
+      mark.style.left = (ratio * 100) + "%";
+      $("wavemark").textContent = `已选择位置 ${(ratio * 360).toFixed(0)}°（以红=0°计）——点击"提交"确认`;
+      $("wavesubmit").disabled = false;
+    };
   }
 }
 
@@ -208,6 +238,10 @@ function submitHue(){
   window.__hueDone = true;
   submitAnswer(window.__hueSlots.slice());       // 槽位顺序 = 色块下标序列（后端判分接口不变）
 }
+function submitWave(){
+  if(window.__waveSel === null) return;
+  submitAnswer(window.__waveSel);                // 点击位置比例（0~1），后端换算色相角判轴
+}
 function resetHue(){
   window.__hueSlots = new Array(window.__hueColors.length).fill(null);
   window.__hueSel = null; window.__hueDone = false;
@@ -252,8 +286,9 @@ function renderProfile(prof, opts){
         if(!window.CBChat) return;
         window.CBChat.open();                                   // 动画弹出右下角 AI
         await window.CBChat.send(
-          "我刚完成色盲测评。请读取我的测评档案：先总结我的色彩视觉特点，" +
-          "再说明我与标准色彩视角的差异值（类型/严重度/三维阈值），最后说明这些差异对选色和试妆的影响。");
+          "【测评完成通知】用户刚刚完成全部色盲测评题目，色觉档案已生成。请立即调用 get_vision_profile_tool " +
+          "读取档案，然后向用户总结：一、他的色彩视觉特点；二、他与标准色彩视角的差异值（类型/严重度/三维阈值）；" +
+          "三、这些差异对选色和试妆的影响。不要调用导航工具——用户已经在测评页面，测完了。");
         /* AI 总结完毕 → 校正值自动填入（correct 模式，全站换肤联动；手动调整仍保留在 tryon 高级标签） */
         const r = await (await fetch("/api/cvd/exam/calibrate", {method:"POST",
           headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode: "correct"})})).json();
