@@ -71,7 +71,7 @@
 色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
 测评判定全部由规则引擎完成（可解释可复现），AI 只引用档案说话。</footer>
 <script src="theme_cvd.js?v=def17"></script>
-<script src="chatbox.js?v=def20c"></script>
+<script src="chatbox.js?v=def20d"></script>
 <script>
 const $ = id => document.getElementById(id);
 async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
@@ -94,7 +94,7 @@ async function startExam(){
 
 function renderQ(res){
   const area = $("exam-area");
-  if(res.done){ renderProfile(res.profile); return; }
+  if(res.done){ renderProfile(res.profile, {justFinished: true}); return; }
   const q = res.question;
   const stageCN = {ishihara:"石原分型",grid:"网格找异色",hue:"色相排列"}[q.type] || q.type;
   let body = "";
@@ -224,7 +224,7 @@ async function submitAnswer(ans){
   }catch(e){ $("exam-area").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
 }
 
-function renderProfile(prof){
+function renderProfile(prof, opts){
   examId = null;
   $("exam-area").innerHTML = `<div class="ms">测评完成，档案已生成。</div>`;
   const pc = $("profile-card"); pc.style.display = "";
@@ -237,8 +237,45 @@ function renderProfile(prof){
     `<div class="meta">三维分辨阈值：ΔL=${prof.dL_threshold} · ΔC=${prof.dC_threshold} · ΔH=${prof.dH_threshold}（CIE 单位，越小越敏感）</div>` +
     `<div class="meta">证据：石原 ${ev.n_plates} 张 · 排列判定 ${ev.hue_verdict} · 终档 ${JSON.stringify(ev.final_levels)} · 双证据${ev.consistent ? "一致" : "存在分歧"}</div>` +
     ((prof.prescriptions || []).length ? `<div class="meta">处方：${prof.prescriptions.join(" / ")}</div>` : "") +
-    `<div class="meta">${prof.advice || ""}</div></div></div>`;
+    `<div class="meta">${prof.advice || ""}</div></div></div>` +
+    `<div class="row" style="margin-top:10px">` +
+    `<button onclick="restartExam()">再测一次</button>` +
+    `<button onclick="askAI()">再次让 AI 分析</button>` +
+    `<span class="meta">校色模式可在下方手动切换；默认已按档案自动校色</span></div>`;
   pc.scrollIntoView({behavior: "smooth"});
+
+  /* def 17 · 旅程自动化（仅"刚完成测评"触发，页面恢复不触发）：
+     弹出悬浮 AI（动画）→ AI 读档案总结差异值 → 校正值自动填入（correct 全站联动） */
+  if(opts && opts.justFinished){
+    setTimeout(async () => {
+      try{
+        if(!window.CBChat) return;
+        window.CBChat.open();                                   // 动画弹出右下角 AI
+        await window.CBChat.send(
+          "我刚完成色盲测评。请读取我的测评档案：先总结我的色彩视觉特点，" +
+          "再说明我与标准色彩视角的差异值（类型/严重度/三维阈值），最后说明这些差异对选色和试妆的影响。");
+        /* AI 总结完毕 → 校正值自动填入（correct 模式，全站换肤联动；手动调整仍保留在 tryon 高级标签） */
+        const r = await (await fetch("/api/cvd/exam/calibrate", {method:"POST",
+          headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode: "correct"})})).json();
+        if(r.ok){
+          const cal = r.results.calibration;
+          if(window.CVDTheme) window.CVDTheme.apply("correct", cal.kind, cal.severity);
+          const st = $("calstatus");
+          if(st) st.innerHTML =
+            `<span class="ms">已根据测评档案自动完成校色（correct · ${cal.kind} @ severity ${cal.severity}）· 全站配色已联动 · 可在下方手动切换模式</span>`;
+        }
+      }catch(e){ /* 自动化失败静默：用户仍可手动点按钮完成总结与校色 */ }
+    }, 600);
+  }
+}
+
+function restartExam(){
+  $("profile-card").style.display = "none";
+  $("exam-intro").style.display = "";
+  $("exam-intro").innerHTML =
+    `<div class="meta" style="line-height:1.9;margin-top:6px">重新测评将覆盖当前档案。流程：石原分型图 ×2 → 网格找异色 ×9 → 色相渐变排列 ×1。</div>` +
+    `<button onclick="startExam()" style="margin-top:10px">开始测评</button>`;
+  window.scrollTo({top: 0, behavior: "smooth"});
 }
 
 async function askAI(){

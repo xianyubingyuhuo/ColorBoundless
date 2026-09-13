@@ -28,9 +28,14 @@
   #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)} /* 微量发光（品牌粉） */
   #cb-fab:active{cursor:grabbing;transform:scale(1)}   /* 拖动按住时回归原尺寸，避免缩放干扰定位 */
   #cb-panel{position:fixed;right:22px;bottom:84px;width:340px;max-width:calc(100vw - 44px);height:440px;max-height:calc(100vh - 120px);
-    display:none;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
-    backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5)}
-  #cb-panel.open{display:flex}
+    display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
+    backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5);
+    opacity:0;visibility:hidden;transform:translateY(18px) scale(.97);
+    transition:opacity .38s ease, transform .45s cubic-bezier(.22,1,.36,1), visibility .38s}
+  #cb-panel.open{opacity:1;visibility:visible;transform:none}
+  /* 测评完成等事件触发弹出时：AI 球跳动提示（def 17 · 旅程自动化） */
+  @keyframes cbPop{0%{transform:scale(1)}35%{transform:scale(1.22)}70%{transform:scale(.94)}100%{transform:scale(1)}}
+  #cb-fab.cb-pop{animation:cbPop .9s cubic-bezier(.22,1,.36,1)}
   #cb-head{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--ac2);letter-spacing:1px;
     display:flex;justify-content:space-between;align-items:center}
   #cb-head b{font-weight:600}
@@ -188,9 +193,9 @@
     }
   }
 
-  async function send() {
-    const m = $("cb-in").value.trim();
-    if (!m || $("cb-in").dataset.busy === "1") return;
+  async function sendMessage(text) {
+    const m = (text === undefined ? $("cb-in").value : String(text)).trim();
+    if (!m || $("cb-in").dataset.busy === "1") return null;
     addMsg("u", m);
     const th = addMsg("meta", "大脑思考中…（推理型模型约 10~40s）", false);
     th.classList.add("cb-thinking");
@@ -215,10 +220,22 @@
     }
     $("cb-in").dataset.busy = "0";
     logEl.scrollTop = logEl.scrollHeight;
+    return j;
   }
 
-  $("cb-send").addEventListener("click", send);
-  $("cb-in").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+  $("cb-send").addEventListener("click", () => sendMessage());
+  $("cb-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+  /* def 17 · 外部调用接口：cvd 页测评完成后自动弹出+自动总结（旅程自动化） */
+  window.CBChat = {
+    open: () => {
+      toggle(true);
+      fab.classList.add("cb-pop");
+      setTimeout(() => fab.classList.remove("cb-pop"), 900);
+    },
+    close: () => toggle(false),
+    send: async (text) => { toggle(true); return sendMessage(text); },
+  };
 
   // 初始化：切页回来时还原展开状态（对话与面板位置一并还原）
   if (sessionStorage.getItem(SS_OPEN) === "1") toggle(true);
