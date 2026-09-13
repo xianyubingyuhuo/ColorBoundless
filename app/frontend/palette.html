@@ -33,6 +33,12 @@
   <span class="meta">每点判定：与最近官方色号 ΔE ≤ 1.0 → 官方有</span></div>
  <div id="covstat" class="res"></div>
  <div id="covdetail" class="res"></div>
+ <div class="row" style="margin-top:10px">
+  <button onclick="covView='grid';renderLayer()">网格视图</button>
+  <button onclick="covView='list';renderLayer()">命名清单（本层 256 色）</button>
+  <button onclick="exportCsv()">导出全部 4096 行 CSV</button>
+  <span class="meta">清单含：色块 · hex · GB 名称 · GB 标号 · 最近官方色号 · ΔE · 是否拥有</span>
+ </div>
  <div id="covgrid" style="margin-top:10px"></div>
  <details><summary>原始 JSON</summary><pre id="covjson"></pre></details>
 </div>
@@ -165,23 +171,61 @@ function renderLayer(){
   if(!covData) return;
   const levels = [...Array(16)].map((_, i) => Math.round(i * 255 / 15));
   const b = levels[covLayer];
-  const map = {};
-  covData.items.forEach(it => { map[it.rgb.join(",")] = it; });
-  let html = `<div class="row" style="margin-bottom:8px"><span class="meta">B 通道层：</span>`;
+  const byIdx = {};
+  covData.items.forEach((it, j) => { byIdx[j] = it; });
+  const cellIdxOf = (ri, gi) => ri * 256 + gi * 16 + covLayer;   // items 顺序 = r→g→b 嵌套
+
+  /* 视图/层切换（当前态高亮） */
+  let head = `<div class="row" style="margin-bottom:8px">` +
+    `<button onclick="covView='grid';renderLayer()" style="${covView === "grid" ? "background:var(--ac)" : "opacity:.65"}">网格视图</button>` +
+    `<button onclick="covView='list';renderLayer()" style="${covView === "list" ? "background:var(--ac)" : "opacity:.65"}">命名清单（本层 256 色）</button>` +
+    `<span class="meta">B 通道层：</span>`;
   for(let i = 0; i < 16; i++)
-    html += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
-  html += `</div><div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px">`;
-  for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
-    const cellIdx = ri * 256 + gi * 16 + covLayer;      // items 顺序 = r→g→b 嵌套
-    const it = covData.items[cellIdx];
-    html += `<div data-cell="${cellIdx}" title="#${it.hex} → 官方最近: ${it.official_name}(${it.official_hex}) dE=${it.dE} ${it.has_official ? "官方有" : "官方缺"}"` +
-      ` style="aspect-ratio:1;background:#${it.hex};border:2px ${it.has_official ? "solid rgba(125,224,166,.9)" : "solid rgba(255,138,128,.55)"}"></div>`;
+    head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
+  head += `</div>`;
+
+  if(covView === "grid"){
+    let html = head + `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px">`;
+    for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
+      const cellIdx = cellIdxOf(ri, gi);
+      const it = byIdx[cellIdx];
+      html += `<div data-cell="${cellIdx}" title="#${it.hex} → GB:${it.gb_cn}(${it.gb_label}) → 官方最近: ${it.official_name}(${it.official_hex}) dE=${it.dE} ${it.has_official ? "官方有" : "官方缺"}"` +
+        ` style="aspect-ratio:1;background:#${it.hex};border:2px ${it.has_official ? "solid rgba(125,224,166,.9)" : "solid rgba(255,138,128,.55)"}"></div>`;
+    }
+    html += `</div><div class="meta" style="margin-top:6px">绿框 = 官方有 · 红框 = 官方缺 · <b style="color:var(--tx)">点击色块</b>在上方查看名称与色号详情 · 横轴 R / 纵轴 G（B 固定当前层）</div>`;
+    $("covgrid").innerHTML = html;
+    [...$("covgrid").querySelectorAll("div[data-cell]")].forEach(d => {
+      d.onclick = () => selectCovCell(covData.items[Number(d.dataset.cell)], d);
+    });
+    return;
   }
-  html += `</div><div class="meta" style="margin-top:6px">绿框 = 官方有 · 红框 = 官方缺 · <b style="color:var(--tx)">点击色块</b>在上方查看名称与色号详情</div>`;
-  $("covgrid").innerHTML = html;
-  [...$("covgrid").querySelectorAll("div[data-cell]")].forEach(d => {
-    d.onclick = () => selectCovCell(covData.items[Number(d.dataset.cell)], d);
+
+  /* 命名清单视图：本层 256 色 × [色块|hex|GB名|GB标号|最近官方|ΔE|是否拥有] */
+  let rows = `<div class="meta">命名清单 · B 层 = ${b}（共 ${covData.total} 行全量数据，可点"导出 CSV"拿全部 4096 行）</div>` +
+    `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">` +
+    `<tr style="color:var(--ac2);text-align:left"><th style="padding:4px">色</th><th>hex</th><th>GB 名称</th><th>GB 标号</th><th>最近官方色号</th><th>ΔE</th><th>是否拥有</th></tr>`;
+  for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
+    const it = byIdx[cellIdxOf(ri, gi)];
+    rows += `<tr style="border-top:1px solid var(--bd)">` +
+      `<td style="padding:3px"><span style="display:inline-block;width:28px;height:28px;background:#${it.hex};border:1px solid var(--bd)"></span></td>` +
+      `<td>#${it.hex}</td><td><b>${it.gb_cn}</b>（${it.gb_label}）</td>` +
+      `<td>${it.official_name}（${it.official_hex}）</td><td>${it.dE}</td>` +
+      `<td style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "拥有 ✓" : "缺失 ✗"}</td></tr>`;
+  }
+  rows += `</table>`;
+  $("covgrid").innerHTML = head + rows;
+}
+function exportCsv(){
+  if(!covData) return;
+  let csv = "hex,gb_cn,gb_label,official_name,official_hex,dE,has_official\n";
+  covData.items.forEach(it => {
+    csv += `${it.hex},${it.gb_cn},${it.gb_label},"${it.official_name}",${it.official_hex},${it.dE},${it.has_official}\n`;
   });
+  const blob = new Blob(["\ufeff" + csv], {type: "text/csv;charset=utf-8"});   // BOM：Excel 直开不乱码
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "gb_coverage_16cube.csv";
+  a.click();
 }
 function selectCovCell(it, el){
   [...$("covgrid").querySelectorAll("div[data-sel='1']")].forEach(d => { d.dataset.sel = "0"; d.style.outline = "none"; });
