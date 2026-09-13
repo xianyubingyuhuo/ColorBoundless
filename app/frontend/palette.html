@@ -91,6 +91,11 @@ async function t1(){
     $("s1json").textContent = JSON.stringify({official: off, full_palette: full}, null, 2);
     if(!off.ok){ $("s1res").innerHTML = `<span class="err">[错误] ${off.error}</span>`; return; }
 
+    /* 分区零：GB/T 15608 近似命名（R-07 · 现阶段标注体系） */
+    const gbLine = `<div class="item"><div><b>GB/T 15608 近似命名：${off.query.gb_cn}</b>　` +
+      `<span class="meta">标号 ${off.query.gb_label}</span>` +
+      `<div class="meta">（近似换算；精确标号以《中国颜色体系》国家标准样册为准）</div></div></div>`;
+
     /* 分区一：官方库判定（has_official 由后端按 dE≤1.0 判定） */
     const head = off.query.has_official
       ? `<div class="item" style="border-color:rgba(125,224,166,.6)"><div><b style="color:#7de0a6">官方色号库有此颜色 ✓</b>` +
@@ -114,7 +119,7 @@ async function t1(){
       `<div class="item"><span class="sw" style="background:${r.hex}"></span>` +
       `<div><b>${r.hex}</b>　<span class="meta">dE=${r.dE} · ${r.hue_group || ""} · 非官方色号（可定制）</div></div></div>`).join("");
 
-    $("s1res").innerHTML = head + offList +
+    $("s1res").innerHTML = gbLine + head + offList +
       `<div class="meta" style="margin:12px 0 4px">── 全库精确匹配（262,144 色全色域，任意色可查）──</div>` + exact + fullList;
   }catch(e){ $("s1res").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
 }
@@ -176,7 +181,8 @@ function selectCovCell(it, el){
     `<span class="sw" style="background:#${it.hex};width:56px;height:56px"></span>` +
     `<div><b>该颜色：#${it.hex}</b>　<span class="meta">（16³ 采样点）</span>` +
     `<div style="margin-top:4px"><b style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "官方色号库有此颜色 ✓" : "官方色号库无此颜色 ✗"}</b></div>` +
-    `<div class="meta" style="margin-top:4px">名称（官方定义）：${name}</div>` +
+    `<div class="meta" style="margin-top:4px">名称（GB/T 15608 近似）：${it.gb_cn} · 标号 ${it.gb_label}</div>` +
+    `<div class="meta">名称（官方库定义）：${name}</div>` +
     `<div class="meta">最近官方色号：#${it.official_hex} · ΔE=${it.dE}（判定阈值 1.0）</div>` +
     `<div class="meta">${it.has_official ? "可直接用于试妆与定制。" : "此色不在官方库——可走定制申请，或以上述最近官方色号替代。"}</div>` +
     `</div></div>`;
