@@ -74,7 +74,7 @@ def main():
         "items": items,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")   # 垂直换行，可读可 diff
     print(f"生成 {OUT.name}（{len(items)} 色，耗时 {elapsed}s，覆盖率 {out['stats']['coverage_pct']}%）")
 
     # 抽查关键样本（均为 16³ 网格内色值）
