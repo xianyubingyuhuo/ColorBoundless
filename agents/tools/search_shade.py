@@ -146,48 +146,66 @@ def gb_color_name(rgb255, lab):
     return {"label": label, "cn": cn}
 
 
-_COVERAGE_JSON = Path(__file__).resolve().parents[2] / "data" / "shades" / "color_coverage_16.json"
-_COVERAGE_MAP = None      # hex → (gb_label, gb_cn)，懒加载缓存
+_GBNAMES_JSON = Path(__file__).resolve().parents[2] / "data" / "shades" / "gb_names_16.json"
+_COV_CACHE = None         # (官方库条数, items, stats)——shades.json 扩充后自动重算
+_COV_MAP = None           # hex → (gb_label, gb_cn)，单色查询懒加载缓存
 
 
 def _gb_lookup(hex_std, rgb255, lab):
-    """GB 命名查询：优先读外置覆盖数据（与覆盖检查同源一致）；网格外颜色用函数近似。"""
-    global _COVERAGE_MAP
-    if _COVERAGE_MAP is None:
+    """GB 命名查询：读 gb_names_16.json（与覆盖检查同源）；网格外颜色用函数近似。"""
+    global _COV_MAP
+    if _COV_MAP is None:
         try:
-            data = json.loads(_COVERAGE_JSON.read_text(encoding="utf-8"))
-            _COVERAGE_MAP = {it["hex"]: (it["gb_label"], it["gb_cn"]) for it in data["items"]}
+            data = json.loads(_GBNAMES_JSON.read_text(encoding="utf-8"))
+            _COV_MAP = {it["hex"]: (it["gb_label"], it["gb_cn"]) for it in data["items"]}
         except Exception:
-            _COVERAGE_MAP = {}
-    hit = _COVERAGE_MAP.get(hex_std)
+            _COV_MAP = {}
+    hit = _COV_MAP.get(hex_std)
     if hit:
         return {"label": hit[0], "cn": hit[1]}
     return gb_color_name(rgb255, lab)
 
 
 def coverage16_tool() -> dict:
-    """def 17d · 全色域覆盖检查（数据外置版）。
+    """def 17d · 全色域覆盖检查（职责分离版，用户 2026-09-13 定稿）。
 
-    数据源：data/shades/color_coverage_16.json——由 scripts/generate_color_coverage.py
-    生成（4096 色的 GB/T 15608 命名 + 官方库 ΔE00 最近匹配 + has_official）。
-    用户要求（2026-09-13）：命名与匹配数据**不写在代码内**——色号库（shades.json）
-    扩充后重跑生成脚本即可刷新，本端点只读数据，不含任何颜色判断逻辑。
+    数据流：
+        GB 命名 → data/shades/gb_names_16.json（generate_gb_names_16.py 产物，纯命名）
+        官方匹配 → 运行时从 shades.json 逐点 ΔE00 取最近（官方库扩充自动跟随，
+                    无需重跑任何生成脚本；结果按官方库条数缓存）
+    输出 items = GB 命名字段 + official_hex/official_name/dE/has_official 组合。
     """
     tool = "coverage16"
+    global _COV_CACHE
     try:
-        if not _COVERAGE_JSON.exists():
-            return {"ok": False, "tool": tool,
-                    "error": "覆盖数据未生成——请先运行 scripts/generate_color_coverage.py",
-                    "results": {}}
-        data = json.loads(_COVERAGE_JSON.read_text(encoding="utf-8"))
-        st = data["stats"]
+        gb_data = json.loads(_GBNAMES_JSON.read_text(encoding="utf-8"))
+        shades = _core.SHADES
+
+        if _COV_CACHE and _COV_CACHE[0] == len(shades):     # 官方库未变 → 复用缓存
+            items, stats = _COV_CACHE[1], _COV_CACHE[2]
+        else:
+            off_lab = {s["hex"]: list(_core.hex2lab(s["hex"])) for s in shades}
+            items, hits = [], 0
+            for it in gb_data["items"]:
+                lab = list(_core.hex2lab(it["hex"]))
+                best_k, best_d = 0, 1e9
+                for k, s in enumerate(shades):              # ΔE00 全量取最小（修欧氏背离）
+                    dE = float(_core.ciede2000(lab, off_lab[s["hex"]]))
+                    if dE < best_d:
+                        best_k, best_d = k, dE
+                s = shades[best_k]
+                has = best_d <= 1.0
+                hits += int(has)
+                items.append({**it, "official_hex": s["hex"], "official_name": s["name"],
+                              "dE": round(best_d, 2), "has_official": has})
+            stats = {"total": len(items), "hits": hits, "miss": len(items) - hits,
+                     "coverage_pct": round(100.0 * hits / len(items), 2)}
+            _COV_CACHE = (len(shades), items, stats)
+
         return {"ok": True, "tool": tool,
-                "query": {"sampling": data["sampling"],
-                          "official_shades": data["official_shades"],
-                          "threshold_dE": data["threshold_dE"],
-                          "generated": data["generated"]},
-                "results": {"total": st["total"], "hits": st["hits"], "miss": st["miss"],
-                            "coverage_pct": st["coverage_pct"], "items": data["items"]},
+                "query": {"sampling": gb_data["sampling"], "official_shades": len(shades),
+                          "threshold_dE": 1.0},
+                "results": {**stats, "items": items},
                 "error": None}
-    except Exception as exc:                                       # 错误不穿透
+    except Exception as exc:                                    # 错误不穿透
         return {"ok": False, "tool": tool, "error": str(exc), "results": {}}
