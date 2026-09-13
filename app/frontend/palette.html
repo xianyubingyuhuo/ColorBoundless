@@ -87,14 +87,16 @@ async function t1(){
   $("s1res").innerHTML = `<div class="meta">查询中（官方库 + 全库 26 万色并行）…</div>`;
   try{
     const safe = async (url) => {
-      try { return await getJSON(url); }
-      catch(e){ return {ok: false, error: "请求失败: " + e, results: []}; }
+      try {
+        const {j, ms} = await getJSON(url);          // getJSON 返回 {j, ms} 包装，需解构出五件套
+        return {...j, _ms: ms};
+      } catch(e){ return {ok: false, error: "请求失败: " + e, results: []}; }
     };
     const [off, full] = await Promise.all([
       safe(`/api/tools/search_shade?hex=${hex}&top_k=${k}`),
       safe(`/api/tools/palette_search?hex=${hex}&top_k=${k}`)
     ]);
-    $("s1ms").textContent = `官方 ${off.ms ?? "?"}ms · 全库 ${full.ms ?? "?"}ms`;
+    $("s1ms").textContent = `官方 ${off._ms ?? "?"}ms · 全库 ${full._ms ?? "?"}ms`;
     $("s1json").textContent = JSON.stringify({official: off, full_palette: full}, null, 2);
     if(!off.ok){
       /* 防御：把真实响应打进错误区，便于定位（正常不应触发） */
