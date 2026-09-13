@@ -7,6 +7,8 @@
     本模块只依赖 beauty/lipstick/shade_library（算法层），算法层不知道 agent 存在。
 """
 import importlib.util
+import json
+import math
 import re
 from pathlib import Path
 
@@ -81,7 +83,8 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
     # 查询任意色（如黑色）时最近官方色可能差得很远——必须如实标注"官方无此色号"，
     # 让定制口红/眼影/粉底的任意色链路有意义，而不是硬把红棕系塞给查黑色的用户。
     has_official = bool(rows) and float(rows[0].get("dE", 999.0)) <= 1.0
-    gb = gb_color_name(lab)
+    rgb255 = [int(hex_std[i:i + 2], 16) for i in (0, 2, 4)]
+    gb = _gb_lookup(hex_std, rgb255, lab)
     return {"ok": True, "tool": tool,
             "query": {"hex": hex_std, "lab": lab,
                       "gb_label": gb["label"], "gb_cn": gb["cn"],
@@ -91,30 +94,36 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
             "error": None}
 
 
-def gb_color_name(lab):
-    """GB/T 15608《中国颜色体系》风格近似命名（R-07 口径：现阶段标注体系）。
+def gb_color_name(rgb255, lab):
+    """GB/T 15608《中国颜色体系》近似命名（R-07 口径：现阶段标注体系）。
 
-    输入：Lab (3,)；输出：{label: "5R 4.0/12.0" 标号, cn: "暗红" 中文色名}。
-    诚实边界：色调取 Lab 色相角映射 10 基本色调，明度 V ≈ L*/10、彩度 ≈ 0.4·C*
-    为近似换算——精确标号以《中国颜色体系》国家标准样册为准（PPT 口径已声明）。
+    输入：rgb255 (3,) 0~255、lab (3,)；输出：{label, cn}。
+    修正记录（2026-09-13，用户报错 #000088→"鲜暗红紫"）：
+    ① 色调改用 **HSV 色相角**（感知一致）——Lab 色相角在深色区会把蓝判成紫红；
+    ② 明度 V = L*/10（感知明度），彩度 = min(20, 0.4·C*)；
+    ③ 修饰语互斥：V<3 → 深(Cm≥10)/暗，V≥7.5 → 鲜(Cm≥10)/浅(Cm≥4)/淡，
+       中段 → 鲜(Cm≥10)/淡(Cm<4)——消除"鲜暗"矛盾。
+    诚实边界：近似换算，精确标号以《中国颜色体系》国家标准样册为准。
     """
-    import math
-    L, a, b = float(lab[0]), float(lab[1]), float(lab[2])
-    C = math.hypot(a, b)
-    h = math.degrees(math.atan2(b, a)) % 360.0
-    V = max(0.0, min(10.0, L / 10.0))
-    Cm = C * 0.4
-
-    # 中国颜色体系 10 基本色调（每 36° 一档：中心角、中文名、符号）
-    hues = [(0, "红", "R"), (36, "黄红", "YR"), (72, "黄", "Y"), (108, "绿黄", "GY"),
-            (144, "绿", "G"), (180, "蓝绿", "BG"), (216, "蓝", "B"), (252, "紫蓝", "PB"),
-            (288, "紫", "P"), (324, "红紫", "RP")]
-    idx = int(((h + 18.0) % 360.0) // 36.0) % 10
-    pos = ((h - hues[idx][0]) % 360.0) / 36.0
+    r, g, b = [v / 255.0 for v in rgb255]
+    mx, mn = max(r, g, b), min(r, g, b)
+    h = 0.0
+    if mx != mn:
+        d = mx - mn
+        if mx == r:   h = ((g - b) / d) % 6
+        elif mx == g: h = (b - r) / d + 2
+        else:         h = (r - g) / d + 4
+        h *= 60.0                                   # HSV 色相角（感知色调）
+    idx = int(h // 36.0) % 10
+    pos = (h - idx * 36.0) / 36.0
     hue_num = 10 if pos >= 0.5 else 5
-    label_hue = f"{hue_num}{hues[idx][2]}"
 
-    if C < 2.0:                                   # 非彩色（中性轴）
+    L, a, bb = float(lab[0]), float(lab[1]), float(lab[2])
+    C = math.hypot(a, bb)
+    V = max(0.0, min(10.0, L / 10.0))
+    Cm = min(20.0, C * 0.4)
+
+    if C < 2.0:                                     # 非彩色（中性轴）
         label = f"N {V:.1f}/0"
         if V >= 8.5:   cn = "白色"
         elif V >= 7.0: cn = "明灰色"
@@ -124,66 +133,61 @@ def gb_color_name(lab):
         else:          cn = "黑色"
         return {"label": label, "cn": cn}
 
-    if Cm >= 8.0:   cmod = "鲜"
-    elif Cm <= 2.0: cmod = "淡"
-    else:           cmod = ""
-    if V >= 7.5:    vmod = "浅"
-    elif V <= 3.0:  vmod = "暗"
-    else:           vmod = ""
-    cn = f"{cmod}{vmod}{hues[idx][1]}"
+    hues = ["红", "黄红", "黄", "绿黄", "绿", "蓝绿", "蓝", "紫蓝", "紫", "红紫"]
+    syms = ["R", "YR", "Y", "GY", "G", "BG", "B", "PB", "P", "RP"]
+    label = f"{hue_num}{syms[idx]} {V:.1f}/{Cm:.1f}"
 
-    return {"label": f"{label_hue} {V:.1f}/{Cm:.1f}", "cn": cn}
+    if V < 3.0:                                     # 暗区：深（彩度高）/ 暗
+        cn = f"深{hues[idx]}" if Cm >= 10 else f"暗{hues[idx]}"
+    elif V >= 7.5:                                  # 亮区：鲜（彩度高）/ 浅 / 淡
+        cn = f"鲜{hues[idx]}" if Cm >= 10 else (f"浅{hues[idx]}" if Cm >= 4 else f"淡{hues[idx]}")
+    else:                                           # 中段：鲜 / 淡 / 无修饰
+        cn = f"鲜{hues[idx]}" if Cm >= 10 else (f"淡{hues[idx]}" if Cm < 4 else hues[idx])
+    return {"label": label, "cn": cn}
+
+
+_COVERAGE_JSON = Path(__file__).resolve().parents[2] / "data" / "shades" / "color_coverage_16.json"
+_COVERAGE_MAP = None      # hex → (gb_label, gb_cn)，懒加载缓存
+
+
+def _gb_lookup(hex_std, rgb255, lab):
+    """GB 命名查询：优先读外置覆盖数据（与覆盖检查同源一致）；网格外颜色用函数近似。"""
+    global _COVERAGE_MAP
+    if _COVERAGE_MAP is None:
+        try:
+            data = json.loads(_COVERAGE_JSON.read_text(encoding="utf-8"))
+            _COVERAGE_MAP = {it["hex"]: (it["gb_label"], it["gb_cn"]) for it in data["items"]}
+        except Exception:
+            _COVERAGE_MAP = {}
+    hit = _COVERAGE_MAP.get(hex_std)
+    if hit:
+        return {"label": hit[0], "cn": hit[1]}
+    return gb_color_name(rgb255, lab)
 
 
 def coverage16_tool() -> dict:
-    """def 17d · 全色域覆盖检查：16³=4096 采样点 vs 官方色号库（shades.json）。
+    """def 17d · 全色域覆盖检查（数据外置版）。
 
-    用户需求（2026-09-13）：查询颜色要求全色——16×16×16 采样点每点标注
-    "官方色号库是否有这个颜色"（与最近官方色号 ΔE00 ≤ 1.0 → 官方有）。
-    用途：暴露官方库（当前 20 条）对全色域的覆盖缺口——缺口清单就是
-    色号图片库（extract_palette_from_images 产物）扩充 shades.json 的目标。
-
-    性能：官方库 N 条 × 4096 点，Lab 欧氏全对广播（分块）取最近，再逐点 ΔE00。
+    数据源：data/shades/color_coverage_16.json——由 scripts/generate_color_coverage.py
+    生成（4096 色的 GB/T 15608 命名 + 官方库 ΔE00 最近匹配 + has_official）。
+    用户要求（2026-09-13）：命名与匹配数据**不写在代码内**——色号库（shades.json）
+    扩充后重跑生成脚本即可刷新，本端点只读数据，不含任何颜色判断逻辑。
     """
     tool = "coverage16"
     try:
-        import numpy as np
-
-        shades = _core.SHADES
-        if not shades:
-            return {"ok": False, "tool": tool, "error": "官方色号库为空", "results": {}}
-
-        off_lab = np.array([_core.hex2lab(s["hex"]) for s in shades], dtype=np.float64)
-        levels = [round(i * 255 / 15) for i in range(16)]          # 0,17,...,255
-        pts = [(r, g, b) for r in levels for g in levels for b in levels]
-        q_lab = np.array([_core.hex2lab("%02X%02X%02X" % pt) for pt in pts], dtype=np.float64)
-
-        best = np.empty(len(q_lab), dtype=np.int64)
-        CH = 512
-        for s0 in range(0, len(q_lab), CH):                        # 分块广播防内存尖峰
-            d = ((q_lab[s0:s0 + CH, None, :] - off_lab[None, :, :]) ** 2).sum(-1)
-            best[s0:s0 + CH] = d.argmin(1)
-
-        items, hits = [], 0
-        for j, pt in enumerate(pts):
-            k = int(best[j])
-            s = shades[k]
-            dE = float(_core.ciede2000(q_lab[j], off_lab[k]))
-            has = dE <= 1.0                                        # ΔE≤1 视为官方有（JND 内）
-            hits += int(has)
-            gb = gb_color_name(q_lab[j])                           # R-07 · GB/T 15608 近似命名
-            items.append({"hex": "%02X%02X%02X" % pt, "rgb": list(pt),
-                          "official_hex": s["hex"], "official_name": s["name"],
-                          "dE": round(dE, 2), "has_official": has,
-                          "gb_label": gb["label"], "gb_cn": gb["cn"]})
-
-        miss = len(items) - hits
+        if not _COVERAGE_JSON.exists():
+            return {"ok": False, "tool": tool,
+                    "error": "覆盖数据未生成——请先运行 scripts/generate_color_coverage.py",
+                    "results": {}}
+        data = json.loads(_COVERAGE_JSON.read_text(encoding="utf-8"))
+        st = data["stats"]
         return {"ok": True, "tool": tool,
-                "query": {"sampling": "16x16x16=4096", "official_shades": len(shades),
-                          "threshold_dE": 1.0},
-                "results": {"total": len(items), "hits": hits, "miss": miss,
-                            "coverage_pct": round(100.0 * hits / len(items), 2),
-                            "items": items},
+                "query": {"sampling": data["sampling"],
+                          "official_shades": data["official_shades"],
+                          "threshold_dE": data["threshold_dE"],
+                          "generated": data["generated"]},
+                "results": {"total": st["total"], "hits": st["hits"], "miss": st["miss"],
+                            "coverage_pct": st["coverage_pct"], "items": data["items"]},
                 "error": None}
     except Exception as exc:                                       # 错误不穿透
         return {"ok": False, "tool": tool, "error": str(exc), "results": {}}
