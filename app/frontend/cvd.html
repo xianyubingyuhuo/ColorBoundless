@@ -13,10 +13,45 @@
   <a href="/palette.html">选色</a><span class="sep">|</span><a href="/tryon.html">试妆</a><span class="sep">|</span><a class="on" href="/cvd.html">色盲校验</a><span class="sep">|</span><a href="/products.html">产品库</a>
  </nav>
 </header>
-<p class="sub">Machado 2009 模拟 · ΔE 判定 · 规则库避撞 · 让美妆对色觉异常用户也成立</p>
+<p class="sub">测评 → 校色 → 试妆 · Machado 2009 模拟 · ΔE 判定 · 规则库避撞 · 一切数字由代码计算</p>
 
-<!-- def 14 · 色对校验 / 单色模拟（已上线） -->
-<div class="card" id="card-cvd"><b><span class="step">STEP 1</span>色盲视角校验 /api/cvd · Machado 2009 模拟 + 规则库</b>
+<!-- def 17 · 旅程第一步：色盲测评（12 题快筛，规则引擎判定） -->
+<div class="card" id="exam-card"><b><span class="step">STEP 1</span>色盲自测 · 12 题快筛（约 2 分钟）</b>
+ <div id="exam-intro">
+  <div class="meta" style="line-height:1.9;margin-top:6px">
+   流程：石原分型图 ×2（报数字）→ 网格找异色 ×9（明度/彩度/色相三维各 3 轮阶梯）→
+   色相渐变排列 ×1（按平滑顺序点击 15 块）。判定全部由规则引擎完成——可解释、可复现，测完出你的色觉档案。
+  </div>
+  <button onclick="startExam()" style="margin-top:10px">开始测评</button>
+ </div>
+ <div id="exam-area"></div>
+</div>
+
+<!-- def 17 · 旅程第二步：档案 · AI 总结 · 校色选择 -->
+<div class="card" id="profile-card" style="display:none"><b><span class="step">STEP 2</span>你的色觉档案 · AI 总结 · 校色选择</b>
+ <div id="profile-body" style="margin-top:8px"></div>
+ <div class="row" style="margin-top:10px">
+  <button onclick="askAI()">让 AI 总结我的色彩视觉</button>
+  <span class="meta">AI 只引用档案数据说话，不做判定</span>
+ </div>
+ <div id="aisum" class="res"></div>
+ <div style="margin-top:14px;border-top:1px solid var(--bd);padding-top:10px">
+  <b class="meta">选择校色模式（旅程第二步 · 试妆通道将消费此选择 · 全站配色联动）：</b>
+  <div class="row" style="margin-top:8px">
+   <button onclick="doCalibrate('correct')">校色模式</button>
+   <button onclick="doCalibrate('simulate')">模拟模式</button>
+   <button onclick="doCalibrate('off')">关闭</button>
+   <span id="calstatus" class="ms"></span>
+  </div>
+  <div class="meta" style="margin-top:6px">
+   校色 = 整站配色为你重新校色（你现在看到的页面变化就是效果），试妆色号同步反解为标准视觉等意色；
+   模拟 = 向你展示"色盲用户眼中的本站"；关闭 = 恢复原色。
+  </div>
+ </div>
+</div>
+
+<!-- def 14 · 模拟/校验（保留） -->
+<div class="card" id="card-cvd"><b><span class="step">STEP 3</span>色盲视角校验 /api/cvd · Machado 2009 模拟 + 规则库</b>
  <div class="row" style="margin-top:8px">
   <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
   <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
@@ -32,14 +67,156 @@
  <details><summary>原始 JSON</summary><pre id="cvdjson"></pre></details>
 </div>
 
-<!-- def 17 预留位：色觉测评全链（ishihara 排序 → 色觉档案 JSON → 喂 AI 分析） -->
-
-<footer>判定阈值 confuse&lt;5 / risky&lt;12 为项目启发式（答辩口径：非行业标准）· 规则库比原始 ΔE 更保守，规则命中与物理可辨可以不同——这正是产品层对人的关怀。</footer>
+<footer>判定阈值（confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
+色觉规则库比原始 ΔE 更保守——规则命中与物理可辨可以不同，这正是产品层对人的关怀 ·
+测评判定全部由规则引擎完成（可解释可复现），AI 只引用档案说话。</footer>
+<script src="theme_cvd.js?v=def17"></script>
 <script src="chatbox.js?v=def20c"></script>
 <script>
 const $ = id => document.getElementById(id);
 async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
 
+/* ==== 测评状态机（前端驱动出题展示，判定在后端规则引擎） ==== */
+let examId = null;
+const TYPE_CN = {deutan:"绿色盲（deutan）",protan:"红色盲（protan）",tritan:"蓝黄色盲（tritan）",
+                 normal:"正常色觉",uncertain:"证据矛盾 · 待复核"};
+
+async function startExam(){
+  $("exam-intro").innerHTML = '<div class="meta">测评加载中…</div>';
+  try{
+    const r = await (await fetch("/api/cvd/exam/start",{method:"POST"})).json();
+    if(!r.ok){ $("exam-intro").innerHTML = `<span class="err">[错误] ${r.error}</span>`; return; }
+    examId = r.query.exam_id;
+    $("exam-intro").style.display = "none";
+    renderQ(r.results);
+  }catch(e){ $("exam-intro").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
+}
+
+function renderQ(res){
+  const area = $("exam-area");
+  if(res.done){ renderProfile(res.profile); return; }
+  const q = res.question;
+  const stageCN = {ishihara:"石原分型",grid:"网格找异色",hue:"色相排列"}[q.type] || q.type;
+  let body = "";
+  if(q.type === "ishihara"){
+    body = `<img src="data:image/png;base64,${q.img_b64}" style="max-width:320px;border:1px solid var(--bd)">` +
+      `<div class="row" style="margin-top:10px"><input id="ans" type="number" min="0" max="99" placeholder="看到的数字" style="width:130px">` +
+      `<button onclick="submitAnswer(document.getElementById('ans').value)">提交</button>` +
+      `<span class="meta">看不清就填 0</span></div>`;
+  } else if(q.type === "grid"){
+    body = `<div style="position:relative;display:inline-block;cursor:crosshair">` +
+      `<img src="data:image/png;base64,${q.img_b64}" style="display:block;border:1px solid var(--bd)">` +
+      `<div id="goverlay" style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(${q.n},1fr);grid-template-rows:repeat(${q.n},1fr)"></div></div>` +
+      `<div class="meta" style="margin-top:6px">点出异色块的位置</div>`;
+  } else if(q.type === "hue"){
+    body = `<div class="row" id="huebox" style="margin-top:4px"></div>` +
+      `<div class="row" style="margin-top:10px"><button onclick="resetHue()">重新排</button>` +
+      `<span class="meta" id="huecount">已选 0/${q.colors.length} · 全部点完自动收卷</span></div>`;
+  }
+  area.innerHTML = `<div class="meta">${stageCN} · 第 ${res.question_no}/${res.question_total} 题</div>` +
+    `<div style="height:6px;background:rgba(255,255,255,.08);margin:6px 0 12px">` +
+    `<div style="height:100%;width:${Math.round((res.question_no-1)/res.question_total*100)}%;background:var(--ac)"></div></div>` + body;
+
+  if(q.type === "grid"){
+    const ov = $("goverlay");
+    for(let r = 0; r < q.n; r++) for(let c = 0; c < q.n; c++){
+      const cell = document.createElement("div");
+      cell.style.cssText = "border:1px solid transparent";
+      cell.onmouseenter = () => cell.style.borderColor = "rgba(229,71,109,.5)";
+      cell.onmouseleave = () => cell.style.borderColor = "transparent";
+      cell.onclick = () => submitAnswer([r, c]);
+      ov.appendChild(cell);
+    }
+  }
+  if(q.type === "hue"){
+    window.__huePick = []; window.__hueDone = false;
+    const box = $("huebox");
+    q.colors.forEach((rgb, idx) => {
+      const b = document.createElement("button");
+      b.style.cssText = `width:44px;height:64px;background:rgb(${rgb[0]},${rgb[1]},${rgb[2]});padding:0;position:relative`;
+      b.onclick = () => {
+        if(window.__hueDone) return;
+        window.__huePick.push(idx);
+        b.textContent = window.__huePick.length; b.disabled = true; b.style.opacity = .55;
+        $("huecount").textContent = `已选 ${window.__huePick.length}/${q.colors.length} · 全部点完自动收卷`;
+        if(window.__huePick.length === q.colors.length){ window.__hueDone = true; submitAnswer(window.__huePick); }
+      };
+      box.appendChild(b);
+    });
+  }
+}
+
+function resetHue(){
+  window.__huePick = []; window.__hueDone = false;
+  [...$("huebox").children].forEach(b => { b.textContent = ""; b.disabled = false; b.style.opacity = 1; });
+  $("huecount").textContent = "已选 0/15 · 全部点完自动收卷";
+}
+
+async function submitAnswer(ans){
+  try{
+    const r = await (await fetch("/api/cvd/exam/answer", {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({exam_id: examId, answer: ans})})).json();
+    if(!r.ok){ $("exam-area").innerHTML = `<span class="err">[错误] ${r.error}</span>`; return; }
+    renderQ(r.results);
+  }catch(e){ $("exam-area").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
+}
+
+function renderProfile(prof){
+  examId = null;
+  $("exam-area").innerHTML = `<div class="ms">测评完成，档案已生成。</div>`;
+  const pc = $("profile-card"); pc.style.display = "";
+  const ev = prof.evidence || {};
+  const sevPct = Math.round((prof.severity || 0) * 100);
+  $("profile-body").innerHTML =
+    `<div class="item"><div><b>色觉类型：${TYPE_CN[prof.cvd_type] || prof.cvd_type}</b>` +
+    `<div class="meta">severity ${prof.severity}（${sevPct}%）· 置信度 ${prof.confidence} · 分诊通道 ${prof.triage_path}</div>` +
+    `<div style="height:6px;background:rgba(255,255,255,.08);margin:6px 0"><div style="height:100%;width:${sevPct}%;background:var(--ac)"></div></div>` +
+    `<div class="meta">三维分辨阈值：ΔL=${prof.dL_threshold} · ΔC=${prof.dC_threshold} · ΔH=${prof.dH_threshold}（CIE 单位，越小越敏感）</div>` +
+    `<div class="meta">证据：石原 ${ev.n_plates} 张 · 排列判定 ${ev.hue_verdict} · 终档 ${JSON.stringify(ev.final_levels)} · 双证据${ev.consistent ? "一致" : "存在分歧"}</div>` +
+    ((prof.prescriptions || []).length ? `<div class="meta">处方：${prof.prescriptions.join(" / ")}</div>` : "") +
+    `<div class="meta">${prof.advice || ""}</div></div></div>`;
+  pc.scrollIntoView({behavior: "smooth"});
+}
+
+async function askAI(){
+  const box = $("aisum");
+  box.innerHTML = `<div class="meta">AI 正在读取你的档案并总结…（约 10~40s，可在右下角 AI 窗口继续追问）</div>`;
+  try{
+    const r = await fetch("/api/chat", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({message: "请根据我的色盲测评档案，总结我的色彩视觉特点，并给出选色与校色建议"})});
+    const j = await r.json();
+    box.innerHTML = (j.steps || []).map(s => `<div class="meta">[工具] ${s.tool} ${s.ok ? "[OK]" : "[错误]"}</div>`).join("") +
+      (j.error ? `<div class="err">[错误] ${j.error}</div>`
+               : `<div class="a" style="white-space:pre-wrap;line-height:1.7">${j.content ?? ""}</div>`);
+  }catch(e){ box.innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
+}
+
+async function doCalibrate(mode){
+  const st = $("calstatus");
+  st.textContent = "提交中…";
+  try{
+    const r = await (await fetch("/api/cvd/exam/calibrate", {method:"POST",
+      headers:{"Content-Type":"application/json"}, body: JSON.stringify({mode})})).json();
+    if(!r.ok){ st.textContent = `[错误] ${r.error}`; return; }
+    const cal = r.results.calibration;
+    if(window.CVDTheme){
+      if(mode === "off") window.CVDTheme.reset();
+      else window.CVDTheme.apply(mode, cal.kind, cal.severity);
+    }
+    st.innerHTML = `<span class="ms">已应用：${mode}（${cal.kind} @ severity ${cal.severity}）· 全站配色已联动 · 试妆通道将按此执行</span>`;
+  }catch(e){ st.textContent = `[错误] 请求失败: ${e}`; }
+}
+
+/* 页面加载：已有档案则直接展示（可重新校色，无需重测） */
+(async () => {
+  try{
+    const p = await (await fetch("/api/cvd/exam/profile")).json();
+    if(p.ok) renderProfile(p.results);
+  }catch(e){}
+})();
+
+/* ==== def 14 · 模拟/校验（原逻辑保留） ==== */
 function cvdVerdict(v){
   if(v==="confuse") return '<span class="err">色盲用户几乎看不出区别（ΔE&lt;5）</span>';
   if(v==="risky") return '<span style="color:#ffc46b">勉强可辨，建议加大明度差（ΔE&lt;12）</span>';
@@ -71,6 +248,7 @@ async function cvd(){
     }
   }catch(e){el.innerHTML=`<span class="err">[错误] 请求失败: ${e}</span>`}
 }
+
 </script>
 </body>
 </html>

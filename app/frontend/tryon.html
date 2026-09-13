@@ -43,19 +43,28 @@
 <!-- def 16 预留位：上传即分析 → 自动肤色 → 精确色号回填表单（确认权在用户） -->
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
-<script src="chatbox.js?v=def20c"></script>
+<script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def20c"></script>
 <script>
 const $ = id => document.getElementById(id);
 
-/* def 17b · 校色联动：页面加载即查测评档案，状态条可见可解释 */
+/* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */
 (async () => {
   try {
     const p = await (await fetch("/api/cvd/exam/profile")).json();
     if (p.ok) {
-      const r = p.results;
-      $("corstatus").innerHTML =
-        `<span class="ms">校正生效中：${r.cvd_type} @ severity ${r.severity}` +
-        `（置信度 ${r.confidence}，来自测评档案）</span>`;
+      const r = p.results, cal = r.calibration;
+      if (cal && cal.mode === "correct") {
+        $("corstatus").innerHTML =
+          `<span class="ms">校色生效中（${cal.mode} · ${cal.kind} @ severity ${cal.severity}）——` +
+          `所选色号将反解为标准视觉等意色后上妆</span>`;
+      } else if (cal && cal.mode === "simulate") {
+        $("corstatus").innerHTML =
+          `<span class="meta">模拟模式生效中（全站配色为你模拟展示）——此模式下试妆色号不做反解</span>`;
+      } else {
+        $("corstatus").innerHTML =
+          `<span class="meta">已有测评档案但未完成校色——请去 <a href="/cvd.html" style="color:var(--ac2)">色盲校验</a> ` +
+          `STEP 2 选择校色模式（旅程：测评 → 校色 → 试妆）</span>`;
+      }
     } else {
       $("corstatus").innerHTML =
         `<span class="meta">暂无测评档案——先去 <a href="/cvd.html" style="color:var(--ac2)">色盲校验</a> 完成测评，` +
