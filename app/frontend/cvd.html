@@ -116,11 +116,14 @@ function renderQ(res){
       `<div class="row" style="margin-top:10px"><button id="huesubmit" onclick="submitHue()" disabled>提交排列</button>` +
       `<button onclick="resetHue()">清空重来</button><span class="meta" id="huecount"></span></div>`;
   } else if(q.type === "wave"){
-    body = `<div class="row" style="margin-top:6px"><span class="meta">目标色：</span>` +
-      `<span style="width:52px;height:34px;background:rgb(${q.target[0]},${q.target[1]},${q.target[2]});border:1px solid var(--bd);display:inline-block"></span>` +
-      `<span class="meta">在下面的色彩波段条上，点击你认为与目标色相同的位置</span></div>` +
-      `<div id="wavebar" style="display:flex;height:56px;margin-top:10px;cursor:crosshair;border:1px solid var(--bd);position:relative"></div>` +
-      `<div class="meta" id="wavemark" style="margin-top:6px">尚未选择</div>` +
+    body = `<div class="row" style="margin-top:6px;align-items:center">` +
+      `<span class="meta">目标色</span>` +
+      `<span style="width:64px;height:44px;background:rgb(${q.target[0]},${q.target[1]},${q.target[2]});border:1px solid var(--bd);display:inline-block"></span>` +
+      `<span class="meta" style="margin:0 12px">↔ 对比 ↔</span>` +
+      `<span id="wavepreview" style="width:64px;height:44px;border:1px dashed var(--bd);display:inline-block"></span>` +
+      `<span class="meta">你的选择</span></div>` +
+      `<div id="wavebar" style="display:flex;height:56px;margin-top:12px;cursor:ew-resize;border:1px solid var(--bd);position:relative;touch-action:none"></div>` +
+      `<div class="meta" id="wavemark" style="margin-top:8px">在波段条上**按住拖动**滑块，左边目标色 / 右边你的选择实时对比，觉得一致就提交（有容差，不必强求像素级一致）</div>` +
       `<div class="row" style="margin-top:8px"><button id="wavesubmit" onclick="submitWave()" disabled>提交</button></div>`;
   }
   area.innerHTML = `<div class="meta">${stageCN} · 第 ${res.question_no}/${res.question_total} 题</div>` +
@@ -152,20 +155,28 @@ function renderQ(res){
       seg.style.cssText = `flex:1;background:rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
       bar.appendChild(seg);
     });
-    bar.onclick = (e) => {
+    const setPos = (clientX) => {
       const rect = bar.getBoundingClientRect();
-      const ratio = Math.min(0.999, Math.max(0, (e.clientX - rect.left) / rect.width));
+      const ratio = Math.min(0.999, Math.max(0.001, (clientX - rect.left) / rect.width));
       window.__waveSel = ratio;
       let mark = document.getElementById("wavemarkline");
       if(!mark){
         mark = document.createElement("div"); mark.id = "wavemarkline";
-        mark.style.cssText = "position:absolute;top:0;bottom:0;width:3px;background:var(--tx);pointer-events:none";
+        mark.style.cssText = "position:absolute;top:-6px;bottom:-6px;width:5px;background:var(--tx);pointer-events:none;box-shadow:0 0 10px rgba(0,0,0,.7)";
+        mark.innerHTML = `<div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:var(--tx);border:3px solid #181220"></div>`;
         bar.appendChild(mark);
       }
-      mark.style.left = (ratio * 100) + "%";
-      $("wavemark").textContent = `已选择位置 ${(ratio * 360).toFixed(0)}°（以红=0°计）——点击"提交"确认`;
+      mark.style.left = `calc(${(ratio * 100).toFixed(2)}% - 2.5px)`;
+      const segIdx = Math.min(q.segments.length - 1, Math.floor(ratio * q.segments.length));
+      const c = q.segments[segIdx];
+      $("wavepreview").style.background = `rgb(${c[0]},${c[1]},${c[2]})`;
+      $("wavepreview").style.borderStyle = "solid";
+      $("wavemark").textContent =
+        `实时对比中（当前 ${(ratio * 360).toFixed(0)}°）——来回拖动，直到右边与左边看起来一致再提交`;
       $("wavesubmit").disabled = false;
     };
+    bar.onpointerdown = (e) => { bar.setPointerCapture(e.pointerId); setPos(e.clientX); };
+    bar.onpointermove = (e) => { if(e.buttons) setPos(e.clientX); };   // 按住拖动实时更新
   }
 }
 

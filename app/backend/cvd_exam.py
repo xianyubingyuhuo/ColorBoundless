@@ -95,9 +95,16 @@ def _judge_wave(click_ratio, h_true):
         axis = "blue-yellow"
     else:
         axis = "mixed"
+    # 容差分级（用户 2026-09-13 反馈：目测有色差，判定放宽）——佐证用途，不进主投票
+    if abs(ang) <= 15.0:
+        match = "match"          # 吻合（容差内）
+    elif abs(ang) <= 35.0:
+        match = "close"          # 接近（滑动对比后的正常精度）
+    else:
+        match = "deviate"        # 明显偏差（轴向信号）
     return {"h_true": round(h_true, 1), "h_click": round(h_click, 1),
-            "ang_err": round(ang, 1), "axis_hint": axis,
-            "note": "单题误差含噪声，仅作类型佐证"}
+            "ang_err": round(ang, 1), "axis_hint": axis, "match": match,
+            "note": "拖动对比交互 + 容差分级；单题仅作类型佐证，不进主投票"}
 
 
 def _next_question(state: dict) -> dict:
