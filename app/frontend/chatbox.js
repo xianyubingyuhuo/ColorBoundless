@@ -379,6 +379,3 @@
     micBtn.style.display = "none";
   }
 })();
-
-  /* ==== 锚点C ==== */
-})();
