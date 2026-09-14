@@ -18,11 +18,16 @@ _DEFAULTS = {
             "base_url": "https://api.deepseek.com/chat/completions",
             "api_key": "",
             "model": "deepseek-v4-flash",
+            # def 22 · 思考程度：disabled = 关思维链，响应更快（对话 AI 场景够用）
+            "thinking": {"type": "disabled"},
         },
         "zhipu": {
             "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
             "api_key": "",
             "model": "glm-5.3-flash",
+            # GLM 官方参数：enabled 产生 1000~2000 tokens 思维链（慢）；
+            # disabled 直接出正文。想恢复深度思考改成 {"type": "enabled"} 即可。
+            "thinking": {"type": "disabled"},
         },
     },
 }

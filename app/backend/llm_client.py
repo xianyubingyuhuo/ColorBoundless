@@ -28,6 +28,10 @@ def llm_chat(messages, tools=None, tool_choice=None, timeout=60, max_tokens=4096
     """
     p = current_provider()
     payload = {"model": p["model"], "messages": messages, "max_tokens": max_tokens}
+    if p.get("thinking") is not None:
+        # def 22 · 思考程度透传（GLM 系官方参数 {"type":"disabled"|"enabled"}）：
+        # disabled 关掉思维链，首字延迟大幅下降；provider 配置里可按需改。
+        payload["thinking"] = p["thinking"]
     if tools:
         payload["tools"] = tools
     if tool_choice is not None:
