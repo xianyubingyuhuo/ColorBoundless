@@ -45,6 +45,10 @@
   #cb-log .cb-a{margin:6px 0;white-space:pre-wrap;line-height:1.55}
   #cb-log .cb-meta{margin:5px 0;font-size:11.5px;color:var(--tx2)}
   #cb-log .cb-err{color:#ff8a80;font-size:12.5px;margin:6px 0}
+  #cb-mic{padding:7px 10px;font-size:12px}
+  #cb-mic.cb-rec{background:rgba(229,71,109,1);color:#fff}
+  #cb-tts{margin-right:6px;padding:4px 8px;font-size:11px;background:rgba(255,255,255,.06);color:var(--tx2);border:1px solid var(--bd);cursor:pointer}
+  #cb-tts.on{color:var(--ac2);border-color:rgba(229,71,109,.5)}
   #cb-inrow{display:flex;gap:6px;padding:10px;border-top:1px solid var(--bd)}
   #cb-in{flex:1}
   #cb-send{padding:7px 14px}
@@ -58,9 +62,13 @@
   wrap.innerHTML = `
   <button id="cb-fab" title="伴随 AI · 点击对话 / 按住拖动"><span>AI</span></button>
   <div id="cb-panel">
-    <div id="cb-head"><b>伴随 AI · 数字由代码计算</b><button id="cb-close" title="收起">×</button></div>
+    <div id="cb-head"><b>伴随 AI · 数字由代码计算</b>` +
+      `<span style="display:flex;align-items:center;gap:6px">` +
+      `<button id="cb-tts" style="display:none" title="朗读 AI 回复（无障碍）">朗读:关</button>` +
+      `<button id="cb-close" title="收起">×</button></span></div>
     <div id="cb-log"></div>
     <div id="cb-inrow">
+      <button id="cb-mic" style="display:none" title="按住说话，松开识别">语音</button>
       <input id="cb-in" placeholder="例如：黄黑皮适合什么口红？">
       <button id="cb-send">发送</button>
     </div>
@@ -220,11 +228,55 @@
     }
     $("cb-in").dataset.busy = "0";
     logEl.scrollTop = logEl.scrollHeight;
+    if(!j.error && j.content) speak(j.content);      // def 21 · TTS 朗读开关开启时读出回复
     return j;
   }
 
   $("cb-send").addEventListener("click", () => sendMessage());
   $("cb-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+  /* ==== def 21 · 语音闭环（R-08 无障碍）：SpeechRecognition 输入 + SpeechSynthesis 输出 ==== */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const ttsState = { on: localStorage.getItem("cb_tts") === "1" };
+  function speak(text){
+    if (!ttsState.on || !("speechSynthesis" in window) || !text) return;
+    speechSynthesis.cancel();
+    const clean = String(text).replace(/[#*`>]/g, "");          // 去掉 markdown 符号再朗读
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "zh-CN"; u.rate = 1;
+    speechSynthesis.speak(u);
+  }
+  if ("speechSynthesis" in window) {
+    const tb = $("cb-tts");
+    tb.style.display = "";
+    tb.textContent = ttsState.on ? "朗读:开" : "朗读:关";
+    tb.classList.toggle("on", ttsState.on);
+    tb.onclick = () => {
+      ttsState.on = !ttsState.on;
+      localStorage.setItem("cb_tts", ttsState.on ? "1" : "0");
+      tb.textContent = ttsState.on ? "朗读:开" : "朗读:关";
+      tb.classList.toggle("on", ttsState.on);
+      if (!ttsState.on) speechSynthesis.cancel();
+    };
+  }
+  if (SR) {
+    const mic = $("cb-mic");
+    mic.style.display = "";
+    const rec = new SR();
+    rec.lang = "zh-CN"; rec.interimResults = false; rec.maxAlternatives = 1;
+    let listening = false;
+    rec.onresult = (e) => {
+      const t = e.results[0][0].transcript.trim();
+      if (t) { $("cb-in").value = t; sendMessage(); }
+    };
+    rec.onend = () => { listening = false; mic.classList.remove("cb-rec"); mic.textContent = "语音"; };
+    rec.onerror = () => { listening = false; mic.classList.remove("cb-rec"); mic.textContent = "语音"; };
+    mic.onclick = () => {
+      if (listening) { rec.stop(); return; }
+      try { rec.start(); listening = true; mic.textContent = "聆听中"; mic.classList.add("cb-rec"); }
+      catch (e) {}
+    };
+  }
 
   /* def 17 · 外部调用接口：cvd 页测评完成后自动弹出+自动总结（旅程自动化） */
   window.CBChat = {
