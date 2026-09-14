@@ -3,7 +3,7 @@
  *   ① 用户消息右对齐圆角气泡（带边框透明底，本区域允许圆角）
  *   ② 输入区统一：语音圆标(SVG麦克风) + 输入框 + 纸飞机发送(SVG)，思考中锁定输入防串台
  *   ③ 超时可重发（90s AbortController）+ 思考中"发送"变"停止"（暂停输出）
- *   ④ 左侧对话选择栏：最多 5 个会话，新建自动顶替最早（sessionStorage 持久，刷新全清）
+ *   ④ 左侧对话选择栏：最多 5 个会话，新建自动顶替最早（localStorage 持久，跨页面/刷新保留）
  *   ⑤ 语音修复：onerror 人话提示（Chrome 网络受限→建议 Edge）+ 识别超时阈值 10s
  * 保留：拖动 / 跨页对话 / 刷新清空 / TTS 朗读 / 位置持久 / CBChat 外部接口
  * 铁律不变：数字来自工具轨迹，组件只渲染不心算。
@@ -15,6 +15,7 @@
   try {
 
   const MAX_CONVS = 5, SEND_TIMEOUT = 90000, REC_TIMEOUT = 10000;
+let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建会话（newConv）读 busy 时不踩 TDZ */
 
   const css = `
   #cb-fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border:none;cursor:grab;z-index:999;
@@ -130,9 +131,9 @@
   let convs = [];          // [{id, title, msgs:[{cls,text}]}]，≤5
   let curId = null;        // 当前会话 id
   function loadConvs(){
-    try { convs = JSON.parse(sessionStorage.getItem(SS_CONVS) || "[]"); } catch(e){ convs = []; }
+    try { convs = JSON.parse(localStorage.getItem(SS_CONVS) || "[]"); } catch(e){ convs = []; }
   }
-  function saveConvs(){ try { sessionStorage.setItem(SS_CONVS, JSON.stringify(convs)); } catch(e){} }
+  function saveConvs(){ try { localStorage.setItem(SS_CONVS, JSON.stringify(convs)); } catch(e){} }
   function curConv(){ return convs.find(c => c.id === curId); }
 
   function renderConvList(){
@@ -161,13 +162,13 @@
       curId = convs[convs.length - 1].id;
       logEl.innerHTML = "";
       (curConv().msgs || []).forEach(m => addMsg(m.cls, m.text, false));
-      sessionStorage.setItem(SS_CUR, curId);
+      localStorage.setItem(SS_CUR, curId);
     }
     saveConvs(); renderConvList();
   }
   function switchConv(id){
     curId = id;
-    sessionStorage.setItem(SS_CUR, id);
+    localStorage.setItem(SS_CUR, id);
     const c = curConv();
     logEl.innerHTML = "";
     (c ? c.msgs : []).forEach(m => addMsg(m.cls, m.text, false));
@@ -178,7 +179,7 @@
     if (convs.length >= MAX_CONVS) convs.shift();          // 顶替最早
     const c = { id: Date.now().toString(36), title: "新对话", msgs: [] };
     convs.push(c); curId = c.id;
-    saveConvs(); sessionStorage.setItem(SS_CUR, curId);
+    saveConvs(); localStorage.setItem(SS_CUR, curId);
     logEl.innerHTML = "";
     addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
     renderConvList();
@@ -205,20 +206,17 @@
     return null;
   }
 
-  /* def 22 · 启动：任何导航（站内切页 / F5 / 前进后退）都保留会话与展开态——
-     切换页面不影响当前对话的决策与总结（会话存 sessionStorage，关闭标签页才清空） */
+  /* def 22 · 启动：任何导航（站内切页 / F5 / 前进后退 / AI 跳页）都保留会话与展开态——
+     会话历史存 localStorage（跨页面跨刷新持久），切换页面不影响当前对话的决策与总结 */
   applySavedPos();   /* def 22 · 先恢复球位置（LS_POS），面板弹出位置才正确（函数声明提升，可先调） */
   loadConvs();
   if (convs.length){
-    curId = sessionStorage.getItem(SS_CUR) && convs.find(c => c.id === sessionStorage.getItem(SS_CUR))
-            ? sessionStorage.getItem(SS_CUR) : convs[convs.length - 1].id;
+    curId = localStorage.getItem(SS_CUR) && convs.find(c => c.id === localStorage.getItem(SS_CUR))
+            ? localStorage.getItem(SS_CUR) : convs[convs.length - 1].id;
     switchConv(curId);
   } else {
-    curId = null;
-    addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
-    renderConvList();
+    newConv();   /* def 22 · 对话开始即自动新建一个会话：此后所有消息都存进去，上下文不丢 */
   }
-  try { if (sessionStorage.getItem(SS_OPEN) === "1") toggle(true); } catch(e){}   // 切页回来自动恢复展开（含进行中的对话）
 
   /* ==== 拖动（保留）+ 面板锚定 ==== */
   function applySavedPos() {
@@ -377,8 +375,7 @@
   };
 
   /* ==== 消息发送：AbortController 超时/停止 + 思考中锁定输入（防串台）+ TTS ==== */
-  let busy = false;
-  let aborter = null;
+  /* busy/aborter 已提前到文件头部声明（启动自动建会话需要） */
   function setBusy(v){
     busy = v;
     $("cb-inrow").classList.toggle("locked", v);
@@ -491,6 +488,10 @@
   } else {
     micBtn.style.display = "none";
   }
+
+  /* def 22 · 切页返回：恢复面板展开态（AI navigate 跳页 / F5 后对话窗口不关闭） */
+  try { if (sessionStorage.getItem(SS_OPEN) === "1") toggle(true); } catch(e){}
+
   } catch (initErr) {
     /* 初始化错误可见化：不用 F12 也能看到（截图发我即可定位） */
     document.body.insertAdjacentHTML("beforeend",
