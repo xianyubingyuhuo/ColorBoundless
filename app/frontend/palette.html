@@ -174,12 +174,14 @@ function renderLayer(){
   covData.items.forEach((it, j) => { byIdx[j] = it; });
   const cellIdxOf = (ri, gi) => ri * 256 + gi * 16 + covLayer;   // items 顺序 = r→g→b 嵌套
 
-  /* 视图/层切换（当前态高亮）+ CSV 导出 */
-  let head = `<div class="row" style="margin-bottom:8px">` +
+  /* 视图切换一行 + B 通道层换行独立一行 */
+  let head = `<div class="row" style="margin-bottom:6px">` +
     `<button onclick="covView='grid';renderLayer()" style="${covView === "grid" ? "background:var(--ac)" : "opacity:.65"}">网格视图</button>` +
     `<button onclick="covView='list';renderLayer()" style="${covView === "list" ? "background:var(--ac)" : "opacity:.65"}">命名清单（本层 256 色）</button>` +
-    `<button onclick="exportCsv()">导出全部 4096 行 CSV</button>` +
-    `<span class="meta">B 通道层：</span>`;
+    `</div><div class="row" style="margin-bottom:6px"><span class="meta">B 通道层：</span>`;
+  for(let i = 0; i < 16; i++)
+    head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
+  head += `</div>`;
   for(let i = 0; i < 16; i++)
     head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
   head += `</div>`;
@@ -214,18 +216,6 @@ function renderLayer(){
   }
   rows += `</table>`;
   $("covgrid").innerHTML = head + rows;
-}
-function exportCsv(){
-  if(!covData) return;
-  let csv = "hex,gb_cn,gb_label,official_name,official_hex,dE,has_official\n";
-  covData.items.forEach(it => {
-    csv += `${it.hex},${it.gb_cn},${it.gb_label},"${it.official_name}",${it.official_hex},${it.dE},${it.has_official}\n`;
-  });
-  const blob = new Blob(["\ufeff" + csv], {type: "text/csv;charset=utf-8"});   // BOM：Excel 直开不乱码
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "gb_coverage_16cube.csv";
-  a.click();
 }
 function selectCovCell(it, el){
   [...$("covgrid").querySelectorAll("div[data-sel='1']")].forEach(d => { d.dataset.sel = "0"; d.style.outline = "none"; });
