@@ -30,6 +30,12 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   #cb-fab:active{cursor:grabbing;transform:scale(1)}
   #cb-fab{transition:transform .38s cubic-bezier(.22,1,.36,1), box-shadow .38s ease, opacity .3s ease}
   #cb-fab.cb-hide{transform:scale(0);opacity:0;pointer-events:none}
+  /* def 22 · 面板内滚动条：轨道毛玻璃白（半透明透出面板底），滑块=发送按钮品牌色 */
+  #cb-panel *::-webkit-scrollbar{width:8px}
+  #cb-panel *::-webkit-scrollbar-track{background:rgba(255,255,255,.07);border-radius:4px}
+  #cb-panel *::-webkit-scrollbar-thumb{background:rgba(229,71,109,.82);border-radius:4px}
+  #cb-panel *::-webkit-scrollbar-thumb:hover{background:rgba(229,71,109,1)}
+  #cb-panel{scrollbar-width:thin;scrollbar-color:rgba(229,71,109,.82) rgba(255,255,255,.07)}
   #cb-head{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
   #cb-rz{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:50;
     background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
@@ -403,14 +409,22 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
     addMsg("u", m);
     input.value = "";
     setBusy(true);
-    const th = addMsg("meta", "大脑思考中…（约 10~40s，可点右侧按钮停止）", false);
+    const th = addMsg("meta", "Thinking…（约 10~40s，可点右侧按钮停止）", false);
     aborter = new AbortController();
     const timer = setTimeout(() => aborter && aborter.abort(), SEND_TIMEOUT);
     let j = null;
     try{
       const r = await fetch("/api/chat", {method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({message: m}), signal: aborter.signal});
+        body: JSON.stringify({
+          message: m,
+          history: (() => {                     /* def 22l · 最近 10 条多轮上下文（不含 meta/err；当前消息走 message 字段，剔除避免重复） */
+            const ms = (curConv() || {}).msgs || [];
+            return ms.slice(0, -1).slice(-10)
+              .filter(x => x.cls === "u" || x.cls === "a")
+              .map(x => ({ role: x.cls === "u" ? "user" : "assistant", content: x.text }));
+          })(),
+        }), signal: aborter.signal});
       j = await r.json();
       clearTimeout(timer);
       document.querySelectorAll(".cb-thinking").forEach((e) => e.remove());
