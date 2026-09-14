@@ -15,6 +15,7 @@ from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool, HUE_GROUPS
 from agents.tools.navigate import navigate_tool, PAGES
 from agents.tools.vision_profile import get_vision_profile_tool
+from agents.prompt import TOOL_DESCRIPTIONS      # def 22k · 工具描述话术收拢至 prompt.py
 
 _REGISTRY = {
     "search_shade_tool": {
@@ -23,9 +24,7 @@ _REGISTRY = {
             "type": "function",
             "function": {
                 "name": "search_shade_tool",
-                "description": "按用户给出的十六进制色值，从官方口红色号库找最接近的色号，"
-                               "返回按色差 dE 升序的候选（含色号名、冷暖调、场合、气质标签）。"
-                               "用户提到具体色值（如 #FF4D6D、f46）想找口红色号时用它。",
+                "description": TOOL_DESCRIPTIONS["search_shade_tool"],
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -44,9 +43,7 @@ _REGISTRY = {
             "type": "function",
             "function": {
                 "name": "palette_search_tool",
-                "description": "在 262,144 色的全色域里找与目标色值最接近的颜色，"
-                               "可限定色相族（如只在 red/white 内找）。"
-                               "用户想找'接近某颜色的其他颜色'或官方色号库没有的近似色时用它。",
+                "description": TOOL_DESCRIPTIONS["palette_search_tool"],
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -67,8 +64,7 @@ _REGISTRY = {
             "type": "function",
             "function": {
                 "name": "kb_search_tool",
-                "description": "检索化妆知识库（肤色底调、冷暖皮判断、色彩搭配、选购建议等）。"
-                               "知识性、方法性问题先检索再回答，不要凭记忆编。",
+                "description": TOOL_DESCRIPTIONS["kb_search_tool"],
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -86,12 +82,7 @@ _REGISTRY = {
             "type": "function",
             "function": {
                 "name": "navigate_tool",
-                "description": "把用户引导到网站对应页面（前端会真的跳转，请先想清楚该去哪）。"
-                               "各页面职责：palette=选色/查色号/全库找色/配色知识；"
-                               "tryon=上传照片虚拟试妆；cvd=色盲自测+色盲视角模拟与校色；"
-                               "products=产品库（建设中）；home=网站主页。"
-                               "用户表达'想去/带我去/帮我在XX功能里弄'，或当前话题属于某页职责时调用；"
-                               "调用后用一句话告诉用户为什么带 TA 去那里。",
+                "description": TOOL_DESCRIPTIONS["navigate_tool"],
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -112,12 +103,7 @@ _REGISTRY = {
             "type": "function",
             "function": {
                 "name": "get_vision_profile_tool",
-                "description": "读取用户最近一次色盲测评的色觉档案（类型 cvd_type、严重度 severity、"
-                               "明度/彩度/色相三维分辨阈值、置信度、建议 advice）。"
-                               "用户做完测评后让你总结结果、解释 TA 的色彩视觉特点、"
-                               "或给出个性化用色/校色建议时，必须先用本工具读档案再说话，禁止凭空推测。"
-                               "用户说'我做完测评了/读一下我的档案/总结测试结果'时也必须调用本工具，"
-                               "此时不要调用导航工具（用户已在测评页）。",
+                "description": TOOL_DESCRIPTIONS["get_vision_profile_tool"],
                 "parameters": {"type": "object", "properties": {}},
             },
         },
