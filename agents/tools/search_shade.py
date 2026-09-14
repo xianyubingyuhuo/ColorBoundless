@@ -199,7 +199,8 @@ def coverage16_tool() -> dict:
                 items.append({**it, "official_hex": s["hex"], "official_name": s["name"],
                               "dE": round(best_d, 2), "has_official": has})
             stats = {"total": len(items), "hits": hits, "miss": len(items) - hits,
-                     "coverage_pct": round(100.0 * hits / len(items), 2)}
+                     "coverage_pct": round(100.0 * hits / len(items), 2),
+                     "official_shades": len(shades)}
             _COV_CACHE = (len(shades), items, stats)
 
         return {"ok": True, "tool": tool,
