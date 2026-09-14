@@ -28,6 +28,7 @@
   #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)}
   #cb-fab:active{cursor:grabbing;transform:scale(1)}
   #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
+    resize:both;min-width:300px;min-height:380px;overflow:hidden;
     display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
     backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5);
     opacity:0;visibility:hidden;transform:translateY(18px) scale(.97);
@@ -239,6 +240,18 @@
     panel.style.right = "auto"; panel.style.bottom = "auto";
   }
   applySavedPos();
+
+  /* def 22 · 面板大小用户可调（右下角手柄拖拽）+ 尺寸持久化，刷新后保持 */
+  const LS_SIZE = "cb_panel_size";
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_SIZE) || "null");
+    if (s && s.w && s.h) { panel.style.width = s.w + "px"; panel.style.height = s.h + "px"; }
+  } catch (e) {}
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: Math.round(panel.offsetWidth), h: Math.round(panel.offsetHeight) })); } catch (e) {}
+    }).observe(panel);
+  }
 
   let moved = false;
   fab.addEventListener("pointerdown", (e) => {
