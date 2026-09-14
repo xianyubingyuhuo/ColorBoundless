@@ -136,7 +136,7 @@
     sessionStorage.setItem(SS_CUR, id);
     const c = curConv();
     logEl.innerHTML = "";
-    (c ? c.msgs : []).forEach(m => appendMsg(m.cls, m.text, false));
+    (c ? c.msgs : []).forEach(m => addMsg(m.cls, m.text, false));
     renderConvList();
   }
   function newConv(){
@@ -146,7 +146,7 @@
     convs.push(c); curId = c.id;
     saveConvs(); sessionStorage.setItem(SS_CUR, curId);
     logEl.innerHTML = "";
-    appendMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
+    addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
     renderConvList();
   }
   $("cb-newconv").onclick = newConv;
@@ -185,7 +185,7 @@
     switchConv(curId);
   } else {
     curId = null;
-    appendMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
+    addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
     renderConvList();
   }
 
