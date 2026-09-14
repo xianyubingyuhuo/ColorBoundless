@@ -20,6 +20,19 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class NoCacheHTML(BaseHTTPMiddleware):
+    """def 22 · HTML 永远拉新（Cache-Control no-cache）——根治"改了前端没生效"的缓存类问题；
+    CSS/JS 等静态资源靠引用处的 ?v= 版本号管理。"""
+
+    async def dispatch(self, request, call_next):
+        resp = await call_next(request)
+        path = request.url.path
+        if path == "/" or path.endswith(".html"):
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return resp
 
 from agents.tools.search_shade import search_shade_tool, coverage16_tool
 from agents.tools.kb_search import kb_search_tool
@@ -42,6 +55,7 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="ColorBoundless 工具测试台", lifespan=lifespan)
+app.add_middleware(NoCacheHTML)
 
 
 class ChatIn(BaseModel):
