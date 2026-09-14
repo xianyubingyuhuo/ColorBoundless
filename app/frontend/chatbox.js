@@ -46,10 +46,13 @@
   #cb-side{width:76px;border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:8px 6px;gap:6px;overflow-y:auto}
   #cb-newconv{width:100%;padding:6px 0;font-size:12px;background:rgba(229,71,109,.25);border:1px solid rgba(229,71,109,.5);color:var(--tx);cursor:pointer}
   #cb-newconv:hover{background:rgba(229,71,109,.45)}
-  .cb-conv{width:100%;padding:6px 4px;font-size:11px;color:var(--tx2);background:rgba(255,255,255,.04);
-    border:1px solid transparent;cursor:pointer;text-align:center;line-height:1.4;word-break:break-all}
+  .cb-conv{display:flex;align-items:center;gap:4px;width:100%;padding:6px 8px;font-size:11.5px;color:var(--tx2);background:rgba(255,255,255,.04);
+    border:1px solid transparent;cursor:pointer;line-height:1.4;text-align:left}
+  .cb-conv > span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cb-conv:hover{color:var(--tx);border-color:var(--bd)}
   .cb-conv.on{color:var(--ac2);border-color:rgba(229,71,109,.6);background:rgba(229,71,109,.08)}
+  .cb-del{flex:none;width:18px;height:18px;line-height:16px;text-align:center;border-radius:5px;color:var(--tx2);opacity:.55;font-size:14px}
+  .cb-del:hover{opacity:1;color:#ff8a80;background:rgba(255,138,128,.12)}
   /* 聊天区 */
   #cb-main{flex:1;display:flex;flex-direction:column;min-width:0}
   #cb-log{flex:1;overflow-y:auto;padding:12px;font-size:13.5px;color:var(--tx)}
@@ -60,16 +63,17 @@
     background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:3px 14px 14px 14px;padding:8px 12px}
   #cb-log .cb-meta{margin:6px 0;font-size:11.5px;color:var(--tx2)}
   #cb-log .cb-err{color:#ff8a80;font-size:12.5px;margin:6px 0}
-  #cb-inrow{display:flex;gap:6px;padding:10px;border-top:1px solid var(--bd);align-items:center}
+  #cb-inrow{display:flex;gap:0;margin:10px;padding:4px 6px;border:1px solid var(--bd);border-radius:12px;background:rgba(255,255,255,.04);align-items:center}
   #cb-inrow.locked{opacity:.55}
-  #cb-mic,#cb-send{width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;flex:none}
+  .cb-sep{width:1px;height:20px;background:var(--bd);flex:none;margin:0 5px}
+  #cb-mic,#cb-send{border:none;width:34px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;flex:none;border-radius:9px}
   #cb-mic svg,#cb-send svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   #cb-mic{background:rgba(255,255,255,.08)}
   #cb-mic.cb-rec{background:rgba(229,71,109,1);color:#fff}
   #cb-send{background:rgba(229,71,109,.82)}
   #cb-send:hover{background:rgba(229,71,109,1)}
   #cb-send.stop{background:rgba(118,84,255,.85)}
-  #cb-in{flex:1;min-width:0}
+  #cb-in{flex:1;min-width:0;background:transparent;border:none;box-shadow:none}
   #cb-in:disabled{opacity:.6}
   `;
   const st = document.createElement("style");
@@ -98,7 +102,9 @@
         <div id="cb-log"></div>
         <div id="cb-inrow">
           <button id="cb-mic" style="display:none" title="点击说话（识别后自动发送）">${MIC_SVG}</button>
+          <span class="cb-sep" id="cb-sep1" style="display:none"></span>
           <input id="cb-in" placeholder="例如：黄黑皮适合什么口红？">
+          <span class="cb-sep"></span>
           <button id="cb-send" title="发送（思考中变为停止）">${SEND_SVG}</button>
         </div>
       </div>
@@ -125,11 +131,30 @@
     convs.forEach(c => {
       const d = document.createElement("div");
       d.className = "cb-conv" + (c.id === curId ? " on" : "");
-      d.textContent = c.title || "新对话";
       d.title = c.title || "";
+      const t = document.createElement("span");
+      t.textContent = c.title || "新对话";
+      const x = document.createElement("span");
+      x.className = "cb-del"; x.textContent = "×"; x.title = "删除此对话";
+      x.onclick = (ev) => { ev.stopPropagation(); delConv(c.id); };
+      d.appendChild(t); d.appendChild(x);
       d.onclick = () => { if (busy) return; switchConv(c.id); };
       box.appendChild(d);
     });
+  }
+  function delConv(id){
+    if (busy) return;
+    const i = convs.findIndex(c => c.id === id);
+    if (i < 0) return;
+    convs.splice(i, 1);
+    if (!convs.length) convs.push({ id: Date.now().toString(36), title: "新对话", msgs: [] });
+    if (curId === id || !curConv()){
+      curId = convs[convs.length - 1].id;
+      logEl.innerHTML = "";
+      (curConv().msgs || []).forEach(m => addMsg(m.cls, m.text, false));
+      sessionStorage.setItem(SS_CUR, curId);
+    }
+    saveConvs(); renderConvList();
   }
   function switchConv(id){
     curId = id;
@@ -348,6 +373,7 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR){
     micBtn.style.display = "";
+    const sep1 = $("cb-sep1"); if (sep1) sep1.style.display = "";
     const rec = new SR();
     rec.lang = "zh-CN"; rec.interimResults = false; rec.maxAlternatives = 1;
     let listening = false, recTimer = null;
