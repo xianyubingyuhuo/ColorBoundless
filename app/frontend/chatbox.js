@@ -32,6 +32,8 @@
   #cb-head{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
   #cb-rz{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:50;
     background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
+  /* def 22 · 拖动（移动/缩放）期间关闭过渡与背景模糊：left/top 实时跟手不卡顿 */
+  #cb-panel.no-anim{transition:none !important;backdrop-filter:none;-webkit-backdrop-filter:none}
   #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
     min-width:300px;min-height:380px;overflow:hidden;
     display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
@@ -236,12 +238,23 @@
             Math.min(Math.max(4, y), window.innerHeight - h - 4)];
   }
   function placePanel() {
-    /* def 22 · 球原地扩大成对话框：面板左上角 = 球位置（clamp 保证完整在屏内） */
+    /* def 22 · 弹出方向自适应：
+       球默认在右下 → 面板右下角贴球、向左上展开（origin 右下）；
+       球被拖到顶部 → 面板顶边贴球、向下展开；球靠左 → 向右展开。 */
     const fr = fab.getBoundingClientRect();
     const pw = panel.offsetWidth || 430, ph = panel.offsetHeight || 460;
-    const [left, top] = clamp(fr.left, fr.top, pw, ph);
+    let left = fr.right - pw;                 // 默认：面板右边贴球右边（出现在球的左上）
+    let top = fr.bottom - ph;                 //       面板底边贴球底边
+    if (top < 4) top = fr.top;                // 顶部放不下 → 面板顶边贴球、向下展开
+    if (left < 4) left = fr.left;             // 左侧放不下 → 面板左边贴球、向右展开
+    [left, top] = clamp(left, top, pw, ph);
     panel.style.left = left + "px"; panel.style.top = top + "px";
     panel.style.right = "auto"; panel.style.bottom = "auto";
+    /* origin = 球在面板边界上的方位（展开动画从球所在方向长出来）：
+       面板左边在球左侧 → 球贴面板右缘 → 从右长出("100%")；反之从左("0")。 */
+    const ox = (left < fr.left) ? "100%" : "0";
+    const oy = (top < fr.top) ? "100%" : "0";
+    panel.style.transformOrigin = ox + " " + oy;
   }
   applySavedPos();
 
@@ -295,8 +308,7 @@
   function toggle(open) {
     const willOpen = (open === undefined) ? !panel.classList.contains("open") : open;
     if (willOpen) {
-      placePanel();                                  // 面板从球的位置放大（origin 左上）
-      panel.style.transformOrigin = "0 0";
+      placePanel();                                  // 弹出方向自适应（origin 在 placePanel 内按球位置设定）
       fab.classList.add("cb-hide");                  // 球同步缩小消失
     } else {
       dockFabToPanel();                              // 球在面板右下角就位
@@ -312,6 +324,7 @@
   /* def 22 · 按住对话框顶部拖动移动（松手记住位置，收起时球 dock 到右下角） */
   $("cb-head").addEventListener("pointerdown", (e) => {
     if (e.target.closest("#cb-tts,#cb-close")) return;      // 头部按钮不触发拖动
+    panel.classList.add("no-anim");                          // 拖动期关闭过渡 → 实时跟手
     const pr = panel.getBoundingClientRect();
     const dx = e.clientX - pr.left, dy = e.clientY - pr.top;
     const onMove = (ev) => {
@@ -322,6 +335,7 @@
     const onUp = () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
+      panel.classList.remove("no-anim");
       const r = panel.getBoundingClientRect();
       try { localStorage.setItem(LS_POS, JSON.stringify({ x: r.right - 64, y: r.bottom - 64 })); } catch (e2) {}
     };
@@ -332,6 +346,7 @@
   /* def 22 · 右下角手柄拖拽调整面板大小（自定义实现，跨浏览器可靠） */
   $("cb-rz").addEventListener("pointerdown", (e) => {
     e.stopPropagation();
+    panel.classList.add("no-anim");                          // 缩放期同样关闭过渡
     const sw = panel.offsetWidth, sh = panel.offsetHeight;
     const sx = e.clientX, sy = e.clientY;
     const onMove = (ev) => {
@@ -343,6 +358,7 @@
     const onUp = () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
+      panel.classList.remove("no-anim");
       try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch (e2) {}
     };
     document.addEventListener("pointermove", onMove);
