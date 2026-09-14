@@ -36,7 +36,7 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   /* def 22 · 拖动（移动/缩放）期间关闭过渡与背景模糊：left/top 实时跟手不卡顿 */
   #cb-panel.no-anim{transition:none !important;backdrop-filter:none;-webkit-backdrop-filter:none}
   #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
-    min-width:300px;min-height:380px;overflow:hidden;
+    min-width:300px;min-height:380px;overflow:hidden;border-radius:16px;
     display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
     backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5);
     opacity:0;visibility:hidden;transform:scale(.12);
@@ -47,7 +47,8 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   #cb-head{padding:10px 12px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--ac2);letter-spacing:1px;
     display:flex;justify-content:space-between;align-items:center}
   #cb-head b{font-weight:600}
-  #cb-tts{padding:4px 8px;font-size:11px;background:rgba(255,255,255,.06);color:var(--tx2);border:1px solid var(--bd);cursor:pointer}
+  #cb-panel button,#cb-panel input{border-radius:9px}
+  #cb-tts{padding:4px 8px;font-size:11px;background:rgba(255,255,255,.06);color:var(--tx2);border:1px solid var(--bd);cursor:pointer;border-radius:8px}
   #cb-tts.on{color:var(--ac2);border-color:rgba(229,71,109,.5)}
   #cb-close{cursor:pointer;color:var(--tx2);border:none;background:none;font-size:16px;padding:0 2px}
   #cb-body{flex:1;display:flex;min-height:0}
@@ -56,7 +57,7 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   #cb-newconv{width:100%;padding:6px 0;font-size:12px;background:rgba(229,71,109,.25);border:1px solid rgba(229,71,109,.5);color:var(--tx);cursor:pointer}
   #cb-newconv:hover{background:rgba(229,71,109,.45)}
   .cb-conv{display:flex;align-items:center;gap:4px;width:100%;padding:6px 8px;font-size:11.5px;color:var(--tx2);background:rgba(255,255,255,.04);
-    border:1px solid transparent;cursor:pointer;line-height:1.4;text-align:left}
+    border:1px solid transparent;cursor:pointer;line-height:1.4;text-align:left;border-radius:9px}
   .cb-conv > span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cb-conv:hover{color:var(--tx);border-color:var(--bd)}
   .cb-conv.on{color:var(--ac2);border-color:rgba(229,71,109,.6);background:rgba(229,71,109,.08)}
@@ -445,8 +446,15 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   window.__cbAction = (a) => {
     if (!a || !a.type) return;
     if (a.type === "navigate" && a.page){
+      /* 已在目标页（/index.html 与 / 视为同页）→ 只提示不跳转 */
+      const norm = (p) => p.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
+      if (norm(location.pathname) === norm(a.page)){
+        addMsg("meta", "[调度] 你已经在这个页面啦");
+        return;
+      }
       addMsg("meta", `[调度] 正在前往 ${a.page}${a.reason ? " · " + a.reason : ""}`);
-      setTimeout(() => { location.href = a.page; }, 600);
+      try { sessionStorage.setItem(SS_OPEN, "1"); } catch(e){}   /* 锁定展开态：跳页后对话窗口必定恢复 */
+      setTimeout(() => { location.href = a.page; }, 350);
     }
   };
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
