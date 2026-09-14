@@ -205,14 +205,10 @@
     return null;
   }
 
-  /* 启动：刷新（reload）→ 全部对话清空（用户规则）；切页跳转 → 保留恢复 */
-  let navType = "navigate";
-  try { navType = (performance.getEntriesByType("navigation")[0] || {}).type || "navigate"; } catch(e){}
+  /* def 22 · 启动：任何导航（站内切页 / F5 / 前进后退）都保留会话与展开态——
+     切换页面不影响当前对话的决策与总结（会话存 sessionStorage，关闭标签页才清空） */
+  applySavedPos();   /* def 22 · 先恢复球位置（LS_POS），面板弹出位置才正确（函数声明提升，可先调） */
   loadConvs();
-  if (navType === "reload"){
-    convs = []; curId = null;
-    try { sessionStorage.removeItem(SS_CONVS); sessionStorage.removeItem(SS_CUR); sessionStorage.setItem(SS_OPEN, "0"); } catch(e){}
-  }
   if (convs.length){
     curId = sessionStorage.getItem(SS_CUR) && convs.find(c => c.id === sessionStorage.getItem(SS_CUR))
             ? sessionStorage.getItem(SS_CUR) : convs[convs.length - 1].id;
@@ -222,6 +218,7 @@
     addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
     renderConvList();
   }
+  try { if (sessionStorage.getItem(SS_OPEN) === "1") toggle(true); } catch(e){}   // 切页回来自动恢复展开（含进行中的对话）
 
   /* ==== 拖动（保留）+ 面板锚定 ==== */
   function applySavedPos() {
