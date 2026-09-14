@@ -60,6 +60,7 @@ app.add_middleware(NoCacheHTML)
 
 class ChatIn(BaseModel):
     message: str
+    history: list = None   # def 22l · 多轮上下文 [{role: user|assistant, content: str}, ...] 最近 N 条
 
 
 @app.get("/api/tools/search_shade")
@@ -88,8 +89,9 @@ def api_palette_search(hex: str, hue_group: str = None, top_k: int = 5):
 
 @app.post("/api/chat")
 def api_chat(body: ChatIn):
-    """def 11 · 大脑循环版：自动选工具 → 代码执行 → 结果喂回 → 正文"""
-    return agent_reply(body.message)
+    """def 11 · 大脑循环版：自动选工具 → 代码执行 → 结果喂回 → 正文
+       def 22l · 接入多轮 history——对话不再失忆（割裂修复）"""
+    return agent_reply(body.message, body.history)
 
 
 MAX_IMG_BYTES = 10 * 1024 * 1024
