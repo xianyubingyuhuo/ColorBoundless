@@ -181,7 +181,6 @@ function renderLayer(){
     `</div><div class="row" style="margin-bottom:6px"><span class="meta">B 通道层：</span>`;
   for(let i = 0; i < 16; i++)
     head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
-  head += `</div>`;
   for(let i = 0; i < 16; i++)
     head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
   head += `</div>`;
