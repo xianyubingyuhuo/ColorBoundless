@@ -1,63 +1,84 @@
-/* def 20 v2 · 伴随 AI 悬浮窗（全站常驻 · 跨页连续 · 自由拖动）
- * R-05：不设独立 chat 子页，悬浮窗内嵌大脑；用户指示 2026-09-11：悬浮窗于所有页面常驻，
- *      不受标签切换影响，可自由拖动。
- * 跨页连续性（同标签跳转不丢状态）：
- *   - 对话记录 → sessionStorage["cb_log"]（[{cls,text}] 数组，切页回来逐条重放）
- *   - 展开状态 → sessionStorage["cb_open"]（切页回来自动还原展开/收起）
- *   - 拖动位置 → localStorage["cb_pos"]（像素坐标，关浏览器下次打开仍在原位）
- * 拖动交互：按住 AI 球即拖（位移 >5px 判定拖动并持久化；≤5px 视为点击开关面板）。
- * 面板展开时锚定 AI 球上方并自动防屏幕溢出——拖到哪，对话就在哪顺利打开。
- * 铁律不变：报告数字全部来自 /api/chat 的工具轨迹 j.steps，组件只渲染不心算。
- * 扩展点（def 18/20 完整版）：j.action = {type:"navigate"|"fill", ...} → doAction() 通道已预留。
+/* def 22 · 伴随 AI 悬浮窗 v3——界面重构版（用户 2026-09-14 定稿）
+ * 新增/变更：
+ *   ① 用户消息右对齐圆角气泡（带边框透明底，本区域允许圆角）
+ *   ② 输入区统一：语音圆标(SVG麦克风) + 输入框 + 纸飞机发送(SVG)，思考中锁定输入防串台
+ *   ③ 超时可重发（90s AbortController）+ 思考中"发送"变"停止"（暂停输出）
+ *   ④ 左侧对话选择栏：最多 5 个会话，新建自动顶替最早（sessionStorage 持久，刷新全清）
+ *   ⑤ 语音修复：onerror 人话提示（Chrome 网络受限→建议 Edge）+ 识别超时阈值 10s
+ * 保留：拖动 / 跨页对话 / 刷新清空 / TTS 朗读 / 位置持久 / CBChat 外部接口
+ * 铁律不变：数字来自工具轨迹，组件只渲染不心算。
  */
 (function () {
-  if (window.__cb_chatbox) return;          // 防重复注入
+  if (window.__cb_chatbox) return;
   window.__cb_chatbox = true;
 
-  /* ---- 样式自注入：与 style.css 同一套设计锚点（零圆角/毛玻璃/--ac 品牌色） ---- */
+  const MAX_CONVS = 5, SEND_TIMEOUT = 90000, REC_TIMEOUT = 10000;
+
   const css = `
   #cb-fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border:none;cursor:grab;z-index:999;
     border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#ff9ab5 0%,#e5476d 45%,#7654ff 100%);   /* 外环：页面背景光晕同源配色（粉→品红→紫） */
-    box-shadow:0 10px 28px rgba(229,71,109,.35);
-    user-select:none;-webkit-user-select:none;touch-action:none;
-    transition:transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease} /* hover 缓慢放大 + 发光过渡 */
+    background:linear-gradient(135deg,#ff9ab5 0%,#e5476d 45%,#7654ff 100%);
+    box-shadow:0 10px 28px rgba(229,71,109,.35);user-select:none;-webkit-user-select:none;touch-action:none;
+    transition:transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s ease}
   #cb-fab::after{content:"";position:absolute;inset:5px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#2b2138 0%,#1e1424 60%,#150f1d 100%)} /* 内部：背景蓝黑实心圆 */
+    background:radial-gradient(circle at 35% 30%,#2b2138 0%,#1e1424 60%,#150f1d 100%)}
   #cb-fab span{position:relative;z-index:1;font-size:14px;font-weight:600;color:#fff;letter-spacing:.5px}
-  #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)} /* 微量发光（品牌粉） */
-  #cb-fab:active{cursor:grabbing;transform:scale(1)}   /* 拖动按住时回归原尺寸，避免缩放干扰定位 */
-  #cb-panel{position:fixed;right:22px;bottom:84px;width:340px;max-width:calc(100vw - 44px);height:440px;max-height:calc(100vh - 120px);
+  #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)}
+  #cb-fab:active{cursor:grabbing;transform:scale(1)}
+  #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
     display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
     backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5);
     opacity:0;visibility:hidden;transform:translateY(18px) scale(.97);
     transition:opacity .38s ease, transform .45s cubic-bezier(.22,1,.36,1), visibility .38s}
   #cb-panel.open{opacity:1;visibility:visible;transform:none}
-  /* 测评完成等事件触发弹出时：AI 球跳动提示（def 17 · 旅程自动化） */
   @keyframes cbPop{0%{transform:scale(1)}35%{transform:scale(1.22)}70%{transform:scale(.94)}100%{transform:scale(1)}}
   #cb-fab.cb-pop{animation:cbPop .9s cubic-bezier(.22,1,.36,1)}
-  #cb-head{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--ac2);letter-spacing:1px;
+  #cb-head{padding:10px 12px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--ac2);letter-spacing:1px;
     display:flex;justify-content:space-between;align-items:center}
   #cb-head b{font-weight:600}
-  #cb-close{cursor:pointer;color:var(--tx2);border:none;background:none;font-size:16px;padding:0 2px}
-  #cb-log{flex:1;overflow-y:auto;padding:12px 14px;font-size:13.5px;color:var(--tx)}
-  #cb-log .cb-u{color:var(--ac2);margin:6px 0}
-  #cb-log .cb-a{margin:6px 0;white-space:pre-wrap;line-height:1.55}
-  #cb-log .cb-meta{margin:5px 0;font-size:11.5px;color:var(--tx2)}
-  #cb-log .cb-err{color:#ff8a80;font-size:12.5px;margin:6px 0}
-  #cb-mic{padding:7px 10px;font-size:12px}
-  #cb-mic.cb-rec{background:rgba(229,71,109,1);color:#fff}
-  #cb-tts{margin-right:6px;padding:4px 8px;font-size:11px;background:rgba(255,255,255,.06);color:var(--tx2);border:1px solid var(--bd);cursor:pointer}
+  #cb-tts{padding:4px 8px;font-size:11px;background:rgba(255,255,255,.06);color:var(--tx2);border:1px solid var(--bd);cursor:pointer}
   #cb-tts.on{color:var(--ac2);border-color:rgba(229,71,109,.5)}
-  #cb-inrow{display:flex;gap:6px;padding:10px;border-top:1px solid var(--bd)}
-  #cb-in{flex:1}
-  #cb-send{padding:7px 14px}
+  #cb-close{cursor:pointer;color:var(--tx2);border:none;background:none;font-size:16px;padding:0 2px}
+  #cb-body{flex:1;display:flex;min-height:0}
+  /* 左侧对话选择栏（最多 5 会话） */
+  #cb-side{width:76px;border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:8px 6px;gap:6px;overflow-y:auto}
+  #cb-newconv{width:100%;padding:6px 0;font-size:12px;background:rgba(229,71,109,.25);border:1px solid rgba(229,71,109,.5);color:var(--tx);cursor:pointer}
+  #cb-newconv:hover{background:rgba(229,71,109,.45)}
+  .cb-conv{width:100%;padding:6px 4px;font-size:11px;color:var(--tx2);background:rgba(255,255,255,.04);
+    border:1px solid transparent;cursor:pointer;text-align:center;line-height:1.4;word-break:break-all}
+  .cb-conv:hover{color:var(--tx);border-color:var(--bd)}
+  .cb-conv.on{color:var(--ac2);border-color:rgba(229,71,109,.6);background:rgba(229,71,109,.08)}
+  /* 聊天区 */
+  #cb-main{flex:1;display:flex;flex-direction:column;min-width:0}
+  #cb-log{flex:1;overflow-y:auto;padding:12px;font-size:13.5px;color:var(--tx)}
+  #cb-log .cb-uwrap{display:flex;justify-content:flex-end;margin:8px 0}
+  #cb-log .cb-u{max-width:80%;background:rgba(229,71,109,.13);border:1px solid rgba(255,154,181,.45);
+    border-radius:14px 14px 3px 14px;padding:8px 12px;color:var(--tx);line-height:1.5;word-break:break-word}
+  #cb-log .cb-a{margin:8px 0;white-space:pre-wrap;line-height:1.55;max-width:92%;
+    background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:3px 14px 14px 14px;padding:8px 12px}
+  #cb-log .cb-meta{margin:6px 0;font-size:11.5px;color:var(--tx2)}
+  #cb-log .cb-err{color:#ff8a80;font-size:12.5px;margin:6px 0}
+  #cb-inrow{display:flex;gap:6px;padding:10px;border-top:1px solid var(--bd);align-items:center}
+  #cb-inrow.locked{opacity:.55}
+  #cb-mic,#cb-send{width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;flex:none}
+  #cb-mic svg,#cb-send svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #cb-mic{background:rgba(255,255,255,.08)}
+  #cb-mic.cb-rec{background:rgba(229,71,109,1);color:#fff}
+  #cb-send{background:rgba(229,71,109,.82)}
+  #cb-send:hover{background:rgba(229,71,109,1)}
+  #cb-send.stop{background:rgba(118,84,255,.85)}
+  #cb-in{flex:1;min-width:0}
+  #cb-in:disabled{opacity:.6}
   `;
   const st = document.createElement("style");
   st.textContent = css;
   document.head.appendChild(st);
 
-  /* ---- DOM 骨架：fab 按钮 + 面板（头部/消息区/输入行） ---- */
+  /* ==== DOM：fab + 面板（左对话栏 / 聊天区 / 统一输入行） ==== */
+  const MIC_SVG = '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>';
+  const SEND_SVG = '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  const STOP_SVG = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></svg>';
+
   const wrap = document.createElement("div");
   wrap.innerHTML = `
   <button id="cb-fab" title="伴随 AI · 点击对话 / 按住拖动"><span>AI</span></button>
@@ -66,55 +87,107 @@
       `<span style="display:flex;align-items:center;gap:6px">` +
       `<button id="cb-tts" style="display:none" title="朗读 AI 回复（无障碍）">朗读:关</button>` +
       `<button id="cb-close" title="收起">×</button></span></div>
-    <div id="cb-log"></div>
-    <div id="cb-inrow">
-      <button id="cb-mic" style="display:none" title="按住说话，松开识别">语音</button>
-      <input id="cb-in" placeholder="例如：黄黑皮适合什么口红？">
-      <button id="cb-send">发送</button>
+    <div id="cb-body">
+      <div id="cb-side">
+        <button id="cb-newconv" title="新建对话（最多 5 个，超出顶替最早）">＋ 新对话</button>
+        <div id="cb-convlist" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div id="cb-main">
+        <div id="cb-log"></div>
+        <div id="cb-inrow">
+          <button id="cb-mic" style="display:none" title="点击说话（识别后自动发送）">${MIC_SVG}</button>
+          <input id="cb-in" placeholder="例如：黄黑皮适合什么口红？">
+          <button id="cb-send" title="发送（思考中变为停止）">${SEND_SVG}</button>
+        </div>
+      </div>
     </div>
   </div>`;
   document.body.appendChild(wrap);
 
-  /* ==== 下半部：消息持久化 / 位置与拖动 / 对话逻辑 ==== */
+  /* ==== 状态：多会话（≤5，新建顶替最早）/ 刷新全清 / 位置持久 ==== */
+  const SS_CONVS = "cb_convs", SS_CUR = "cb_cur", SS_OPEN = "cb_open", LS_POS = "cb_pos";
   const $ = (id) => document.getElementById(id);
-  const fab = $("cb-fab"), panel = $("cb-panel"), logEl = $("cb-log");
+  const fab = $("cb-fab"), panel = $("cb-panel"), logEl = $("cb-log"),
+        input = $("cb-in"), sendBtn = $("cb-send"), micBtn = $("cb-mic");
 
-  const SS_LOG = "cb_log", SS_OPEN = "cb_open", LS_POS = "cb_pos";
-
-  /* 用户规则（2026-09-11）：刷新页面 = 清空 AI 对话；切换子标签 = 保留。
-     区分手段：Navigation Timing 的 type——"reload"=刷新（清空），"navigate"=页面间跳转（保留） */
-  let navType = "navigate";
-  try { navType = (performance.getEntriesByType("navigation")[0] || {}).type || "navigate"; } catch (e) {}
-  if (navType === "reload") {
-    try { sessionStorage.removeItem(SS_LOG); sessionStorage.setItem(SS_OPEN, "0"); } catch (e) {}
+  let convs = [];          // [{id, title, msgs:[{cls,text}]}]，≤5
+  let curId = null;        // 当前会话 id
+  function loadConvs(){
+    try { convs = JSON.parse(sessionStorage.getItem(SS_CONVS) || "[]"); } catch(e){ convs = []; }
   }
+  function saveConvs(){ try { sessionStorage.setItem(SS_CONVS, JSON.stringify(convs)); } catch(e){} }
+  function curConv(){ return convs.find(c => c.id === curId); }
 
-  /* ---- 消息：渲染 + 持久化（thinking 等临时行不存） ---- */
-  const history = (() => { try { return JSON.parse(sessionStorage.getItem(SS_LOG) || "[]"); } catch (e) { return []; } })();
-  function saveLog() { try { sessionStorage.setItem(SS_LOG, JSON.stringify(history.slice(-80))); } catch (e) {} }
-  function addMsg(cls, text, keep = true) {
-    const d = document.createElement("div");
-    d.className = "cb-" + cls;
-    d.textContent = text;
-    logEl.appendChild(d);
-    logEl.scrollTop = logEl.scrollHeight;
-    if (keep) { history.push({ cls, text }); saveLog(); }
-    return d;
-  }
-  // 启动重放历史（切页回来对话不丢）
-  if (history.length) {
-    history.forEach((m) => {
+  function renderConvList(){
+    const box = $("cb-convlist"); box.innerHTML = "";
+    convs.forEach(c => {
       const d = document.createElement("div");
-      d.className = "cb-" + m.cls;
-      d.textContent = m.text;
-      logEl.appendChild(d);
+      d.className = "cb-conv" + (c.id === curId ? " on" : "");
+      d.textContent = c.title || "新对话";
+      d.title = c.title || "";
+      d.onclick = () => { if (busy) return; switchConv(c.id); };
+      box.appendChild(d);
     });
+  }
+  function switchConv(id){
+    curId = id;
+    sessionStorage.setItem(SS_CUR, id);
+    const c = curConv();
+    logEl.innerHTML = "";
+    (c ? c.msgs : []).forEach(m => appendMsg(m.cls, m.text, false));
+    renderConvList();
+  }
+  function newConv(){
+    if (busy) return;
+    if (convs.length >= MAX_CONVS) convs.shift();          // 顶替最早
+    const c = { id: Date.now().toString(36), title: "新对话", msgs: [] };
+    convs.push(c); curId = c.id;
+    saveConvs(); sessionStorage.setItem(SS_CUR, curId);
+    logEl.innerHTML = "";
+    appendMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
+    renderConvList();
+  }
+  $("cb-newconv").onclick = newConv;
+
+  function addMsg(cls, text, keep = true){
+    const d = document.createElement("div");
+    if (cls === "u"){                                       // 用户消息 → 右对齐圆角气泡
+      const w = document.createElement("div"); w.className = "cb-uwrap";
+      const b = document.createElement("div"); b.className = "cb-u"; b.textContent = text;
+      w.appendChild(b); logEl.appendChild(w);
+    } else {
+      const d2 = document.createElement("div");
+      d2.className = "cb-" + cls; d2.textContent = text;
+      logEl.appendChild(d2);
+    }
     logEl.scrollTop = logEl.scrollHeight;
-  } else {
-    addMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
+    if (keep){
+      const c = curConv();
+      if (c){ c.msgs.push({cls, text}); saveConvs();
+              if (c.msgs.length === 1 && cls === "u"){ c.title = text.slice(0, 14); renderConvList(); } }
+    }
+    return null;
   }
 
-  /* ---- 位置：恢复 / 面板锚定 AI 球 / 拖动 ---- */
+  /* 启动：刷新（reload）→ 全部对话清空（用户规则）；切页跳转 → 保留恢复 */
+  let navType = "navigate";
+  try { navType = (performance.getEntriesByType("navigation")[0] || {}).type || "navigate"; } catch(e){}
+  loadConvs();
+  if (navType === "reload"){
+    convs = []; curId = null;
+    try { sessionStorage.removeItem(SS_CONVS); sessionStorage.removeItem(SS_CUR); sessionStorage.setItem(SS_OPEN, "0"); } catch(e){}
+  }
+  if (convs.length){
+    curId = sessionStorage.getItem(SS_CUR) && convs.find(c => c.id === sessionStorage.getItem(SS_CUR))
+            ? sessionStorage.getItem(SS_CUR) : convs[convs.length - 1].id;
+    switchConv(curId);
+  } else {
+    curId = null;
+    appendMsg("meta", "我可以调用色号检索 / 全库 26 万色板 / 配色知识库为你分析，过程可见。", false);
+    renderConvList();
+  }
+
+  /* ==== 拖动（保留）+ 面板锚定 ==== */
   function applySavedPos() {
     try {
       const p = JSON.parse(localStorage.getItem(LS_POS) || "null");
@@ -128,12 +201,12 @@
     return [Math.min(Math.max(4, x), window.innerWidth - w - 4),
             Math.min(Math.max(4, y), window.innerHeight - h - 4)];
   }
-  function placePanel() {                       // 面板锚定 fab 上方，防溢出
+  function placePanel() {
     const fr = fab.getBoundingClientRect();
-    const pw = panel.offsetWidth || 340, ph = panel.offsetHeight || 440;
-    let left = fr.left + fr.width - pw;         // 右对齐 fab
-    let top = fr.top - ph - 10;                 // fab 上方
-    if (top < 8) top = fr.bottom + 10;          // 放不下则改 fab 下方
+    const pw = panel.offsetWidth || 430, ph = panel.offsetHeight || 460;
+    let left = fr.left + fr.width - pw;
+    let top = fr.top - ph - 10;
+    if (top < 8) top = fr.bottom + 10;
     [left, top] = clamp(left, top, pw, ph);
     panel.style.left = left + "px"; panel.style.top = top + "px";
     panel.style.right = "auto"; panel.style.bottom = "auto";
@@ -148,11 +221,11 @@
     const dx = e.clientX - fr.left, dy = e.clientY - fr.top;
     const onMove = (ev) => {
       if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) moved = true;
-      if (!moved) return;                       // 位移小于 5px 不算拖动（留给点击）
+      if (!moved) return;
       const [x, y] = clamp(ev.clientX - dx, ev.clientY - dy, fr.width, fr.height);
       fab.style.left = x + "px"; fab.style.top = y + "px";
       fab.style.right = "auto"; fab.style.bottom = "auto";
-      if (panel.classList.contains("open")) placePanel();   // 展开时面板实时跟随
+      if (panel.classList.contains("open")) placePanel();
     };
     const onUp = () => {
       document.removeEventListener("pointermove", onMove);
@@ -166,21 +239,17 @@
     document.addEventListener("pointerup", onUp);
     e.preventDefault();
   });
-  fab.addEventListener("click", () => {         // 拖动结束的松手不触发开关
-    if (moved) { moved = false; return; }
-    toggle();
-  });
+  fab.addEventListener("click", () => { if (moved) { moved = false; return; } toggle(); });
 
-  /* ==== 续写锚点 B ==== */
   function toggle(open) {
     const willOpen = (open === undefined) ? !panel.classList.contains("open") : open;
     if (willOpen) placePanel();
     panel.classList.toggle("open", willOpen);
     try { sessionStorage.setItem(SS_OPEN, willOpen ? "1" : "0"); } catch (e) {}
-    if (willOpen) $("cb-in").focus();
+    if (willOpen) input.focus();
   }
   $("cb-close").addEventListener("click", () => toggle(false));
-  window.addEventListener("resize", () => {     // 窗口变化时把 fab/panel 拉回屏幕内
+  window.addEventListener("resize", () => {
     const fr = fab.getBoundingClientRect();
     const [x, y] = clamp(fr.left, fr.top, fr.width, fr.height);
     fab.style.left = x + "px"; fab.style.top = y + "px";
@@ -188,108 +257,128 @@
     if (panel.classList.contains("open")) placePanel();
   });
 
-  /* ---- def 20 完整版通道（预留）：后端下发的自主调度动作 ---- */
-  function doAction(a) {
-    if (!a || !a.type) return;
-    if (a.type === "navigate" && a.page) {          // 自动跳转子页（切页后对话经 sessionStorage 续上）
-      addMsg("meta", `[调度] 正在前往 ${a.page}${a.reason ? " · " + a.reason : ""}`);
-      setTimeout(() => { location.href = a.page; }, 600);
-    } else if (a.type === "fill" && a.page && a.values) {   // def 18：跨页转交表单值
-      try { sessionStorage.setItem("cb_pending_fill", JSON.stringify(a)); } catch (e) {}
-      addMsg("meta", `[调度] 表单已备好，正在前往 ${a.page}…（确认权在你）`);
-      setTimeout(() => { location.href = a.page; }, 600);
-    }
-  }
-
-  async function sendMessage(text) {
-    const m = (text === undefined ? $("cb-in").value : String(text)).trim();
-    if (!m || $("cb-in").dataset.busy === "1") return null;
-    addMsg("u", m);
-    const th = addMsg("meta", "大脑思考中…（推理型模型约 10~40s）", false);
-    th.classList.add("cb-thinking");
-    $("cb-in").value = "";
-    $("cb-in").dataset.busy = "1";
-    try {
-      const r = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: m }),
-      });
-      const j = await r.json();
-      document.querySelectorAll(".cb-thinking").forEach((e) => e.remove());
-      (j.steps || []).forEach((s) =>
-        addMsg("meta", `[工具] ${s.tool}(${JSON.stringify(s.args)}) ${s.ok ? "[OK]" : "[错误]"}`));
-      if (j.action) doAction(j.action);             // 骨架期后端不返回 action，通道静默待命
-      if (j.error) addMsg("err", `[错误] ${j.error}`);
-      else addMsg("a", j.content ?? "");
-    } catch (e) {
-      document.querySelectorAll(".cb-thinking").forEach((el) => el.remove());
-      addMsg("err", `[错误] 请求失败: ${e}`);
-    }
-    $("cb-in").dataset.busy = "0";
-    logEl.scrollTop = logEl.scrollHeight;
-    if(!j.error && j.content) speak(j.content);      // def 21 · TTS 朗读开关开启时读出回复
-    return j;
-  }
-
-  $("cb-send").addEventListener("click", () => sendMessage());
-  $("cb-in").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-
-  /* ==== def 21 · 语音闭环（R-08 无障碍）：SpeechRecognition 输入 + SpeechSynthesis 输出 ==== */
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const ttsState = { on: localStorage.getItem("cb_tts") === "1" };
-  function speak(text){
-    if (!ttsState.on || !("speechSynthesis" in window) || !text) return;
-    speechSynthesis.cancel();
-    const clean = String(text).replace(/[#*`>]/g, "");          // 去掉 markdown 符号再朗读
-    const u = new SpeechSynthesisUtterance(clean);
-    u.lang = "zh-CN"; u.rate = 1;
-    speechSynthesis.speak(u);
-  }
-  if ("speechSynthesis" in window) {
-    const tb = $("cb-tts");
-    tb.style.display = "";
-    tb.textContent = ttsState.on ? "朗读:开" : "朗读:关";
-    tb.classList.toggle("on", ttsState.on);
-    tb.onclick = () => {
-      ttsState.on = !ttsState.on;
-      localStorage.setItem("cb_tts", ttsState.on ? "1" : "0");
-      tb.textContent = ttsState.on ? "朗读:开" : "朗读:关";
-      tb.classList.toggle("on", ttsState.on);
-      if (!ttsState.on) speechSynthesis.cancel();
-    };
-  }
-  if (SR) {
-    const mic = $("cb-mic");
-    mic.style.display = "";
-    const rec = new SR();
-    rec.lang = "zh-CN"; rec.interimResults = false; rec.maxAlternatives = 1;
-    let listening = false;
-    rec.onresult = (e) => {
-      const t = e.results[0][0].transcript.trim();
-      if (t) { $("cb-in").value = t; sendMessage(); }
-    };
-    rec.onend = () => { listening = false; mic.classList.remove("cb-rec"); mic.textContent = "语音"; };
-    rec.onerror = () => { listening = false; mic.classList.remove("cb-rec"); mic.textContent = "语音"; };
-    mic.onclick = () => {
-      if (listening) { rec.stop(); return; }
-      try { rec.start(); listening = true; mic.textContent = "聆听中"; mic.classList.add("cb-rec"); }
-      catch (e) {}
-    };
-  }
-
-  /* def 17 · 外部调用接口：cvd 页测评完成后自动弹出+自动总结（旅程自动化） */
+  /* ==== def 20 · 外部调用接口（cvd 页旅程自动化用） ==== */
   window.CBChat = {
-    open: () => {
-      toggle(true);
-      fab.classList.add("cb-pop");
-      setTimeout(() => fab.classList.remove("cb-pop"), 900);
-    },
+    open: () => { toggle(true); fab.classList.add("cb-pop"); setTimeout(() => fab.classList.remove("cb-pop"), 900); },
     close: () => toggle(false),
     send: async (text) => { toggle(true); return sendMessage(text); },
   };
 
-  // 初始化：切页回来时还原展开状态（对话与面板位置一并还原）
-  if (sessionStorage.getItem(SS_OPEN) === "1") toggle(true);
+  /* ==== 消息发送：AbortController 超时/停止 + 思考中锁定输入（防串台）+ TTS ==== */
+  let busy = false;
+  let aborter = null;
+  function setBusy(v){
+    busy = v;
+    $("cb-inrow").classList.toggle("locked", v);
+    input.disabled = v;
+    sendBtn.classList.toggle("stop", v);
+    sendBtn.innerHTML = v ? STOP_SVG : SEND_SVG;
+    sendBtn.title = v ? "停止本次回答" : "发送";
+  }
+  function speak(text){
+    if (!ttsOn() || !("speechSynthesis" in window) || !text) return;
+    speechSynthesis.cancel();
+    const clean = String(text).replace(/[#*`>]/g, "");
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "zh-CN"; u.rate = 1;
+    speechSynthesis.speak(u);
+  }
+  async function sendMessage(text){
+    const m = (text === undefined ? input.value : String(text)).trim();
+    if (!m) return;
+    if (busy){                                     // 思考中点击发送按钮 = 停止
+      if (aborter) aborter.abort();
+      return;
+    }
+    addMsg("u", m);
+    input.value = "";
+    setBusy(true);
+    const th = addMsg("meta", "大脑思考中…（约 10~40s，可点右侧按钮停止）", false);
+    aborter = new AbortController();
+    const timer = setTimeout(() => aborter && aborter.abort(), SEND_TIMEOUT);
+    let j = null;
+    try{
+      const r = await fetch("/api/chat", {method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({message: m}), signal: aborter.signal});
+      j = await r.json();
+      clearTimeout(timer);
+      document.querySelectorAll(".cb-thinking").forEach((e) => e.remove());
+      (j.steps || []).forEach((s) =>
+        addMsg("meta", `[工具] ${s.tool}(${JSON.stringify(s.args)}) ${s.ok ? "[OK]" : "[错误]"}`));
+      if (j.action && window.CVDThemeNav) window.CVDThemeNav(j.action);
+      if (j.action && typeof window.__cbAction === "function") window.__cbAction(j.action);
+      if (j.error) addMsg("err", `[错误] ${j.error}`);
+      else addMsg("a", j.content ?? "");
+      if (!j.error && j.content) speak(j.content);
+    } catch(e){
+      clearTimeout(timer);
+      document.querySelectorAll(".cb-thinking").forEach((el) => el.remove());
+      addMsg("err", e.name === "AbortError" ? "已超过 90 秒未响应——本次已中断，可重新发送" : `[错误] 请求失败: ${e}`);
+    }
+    setBusy(false);
+    logEl.scrollTop = logEl.scrollHeight;
+    return j;
+  }
+
+  sendBtn.addEventListener("click", () => { if (busy){ if (aborter) aborter.abort(); } else sendMessage(); });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !busy) sendMessage(); });
+
+  /* ==== def 21 · TTS 开关 + 语音识别 + 导航 action ==== */
+  const ttsOn = () => localStorage.getItem("cb_tts") === "1";
+  if ("speechSynthesis" in window){
+    const tb = $("cb-tts");
+    tb.style.display = "";
+    const syncT = () => { tb.textContent = ttsOn() ? "朗读:开" : "朗读:关"; tb.classList.toggle("on", ttsOn()); };
+    syncT();
+    tb.onclick = () => { localStorage.setItem("cb_tts", ttsOn() ? "0" : "1"); syncT(); if (!ttsOn()) speechSynthesis.cancel(); };
+  }
+  window.__cbAction = (a) => {
+    if (!a || !a.type) return;
+    if (a.type === "navigate" && a.page){
+      addMsg("meta", `[调度] 正在前往 ${a.page}${a.reason ? " · " + a.reason : ""}`);
+      setTimeout(() => { location.href = a.page; }, 600);
+    }
+  };
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR){
+    micBtn.style.display = "";
+    const rec = new SR();
+    rec.lang = "zh-CN"; rec.interimResults = false; rec.maxAlternatives = 1;
+    let listening = false, recTimer = null;
+    const ERR = {
+      network: "语音服务网络受限（Chrome 需访问 Google 服务）——建议改用 Edge 浏览器",
+      "not-allowed": "麦克风权限被拒绝——请在地址栏左侧允许麦克风后重试",
+      "audio-capture": "未检测到麦克风设备",
+      aborted: null
+    };
+    rec.onresult = (e) => {
+      clearTimeout(recTimer);
+      const t = e.results[0][0].transcript.trim();
+      micBtn.classList.remove("cb-rec");
+      if (t) sendMessage(t);
+    };
+    rec.onerror = (e) => {
+      clearTimeout(recTimer);
+      micBtn.classList.remove("cb-rec");
+      const msg = ERR[e.error] || ("识别错误: " + e.error);
+      if (msg) addMsg("meta", "[语音] " + msg);
+    };
+    rec.onend = () => { micBtn.classList.remove("cb-rec"); };
+    micBtn.onclick = () => {
+      if (listening){ clearTimeout(recTimer); rec.stop(); return; }
+      try {
+        rec.start(); listening = true;
+        micBtn.classList.add("cb-rec");
+        recTimer = setTimeout(() => {          // 识别超时阈值 10s（用户要求）
+          if (listening){ rec.stop(); addMsg("meta", "[语音] 识别超时自动停止——请靠近麦克风重试，或改用 Edge 浏览器"); }
+        }, REC_TIMEOUT);
+      } catch(e){}
+    };
+  } else {
+    micBtn.style.display = "none";
+  }
 })();
 
+  /* ==== 锚点C ==== */
+})();
