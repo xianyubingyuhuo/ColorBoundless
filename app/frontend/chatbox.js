@@ -43,10 +43,10 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   .cb-rz[data-dir="n"]{top:0}.cb-rz[data-dir="s"]{bottom:0}
   .cb-rz[data-dir="e"],.cb-rz[data-dir="w"]{top:12px;bottom:12px;width:6px;cursor:ew-resize}
   .cb-rz[data-dir="e"]{right:0}.cb-rz[data-dir="w"]{left:0}
-  .cb-rz[data-dir="ne"],.cb-rz[data-dir="se"]{width:14px;height:14px;cursor:nwse-resize}
-  .cb-rz[data-dir="ne"]{top:0;right:0}.cb-rz[data-dir="se"]{bottom:0;right:0}
-  .cb-rz[data-dir="nw"],.cb-rz[data-dir="sw"]{width:14px;height:14px;cursor:nesw-resize}
-  .cb-rz[data-dir="nw"]{top:0;left:0}.cb-rz[data-dir="sw"]{bottom:0;left:0}
+  .cb-rz[data-dir="ne"],.cb-rz[data-dir="sw"]{width:14px;height:14px;cursor:nesw-resize}
+  .cb-rz[data-dir="ne"]{top:0;right:0}.cb-rz[data-dir="sw"]{bottom:0;left:0}
+  .cb-rz[data-dir="nw"],.cb-rz[data-dir="se"]{width:14px;height:14px;cursor:nwse-resize}
+  .cb-rz[data-dir="nw"]{top:0;left:0}.cb-rz[data-dir="se"]{bottom:0;right:0}
   .cb-rz[data-dir="se"]{background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
   .cb-rz:hover{background-color:rgba(229,71,109,.30)}
   #cb-split{width:6px;flex:none;cursor:ew-resize;background:transparent}
