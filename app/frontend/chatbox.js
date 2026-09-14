@@ -37,8 +37,21 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   #cb-panel *::-webkit-scrollbar-thumb:hover{background:rgba(229,71,109,1)}
   #cb-panel{scrollbar-width:thin;scrollbar-color:rgba(229,71,109,.82) rgba(255,255,255,.07)}
   #cb-head{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
-  #cb-rz{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:50;
-    background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
+  /* def 22n · 8 方向 resize 手柄（4 角 + 4 边）+ 左栏分隔线 */
+  .cb-rz{position:absolute;z-index:60;touch-action:none}
+  .cb-rz[data-dir="n"],.cb-rz[data-dir="s"]{left:12px;right:12px;height:6px;cursor:ns-resize}
+  .cb-rz[data-dir="n"]{top:0}.cb-rz[data-dir="s"]{bottom:0}
+  .cb-rz[data-dir="e"],.cb-rz[data-dir="w"]{top:12px;bottom:12px;width:6px;cursor:ew-resize}
+  .cb-rz[data-dir="e"]{right:0}.cb-rz[data-dir="w"]{left:0}
+  .cb-rz[data-dir="ne"],.cb-rz[data-dir="se"]{width:14px;height:14px;cursor:nwse-resize}
+  .cb-rz[data-dir="ne"]{top:0;right:0}.cb-rz[data-dir="se"]{bottom:0;right:0}
+  .cb-rz[data-dir="nw"],.cb-rz[data-dir="sw"]{width:14px;height:14px;cursor:nesw-resize}
+  .cb-rz[data-dir="nw"]{top:0;left:0}.cb-rz[data-dir="sw"]{bottom:0;left:0}
+  .cb-rz[data-dir="se"]{background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
+  .cb-rz:hover{background-color:rgba(229,71,109,.30)}
+  #cb-split{width:6px;flex:none;cursor:ew-resize;background:transparent}
+  #cb-split:hover,#cb-split.on{background:rgba(229,71,109,.35)}
+  #cb-side{flex:none}
   /* def 22 · 拖动（移动/缩放）期间关闭过渡与背景模糊：left/top 实时跟手不卡顿 */
   #cb-panel.no-anim{transition:none !important;backdrop-filter:none;-webkit-backdrop-filter:none}
   #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
@@ -114,6 +127,7 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
         <button id="cb-newconv" title="新建对话（最多 5 个，超出顶替最早）">＋ 新对话</button>
         <div id="cb-convlist" style="display:flex;flex-direction:column;gap:6px"></div>
       </div>
+      <div id="cb-split" title="左右拖动调整会话栏宽度"></div>
       <div id="cb-main">
         <div id="cb-log"></div>
         <div id="cb-inrow">
@@ -123,7 +137,14 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
           <span class="cb-sep"></span>
           <button id="cb-send" title="发送（思考中变为停止）">${SEND_SVG}</button>
         </div>
-        <div id="cb-rz" title="拖拽调整大小"></div>
+        <div class="cb-rz" data-dir="n" title="上下拉伸"></div>
+        <div class="cb-rz" data-dir="s" title="上下拉伸"></div>
+        <div class="cb-rz" data-dir="e" title="左右拉伸"></div>
+        <div class="cb-rz" data-dir="w" title="左右拉伸"></div>
+        <div class="cb-rz" data-dir="ne" title="斜角缩放"></div>
+        <div class="cb-rz" data-dir="nw" title="斜角缩放"></div>
+        <div class="cb-rz" data-dir="se" title="斜角缩放"></div>
+        <div class="cb-rz" data-dir="sw" title="斜角缩放"></div>
       </div>
     </div>
   </div>`;
@@ -345,23 +366,56 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
     document.addEventListener("pointerup", onUp);
   });
 
-  /* def 22 · 右下角手柄拖拽调整面板大小（自定义实现，跨浏览器可靠） */
-  $("cb-rz").addEventListener("pointerdown", (e) => {
-    e.stopPropagation();
-    panel.classList.add("no-anim");                          // 缩放期同样关闭过渡
-    const sw = panel.offsetWidth, sh = panel.offsetHeight;
-    const sx = e.clientX, sy = e.clientY;
-    const onMove = (ev) => {
+  /* def 22n · 8 方向 resize（4 角 + 4 边）：统一 handler，按 data-dir 计算各轴（w/n 方向带位置回弹，面板永不出屏） */
+  const MINW = 300, MINH = 380;
+  document.querySelectorAll(".cb-rz").forEach((h) => {
+    h.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      panel.classList.add("no-anim");
+      const dir = h.dataset.dir;
       const pr = panel.getBoundingClientRect();
-      const w = Math.max(300, Math.min(window.innerWidth - pr.left - 8, sw + ev.clientX - sx));
-      const h = Math.max(380, Math.min(window.innerHeight - pr.top - 8, sh + ev.clientY - sy));
-      panel.style.width = w + "px"; panel.style.height = h + "px";
+      const oL = pr.left, oT = pr.top, sw = pr.width, sh = pr.height;
+      const sx = e.clientX, sy = e.clientY;
+      const onMove = (ev) => {
+        const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        let L = oL, T = oT, W = sw, H = sh;
+        if (dir.includes("e")) W = Math.min(Math.max(MINW, sw + dx), window.innerWidth - oL - 4);
+        if (dir.includes("s")) H = Math.min(Math.max(MINH, sh + dy), window.innerHeight - oT - 4);
+        if (dir.includes("w")) { W = Math.min(Math.max(MINW, sw - dx), oL + sw - 4); L = oL + (sw - W); }
+        if (dir.includes("n")) { H = Math.min(Math.max(MINH, sh - dy), oT + sh - 4); T = oT + (sh - H); }
+        panel.style.left = L + "px"; panel.style.top = T + "px";
+        panel.style.width = W + "px"; panel.style.height = H + "px";
+        panel.style.right = "auto"; panel.style.bottom = "auto";
+      };
+      const onUp = () => {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        panel.classList.remove("no-anim");
+        try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch (e2) {}
+      };
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    });
+  });
+
+  /* def 22n · 左栏分隔线：左右拖动自选会话栏宽度（72~220px，localStorage 记忆） */
+  const LS_SPLIT = "cb_split_w";
+  try {
+    const swSide = parseInt(localStorage.getItem(LS_SPLIT) || "0", 10);
+    if (swSide >= 72 && swSide <= 220) $("cb-side").style.width = swSide + "px";
+  } catch (e) {}
+  $("cb-split").addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    $("cb-split").classList.add("on");
+    const side = $("cb-side"), swSide = side.offsetWidth, sx = e.clientX, pw = panel.offsetWidth;
+    const onMove = (ev) => {
+      side.style.width = Math.min(Math.max(72, swSide + ev.clientX - sx), Math.max(72, Math.min(220, pw - 240))) + "px";
     };
     const onUp = () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
-      panel.classList.remove("no-anim");
-      try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch (e2) {}
+      $("cb-split").classList.remove("on");
+      try { localStorage.setItem(LS_SPLIT, String(side.offsetWidth)); } catch (e2) {}
     };
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
