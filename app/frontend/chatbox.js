@@ -27,13 +27,18 @@
   #cb-fab span{position:relative;z-index:1;font-size:14px;font-weight:600;color:#fff;letter-spacing:.5px}
   #cb-fab:hover{transform:scale(1.09);box-shadow:0 12px 34px rgba(229,71,109,.5), 0 0 22px rgba(255,154,181,.4)}
   #cb-fab:active{cursor:grabbing;transform:scale(1)}
+  #cb-fab{transition:transform .38s cubic-bezier(.22,1,.36,1), box-shadow .38s ease, opacity .3s ease}
+  #cb-fab.cb-hide{transform:scale(0);opacity:0;pointer-events:none}
+  #cb-head{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
+  #cb-rz{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:50;
+    background:linear-gradient(135deg,transparent 0 50%,var(--bd) 50% 56%,transparent 56% 70%,var(--bd) 70% 76%,transparent 76%)}
   #cb-panel{position:fixed;right:22px;bottom:84px;width:430px;max-width:calc(100vw - 44px);height:460px;max-height:calc(100vh - 120px);
-    resize:both;min-width:300px;min-height:380px;overflow:hidden;
+    min-width:300px;min-height:380px;overflow:hidden;
     display:flex;flex-direction:column;z-index:999;background:rgba(24,18,32,.92);border:1px solid var(--bd);
     backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);box-shadow:0 18px 50px rgba(0,0,0,.5);
-    opacity:0;visibility:hidden;transform:translateY(18px) scale(.97);
-    transition:opacity .38s ease, transform .45s cubic-bezier(.22,1,.36,1), visibility .38s}
-  #cb-panel.open{opacity:1;visibility:visible;transform:none}
+    opacity:0;visibility:hidden;transform:scale(.12);
+    transition:opacity .34s ease, transform .42s cubic-bezier(.22,1,.36,1), visibility .34s, left .3s ease, top .3s ease, width .2s ease, height .2s ease}
+  #cb-panel.open{opacity:1;visibility:visible;transform:scale(1)}
   @keyframes cbPop{0%{transform:scale(1)}35%{transform:scale(1.22)}70%{transform:scale(.94)}100%{transform:scale(1)}}
   #cb-fab.cb-pop{animation:cbPop .9s cubic-bezier(.22,1,.36,1)}
   #cb-head{padding:10px 12px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--ac2);letter-spacing:1px;
@@ -108,6 +113,7 @@
           <span class="cb-sep"></span>
           <button id="cb-send" title="发送（思考中变为停止）">${SEND_SVG}</button>
         </div>
+        <div id="cb-rz" title="拖拽调整大小"></div>
       </div>
     </div>
   </div>`;
@@ -230,12 +236,10 @@
             Math.min(Math.max(4, y), window.innerHeight - h - 4)];
   }
   function placePanel() {
+    /* def 22 · 球原地扩大成对话框：面板左上角 = 球位置（clamp 保证完整在屏内） */
     const fr = fab.getBoundingClientRect();
     const pw = panel.offsetWidth || 430, ph = panel.offsetHeight || 460;
-    let left = fr.left + fr.width - pw;
-    let top = fr.top - ph - 10;
-    if (top < 8) top = fr.bottom + 10;
-    [left, top] = clamp(left, top, pw, ph);
+    const [left, top] = clamp(fr.left, fr.top, pw, ph);
     panel.style.left = left + "px"; panel.style.top = top + "px";
     panel.style.right = "auto"; panel.style.bottom = "auto";
   }
@@ -247,11 +251,7 @@
     const s = JSON.parse(localStorage.getItem(LS_SIZE) || "null");
     if (s && s.w && s.h) { panel.style.width = s.w + "px"; panel.style.height = s.h + "px"; }
   } catch (e) {}
-  if (window.ResizeObserver) {
-    new ResizeObserver(() => {
-      try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: Math.round(panel.offsetWidth), h: Math.round(panel.offsetHeight) })); } catch (e) {}
-    }).observe(panel);
-  }
+  /* 尺寸持久化在 cb-rz 手柄松手时写入（避免收起动画误存球尺寸） */
 
   let moved = false;
   fab.addEventListener("pointerdown", (e) => {
@@ -284,14 +284,70 @@
     toggle();
   });
 
+  function dockFabToPanel() {
+    /* def 22 · 收起时球出现在对话框右下角，并记住该位置 */
+    const r = panel.getBoundingClientRect();
+    const [x, y] = clamp(r.right - 64, r.bottom - 64, 56, 56);
+    fab.style.left = x + "px"; fab.style.top = y + "px";
+    fab.style.right = "auto"; fab.style.bottom = "auto";
+    try { localStorage.setItem(LS_POS, JSON.stringify({ x, y })); } catch (e) {}
+  }
   function toggle(open) {
     const willOpen = (open === undefined) ? !panel.classList.contains("open") : open;
-    if (willOpen) placePanel();
+    if (willOpen) {
+      placePanel();                                  // 面板从球的位置放大（origin 左上）
+      panel.style.transformOrigin = "0 0";
+      fab.classList.add("cb-hide");                  // 球同步缩小消失
+    } else {
+      dockFabToPanel();                              // 球在面板右下角就位
+      panel.style.transformOrigin = "100% 100%";     // 面板向右下缩回成球
+      fab.classList.remove("cb-hide");
+    }
     panel.classList.toggle("open", willOpen);
     try { sessionStorage.setItem(SS_OPEN, willOpen ? "1" : "0"); } catch (e) {}
     if (willOpen) input.focus();
   }
   $("cb-close").addEventListener("click", () => toggle(false));
+
+  /* def 22 · 按住对话框顶部拖动移动（松手记住位置，收起时球 dock 到右下角） */
+  $("cb-head").addEventListener("pointerdown", (e) => {
+    if (e.target.closest("#cb-tts,#cb-close")) return;      // 头部按钮不触发拖动
+    const pr = panel.getBoundingClientRect();
+    const dx = e.clientX - pr.left, dy = e.clientY - pr.top;
+    const onMove = (ev) => {
+      const [x, y] = clamp(ev.clientX - dx, ev.clientY - dy, pr.width, pr.height);
+      panel.style.left = x + "px"; panel.style.top = y + "px";
+      panel.style.right = "auto"; panel.style.bottom = "auto";
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      const r = panel.getBoundingClientRect();
+      try { localStorage.setItem(LS_POS, JSON.stringify({ x: r.right - 64, y: r.bottom - 64 })); } catch (e2) {}
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  });
+
+  /* def 22 · 右下角手柄拖拽调整面板大小（自定义实现，跨浏览器可靠） */
+  $("cb-rz").addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    const sw = panel.offsetWidth, sh = panel.offsetHeight;
+    const sx = e.clientX, sy = e.clientY;
+    const onMove = (ev) => {
+      const pr = panel.getBoundingClientRect();
+      const w = Math.max(300, Math.min(window.innerWidth - pr.left - 8, sw + ev.clientX - sx));
+      const h = Math.max(380, Math.min(window.innerHeight - pr.top - 8, sh + ev.clientY - sy));
+      panel.style.width = w + "px"; panel.style.height = h + "px";
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      try { localStorage.setItem(LS_SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch (e2) {}
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  });
   window.addEventListener("resize", () => {
     const fr = fab.getBoundingClientRect();
     const [x, y] = clamp(fr.left, fr.top, fr.width, fr.height);
