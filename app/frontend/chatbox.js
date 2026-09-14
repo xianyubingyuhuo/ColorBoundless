@@ -12,6 +12,8 @@
   if (window.__cb_chatbox) return;
   window.__cb_chatbox = true;
 
+  try {
+
   const MAX_CONVS = 5, SEND_TIMEOUT = 90000, REC_TIMEOUT = 10000;
 
   const css = `
@@ -380,5 +382,10 @@
     };
   } else {
     micBtn.style.display = "none";
+  }
+  } catch (initErr) {
+    /* 初始化错误可见化：不用 F12 也能看到（截图发我即可定位） */
+    document.body.insertAdjacentHTML("beforeend",
+      '<div style="position:fixed;top:0;left:0;right:0;background:#b71c1c;color:#fff;padding:8px 12px;z-index:99999;font-size:12px;font-family:monospace">AI 组件初始化失败: ' + String(initErr && initErr.message || initErr) + '</div>');
   }
 })();
