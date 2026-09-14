@@ -237,9 +237,12 @@
     };
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
-    e.preventDefault();
   });
-  fab.addEventListener("click", () => { if (moved) { moved = false; return; } toggle(); });
+  /* 开关放 pointerup（不依赖 click——规避 pointerdown preventDefault 在部分浏览器的 click 抑制） */
+  fab.addEventListener("pointerup", (e) => {
+    if (moved) { moved = false; return; }
+    toggle();
+  });
 
   function toggle(open) {
     const willOpen = (open === undefined) ? !panel.classList.contains("open") : open;
