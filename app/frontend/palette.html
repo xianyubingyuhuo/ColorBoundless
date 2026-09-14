@@ -199,10 +199,12 @@ function renderLayer(){
     return;
   }
 
-  /* 命名清单视图：本层 256 色 × [色块|hex|GB名|GB标号|最近官方|ΔE|是否拥有] */
-  let rows = `<div class="meta">命名清单 · B 层 = ${b}（共 ${covData.total} 行全量数据，可点"导出 CSV"拿全部 4096 行）</div>` +
-    `<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">` +
-    `<tr style="color:var(--ac2);text-align:left"><th style="padding:4px">色</th><th>hex</th><th>GB 名称</th><th>GB 标号</th><th>最近官方色号</th><th>ΔE</th><th>是否拥有</th></tr>`;
+  /* 命名清单视图：本层 256 色，滚动容器最多同时显示约 50 行，超出滚轮下滚（表头吸顶） */
+  let rows = `<div class="meta">命名清单 · B 层 = ${b}（本层 256 行 · 视口约 50 行，超出用滚轮下滚浏览）</div>` +
+    `<div style="max-height:1780px;overflow-y:auto;border:1px solid var(--bd)">` +
+    `<table style="width:100%;border-collapse:collapse;font-size:12.5px">` +
+    `<thead style="position:sticky;top:0;z-index:1;background:#1e1424"><tr style="color:var(--ac2);text-align:left"><th style="padding:6px 4px">色</th><th style="padding:6px 4px">hex</th><th style="padding:6px 4px">GB 名称</th><th style="padding:6px 4px">GB 标号</th><th style="padding:6px 4px">最近官方色号</th><th style="padding:6px 4px">ΔE</th><th style="padding:6px 4px">是否拥有</th></tr></thead>` +
+    `<tbody>`;
   for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
     const it = byIdx[cellIdxOf(ri, gi)];
     rows += `<tr style="border-top:1px solid var(--bd)">` +
@@ -211,7 +213,7 @@ function renderLayer(){
       `<td>${it.official_name}（${it.official_hex}）</td><td>${it.dE}</td>` +
       `<td style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "拥有 ✓" : "缺失 ✗"}</td></tr>`;
   }
-  rows += `</table>`;
+  rows += `</tbody></table></div>`;
   $("covgrid").innerHTML = head + rows;
 }
 function selectCovCell(it, el){
