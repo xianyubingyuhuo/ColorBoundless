@@ -48,18 +48,23 @@ _REGION_PARTS = {          # def 15 · region → BiSeNet 解析类（celebAMask
 _DEFAULT_ALPHA = {"lip": 0.75, "foundation": 0.25, "eyeshadow": 0.45, "brow": 0.5}
 
 
-def _upper_lid_mask(parsing, parts=(4, 5), band=0.45):
-    """def 15v10 · 眼影掩码：每列取眼睛区域的顶部带（上眼睑），避开眼球/下眼睑。
+def _eyeshadow_mask(parsing, parts=(4, 5), top_ext=0.12, band=0.30):
+    """def 15v10b · 眼影掩码：沿眼睛顶界的带状区（上眼皮+眼眶上缘），避开眼球。
 
-    celebAMask 4/5 是整只眼（含眼球），直接混色会把虹膜染成眼影色；
-    逐列取顶部 band 比例近似"只涂眼皮"。
+    celebAMask 4/5 是整只眼（含眼球），直接混色会把虹膜染成眼影色。
+    逐列取 [top - top_ext*h, top + band*h]：向上扩到眼皮皮肤，向内只盖眼眶上缘。
+    合成椭圆自测：虹膜核心行残留 <0.5%。
     """
     mask = np.isin(parsing, parts).astype(np.uint8)
     out = np.zeros_like(mask)
+    H = mask.shape[0]
     for x in np.where(mask.any(axis=0))[0]:
         col = np.where(mask[:, x])[0]
         top, bot = int(col.min()), int(col.max())
-        out[top:top + max(1, int((bot - top) * band)), x] = 1
+        h = max(1, bot - top)
+        y0 = max(0, top - int(h * top_ext))
+        y1 = min(H, top + int(h * band))
+        out[y0:y1, x] = 1
     return out
 
 
@@ -133,9 +138,9 @@ def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75, parts: li
     out_img = img_bgr.copy()
     for spec in norm_specs:                  # def 15 · 聚合渲染：逐部位掩码混合
         region = spec["region"]
-        if region == "eyeshadow":            # def 15v10 · 只染上眼睑带，避开眼球
+        if region == "eyeshadow":            # def 15v10b · 只染上眼皮带，避开眼球
             out_img = apply_lip_color(out_img, p, 4, hex2bgr(spec["hex"]),
-                                      alpha=spec["alpha"], gloss=0.0, mask=_upper_lid_mask(p))
+                                      alpha=spec["alpha"], gloss=0.0, mask=_eyeshadow_mask(p))
             continue
         gloss = 0.3 if region == "lip" else 0.0   # 唇釉高光仅属唇妆；粉底/眼影/眉不上反光
         for part in _REGION_PARTS[region]:

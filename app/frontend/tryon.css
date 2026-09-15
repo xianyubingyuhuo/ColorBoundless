@@ -44,7 +44,11 @@
 .pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 .pr .p-hex{font-size:11px;width:64px}
 .pr > label.meta{flex:1 1 100%;display:flex;align-items:center;gap:6px}   /* α 行独占一行，滑轨可拉满 */
-.p-a{flex:1;width:100%;min-width:70px}
+/* def 15v10b · 滑轨命中修正：style.css 27 行的全局 input 规则给 range 加了 padding:7px 10px+border，
+   两端各 10px 成了死区（点轨道右端/拖到头都无效）——这里清零并加高碰撞箱到 22px */
+.p-a{flex:1;width:100%;min-width:70px;height:22px;padding:0;border:none;background:none;
+ cursor:pointer;accent-color:#e5476d;margin:0}
+.p-hex{padding:3px 6px}
 #pcmore{display:flex;align-items:center;justify-content:center;margin:2px auto 0;
  border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--ac2);padding:0;line-height:1;
  border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;transition:all .25s}
