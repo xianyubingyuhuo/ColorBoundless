@@ -46,16 +46,29 @@ function toggleGrid(){
   b.title = toGrid ? "收起工具栏" : "展开工具栏";
   $("pcgridbtn").textContent = toGrid ? "◫ 列表视图" : "⊞ 网格视图";
 }
+/* def 15v6 · 展开：悬停停3s自动1s动画展开(pick-slow,移出即收) / 点击立即展开(pick-open,锁定,点外部或再点收起) */
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
-  card.addEventListener("click", (e) => {
+  let hoverTimer = null;
+  card.addEventListener("mouseenter", () => {                 // 悬停排程：3s 后自动展开
+    if(card.classList.contains("pick-open")) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => card.classList.add("pick-slow"), 3000);
+  });
+  card.addEventListener("mouseleave", () => {                 // 移出：取消排程 + 收起自动展开
+    clearTimeout(hoverTimer);
+    card.classList.remove("pick-slow");
+  });
+  card.addEventListener("click", (e) => {                     // 点击：立即展开/收起（锁定）
     if(e.target.closest(".p-pick,.p-swatch,.pr,.p-en,input,button")) return; // 选色面板内操作不切换
+    clearTimeout(hoverTimer);
+    card.classList.remove("pick-slow");
     document.querySelectorAll(".pcard.pick-open").forEach(c => { if(c !== card) c.classList.remove("pick-open"); });
     card.classList.toggle("pick-open");
   });
 });
 document.addEventListener("click", (e) => {
-  if(!e.target.closest(".pcard")) document.querySelectorAll(".pcard.pick-open")
-    .forEach(c => c.classList.remove("pick-open"));
+  if(!e.target.closest(".pcard")) document.querySelectorAll(".pcard.pick-open,.pcard.pick-slow")
+    .forEach(c => c.classList.remove("pick-open", "pick-slow"));
 });
 
 /* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */

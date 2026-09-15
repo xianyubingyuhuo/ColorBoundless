@@ -32,7 +32,7 @@
 .pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border:1px solid var(--bd);
  border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:100%;flex:none;
  text-align:center;transition:transform .2s,border-color .2s,box-shadow .2s}
-.pcard:hover,.pcard.pick-open{transform:scale(1.03);border-color:rgba(229,71,109,.65);
+.pcard:hover,.pcard.pick-open,.pcard.pick-slow{transform:scale(1.03);border-color:rgba(229,71,109,.65);
  box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
 .p-icon{width:44px;height:44px;flex:none;margin:0}
 .p-icon svg{width:100%;height:100%;display:block}
@@ -44,9 +44,9 @@
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
 .pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 .pr .p-hex{font-size:11px;width:64px}
-#pcmore{align-self:center;border:1px solid var(--bd);background:rgba(255,255,255,.05);
- color:var(--ac2);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;
- transition:all .25s;margin-top:2px;display:block}
+#pcmore{display:flex;align-items:center;justify-content:center;align-self:center;margin:2px auto 0;
+ border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--ac2);padding:0;line-height:1;
+ border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;transition:all .25s}
 #pcmore:hover{border-color:rgba(229,71,109,.6);box-shadow:0 0 14px rgba(229,71,109,.3)}
 #pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
  border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
@@ -54,18 +54,18 @@
 /* def 15v5 · 当前色小方块（图标/名之下，流内居中） */
 .p-dot{display:block;width:16px;height:16px;border-radius:4px;margin:3px auto 0;
  border:1px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
-/* 选色区：hover 延迟 3s → 1s 动画展开色盘+滑轨；点击 pick-open 立即展开；移出即收（推挤不遮盖） */
+/* 选色区展开（动画本身无延迟，延迟由 JS 定时器控制）：pick-slow=悬停停3s自动展开(1s动画,移出即收) / pick-open=点击立即展开(0.6s,锁定) */
 .pcard > .p-swatch,.pcard > .pr,.pcard > label.p-en{
  max-height:0;opacity:0;overflow:hidden;margin-top:0;
  transition:max-height .35s ease,opacity .3s ease,margin-top .35s ease}
-.pcard:hover > .p-swatch,.pcard:hover > .pr,.pcard:hover > label.p-en{
- max-height:110px;opacity:1;margin-top:6px;
- transition:max-height 1s ease 3s,opacity 1s ease 3s,margin-top 1s ease 3s}
 .pcard.pick-open > .p-swatch,.pcard.pick-open > .pr,.pcard.pick-open > label.p-en{
  max-height:110px;opacity:1;margin-top:6px;
  transition:max-height .6s ease,opacity .5s ease,margin-top .6s ease}
-#pcards.grid .pcard:hover > .p-swatch,#pcards.grid .pcard:hover > .pr,#pcards.grid .pcard:hover > label.p-en,
-#pcards.grid .pcard.pick-open > .p-swatch,#pcards.grid .pcard.pick-open > .pr,#pcards.grid .pcard.pick-open > label.p-en{max-height:180px}
+.pcard.pick-slow > .p-swatch,.pcard.pick-slow > .pr,.pcard.pick-slow > label.p-en{
+ max-height:110px;opacity:1;margin-top:6px;
+ transition:max-height 1s ease,opacity 1s ease,margin-top 1s ease}
+#pcards.grid .pcard.pick-open > .p-swatch,#pcards.grid .pcard.pick-open > .pr,#pcards.grid .pcard.pick-open > label.p-en,
+#pcards.grid .pcard.pick-slow > .p-swatch,#pcards.grid .pcard.pick-slow > .pr,#pcards.grid .pcard.pick-slow > label.p-en{max-height:180px}
 #pcards.grid #pcmore{grid-column:1/-1;justify-self:center}
 #tyms{display:block;text-align:center;min-height:16px;font-size:11px}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
