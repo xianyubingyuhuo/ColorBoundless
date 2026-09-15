@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
-<link rel="stylesheet" href="tryon.css?v=def15v6">
+<link rel="stylesheet" href="tryon.css?v=def15v7">
 </head>
 <body>
 <header class="site-head">
@@ -40,6 +40,7 @@
     </svg></div>
     <b class="p-name">唇妆 <span class="p-tag">主色·校色</span></b>
      <span class="p-dot" style="background:#C2185B"></span>
+    <div class="p-pick"><div class="p-pick-in">
     <div class="p-swatch">
      <span style="background:#DB7093" onclick="pickSwatch(this,'#DB7093')"></span>
      <span style="background:#CD5C5C" onclick="pickSwatch(this,'#CD5C5C')"></span>
@@ -53,6 +54,8 @@
      <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:44px"></label>
     </div>
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
+    </div>
+    </div>
    </div>
 
    <div class="pcard" data-region="foundation">
@@ -63,6 +66,7 @@
     </svg></div>
     <b class="p-name">粉底 <span class="p-tag">集团产品线</span></b>
      <span class="p-dot" style="background:#F7D9C4"></span>
+    <div class="p-pick"><div class="p-pick-in">
     <div class="p-swatch">
      <span style="background:#F7D9C4" onclick="pickSwatch(this,'#F7D9C4')"></span>
      <span style="background:#E8C4A0" onclick="pickSwatch(this,'#E8C4A0')"></span>
@@ -76,6 +80,8 @@
      <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:44px"></label>
     </div>
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
+    </div>
+    </div>
    </div>
 
    <div class="pcard" data-region="eyeshadow">
@@ -86,6 +92,7 @@
     </svg></div>
     <b class="p-name">眼影</b>
      <span class="p-dot" style="background:#6b6b6b"></span>
+    <div class="p-pick"><div class="p-pick-in">
     <div class="p-swatch">
      <span style="background:#B76E79" onclick="pickSwatch(this,'#B76E79')"></span>
      <span style="background:#C9A9A6" onclick="pickSwatch(this,'#C9A9A6')"></span>
@@ -99,6 +106,8 @@
      <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:44px"></label>
     </div>
     <label class="meta p-en"><input type="checkbox" class="p-on"> 启用</label>
+    </div>
+    </div>
    </div>
 
    <div class="pcard" style="opacity:.55">
@@ -139,6 +148,6 @@
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
 <script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
-<script src="tryon.js?v=def15v6"></script>
+<script src="tryon.js?v=def15v7"></script>
 </body>
 </html>
