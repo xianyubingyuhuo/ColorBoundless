@@ -21,13 +21,36 @@
 #upzone .reup{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:var(--tx2);
  font-size:11px;opacity:.85}
 @keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
-.pcard{border:1px solid var(--bd);border-radius:12px;padding:10px 9px;background:rgba(255,255,255,.03);
- transition:transform .25s,box-shadow .25s;text-align:center}
-.pcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.p-icon{width:34px;height:34px;margin:0 auto 4px}
+/* def 15v3 · 工具栏：默认一列（CSP 风），hover 放大+下方淡入选色，右下角当前色点，可切 3 列网格 */
+#pcards{display:flex;flex-direction:column;gap:8px;align-items:center}
+#pcards.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
+#pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
+ border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+#pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
+.pcard{position:relative;width:96px;border:1px solid var(--bd);border-radius:12px;padding:10px 6px 8px;
+ background:rgba(255,255,255,.03);text-align:center;cursor:pointer;
+ transition:transform .2s,box-shadow .2s,border-color .2s}
+#pcards.grid .pcard{width:auto}
+.pcard:hover,.pcard.pick-open{transform:scale(1.07);border-color:rgba(229,71,109,.65);z-index:8;
+ box-shadow:0 10px 28px rgba(229,71,109,.25)}
+.p-icon{width:52px;height:52px;margin:0 auto 2px}
 .p-icon svg{width:100%;height:100%;display:block}
-.p-name{display:block;font-size:12.5px;margin-bottom:4px;color:var(--tx)}
-.p-tag{font-size:10px;color:var(--ac2);font-weight:normal}
+.p-name{display:block;font-size:11.5px;color:var(--tx)}
+.p-tag{font-size:9.5px;color:var(--ac2);font-weight:normal}
+.p-dot{position:absolute;right:7px;bottom:7px;width:15px;height:15px;border-radius:50%;
+ border:2px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.p-pick{position:absolute;left:-4px;right:-4px;top:calc(100% + 6px);z-index:30;
+ background:rgba(30,20,36,.97);border:1px solid var(--bd);border-radius:10px;padding:8px;
+ opacity:0;visibility:hidden;transform:translateY(-6px);
+ transition:opacity .22s,transform .22s,visibility .22s;box-shadow:0 12px 30px rgba(0,0,0,.55);cursor:default}
+.pcard:hover .p-pick,.pcard.pick-open .p-pick{opacity:1;visibility:visible;transform:translateY(0)}
+#pcards.grid .p-pick{left:0;right:0}
+.p-swatch{display:flex;gap:5px;justify-content:center;margin-bottom:6px}
+.p-swatch span{width:18px;height:18px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);transition:transform .15s}
+.p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
+.p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
+.pcard .p-hex{font-size:11px;width:64px}
+.pcard .row{justify-content:center;gap:4px;margin:4px 0}
 .p-swatch{display:flex;gap:5px;margin:6px 0}
 .p-swatch span{width:20px;height:20px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
  transition:transform .15s}
@@ -46,6 +69,7 @@
 
 <!-- def 15v2 · 聚合式试妆：[+]上传区（hover 浮起发光+预览淡入）+ 右侧部位卡（画笔形状区分 + 色板/取色器） -->
 <div class="card" id="card-tryon"><b>聚合试妆 · 上传照片 → 多部位 AI 上妆</b>
+ <span style="float:right"><button id="pcgridbtn" onclick="toggleGrid()">⊞ 网格视图</button></span>
  <div class="row" style="margin-top:10px;align-items:flex-start;gap:14px;flex-wrap:wrap">
   <label id="upzone" for="tyfile" style="width:280px;flex:none;position:relative">
    <span class="plus">+</span>
@@ -170,18 +194,45 @@ $("tyfile").addEventListener("change", () => {
   rd.readAsDataURL(f);
 });
 /* def 15v2 · 色板 / 取色器 / hex 三向联动 */
+function setDot(card, hex){
+  const d = card.querySelector(".p-dot");
+  if(d) d.style.background = hex;
+}
 function pickSwatch(sw, hex){
   const card = sw.closest(".pcard");
   card.querySelector(".p-hex").value = hex.toUpperCase();
   card.querySelector(".p-color").value = hex;
+  setDot(card, hex);
 }
 function syncFromColor(inp){
-  inp.closest(".pcard").querySelector(".p-hex").value = inp.value.toUpperCase();
+  const card = inp.closest(".pcard");
+  card.querySelector(".p-hex").value = inp.value.toUpperCase();
+  setDot(card, inp.value.toUpperCase());
 }
 function syncFromHex(inp){
   const v = inp.value.trim();
-  if(/^#[0-9a-fA-F]{6}$/.test(v)) inp.closest(".pcard").querySelector(".p-color").value = v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){
+    inp.closest(".pcard").querySelector(".p-color").value = v;
+    setDot(inp.closest(".pcard"), v);
+  }
 }
+/* def 15v3 · 一列/网格切换 + 点击工具卡切换选色浮层（触摸友好）+ 点其他处收起 */
+function toggleGrid(){
+  const g = $("pcards");
+  g.classList.toggle("grid");
+  $("pcgridbtn").textContent = g.classList.contains("grid") ? "◫ 列表视图" : "⊞ 网格视图";
+}
+document.querySelectorAll(".pcard[data-region]").forEach(card => {
+  card.addEventListener("click", (e) => {
+    if(e.target.closest(".p-pick")) return;      // 选色面板内操作不切换
+    document.querySelectorAll(".pcard.pick-open").forEach(c => { if(c !== card) c.classList.remove("pick-open"); });
+    card.classList.toggle("pick-open");
+  });
+});
+document.addEventListener("click", (e) => {
+  if(!e.target.closest(".pcard")) document.querySelectorAll(".pcard.pick-open")
+    .forEach(c => c.classList.remove("pick-open"));
+});
 
 /* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */
 (async () => {
