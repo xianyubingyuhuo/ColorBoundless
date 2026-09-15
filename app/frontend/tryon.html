@@ -6,9 +6,14 @@
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
 <style>
-/* def 15v2 · 上传区 [+]（hover 浮起+发光）+ 预览淡入 + 部位卡画笔图标 + 色板 */
+/* def 15v4 · 布局：上传区（左，含聚合按钮）+ 工具列（右，默认一列紧凑横条，可切 3 列网格） */
+.ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px;flex-wrap:wrap}
+.ty-left{width:320px;flex:none;display:flex;flex-direction:column;gap:8px}
+.ty-right{flex:1;min-width:280px;display:flex;flex-direction:column;gap:6px}
+#ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
- position:relative;width:100%;min-height:230px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
+ position:relative;width:100%;flex:1;min-height:300px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
  background:rgba(255,255,255,.03);transition:transform .25s,box-shadow .25s,border-color .25s}
 #upzone:hover{transform:translateY(-5px);border-color:rgba(229,71,109,.65);
  box-shadow:0 12px 32px rgba(229,71,109,.28),0 0 20px rgba(255,154,181,.18)}
@@ -21,10 +26,12 @@
 #upzone .reup{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:var(--tx2);
  font-size:11px;opacity:.85}
 @keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
-/* def 15v3 · 工具栏：默认一列（CSP 风），hover 放大+下方淡入选色，右下角当前色点，可切 3 列网格 */
-/* def 15v4 · 工具栏：默认一列横条（紧凑），hover 单卡放大+卡内展开选色（互不遮盖），
-   底部箭头动画展开 3 列网格；上传区加大 */
-#upzone{min-height:340px}
+#tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
+ background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
+ box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
+#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
+#tybig:disabled{opacity:.6;transform:none;cursor:wait}
+/* 工具列：默认一列紧凑横条；.grid → 3 列竖卡（动画展开） */
 #pcards{display:flex;flex-direction:column;gap:6px}
 #pcards.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start;
  animation:pcGridIn .35s ease}
@@ -33,10 +40,10 @@
  border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;
  transition:transform .2s,border-color .2s,box-shadow .2s}
 #pcards.grid .pcard{flex-direction:column;text-align:center;padding:10px 6px}
-.pcard:hover,.pcard.pick-open{transform:scale(1.04);border-color:rgba(229,71,109,.65);
+.pcard:hover,.pcard.pick-open{transform:scale(1.03);border-color:rgba(229,71,109,.65);
  box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
 .p-icon{width:44px;height:44px;flex:none;margin:0}
-#pcards.grid .p-icon{width:60px;height:60px;margin:0 auto 4px}
+#pcards.grid .p-icon{width:56px;height:56px;margin:0 auto 4px}
 .p-icon svg{width:100%;height:100%;display:block}
 .p-name{font-size:12px;color:var(--tx);flex:1;text-align:left}
 #pcards.grid .p-name{text-align:center;flex:none}
@@ -44,20 +51,34 @@
 .p-dot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.55);
  box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
 #pcards.grid .p-dot{position:absolute;right:7px;bottom:7px}
+/* 选色面板：hover/点击 卡内下方 max-height 动画展开（推挤不遮盖，互不干扰） */
 .p-pick{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s ease,opacity .25s,margin .3s;
  margin-top:0;width:100%}
-.pcard:hover .p-pick,.pcard.pick-open .p-pick{max-height:220px;opacity:1;margin-top:6px}
+.pcard:hover .p-pick,.pcard.pick-open .p-pick{max-height:230px;opacity:1;margin-top:6px}
 #pcards.grid .p-pick{width:100%}
 .p-swatch{display:flex;gap:5px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
 .p-swatch span{width:18px;height:18px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);transition:transform .15s}
 .p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
-.pcard .p-hex{font-size:11px;width:64px}
-.pcard .row{justify-content:center;gap:4px;margin:4px 0}
+.pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap}
+.pr .p-hex{font-size:11px;width:64px}
 #pcmore{align-self:center;border:1px solid var(--bd);background:rgba(255,255,255,.05);
- color:var(--ac2);border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer;
- transition:all .25s;margin:2px auto 0;display:block}
+ color:var(--ac2);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;
+ transition:all .25s;margin-top:2px;display:block}
 #pcmore:hover{border-color:rgba(229,71,109,.6);box-shadow:0 0 14px rgba(229,71,109,.3)}
+#pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
+ border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+#pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
+/* def 15v4 · 选色区默认隐藏（含启用行），hover 单卡展开——互不干扰 */
+.p-dot{position:absolute;right:8px;bottom:8px;width:15px;height:15px;border-radius:50%;
+ border:2px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.pcard > .p-swatch,.pcard > .pr,.pcard > label.p-en{display:none}
+.pcard:hover > .p-swatch,.pcard:hover > .pr{display:flex}
+.pcard:hover > label.p-en{display:block}
+#tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
+ background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
+ box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
+#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
 </style>
 </head>
 <body>
@@ -88,6 +109,7 @@
      <rect x="14.4" y="15" width="3.2" height="15" rx="1.6" fill="#8a5a3b"/>
     </svg></div>
     <b class="p-name">唇妆 <span class="p-tag">主色·校色</span></b>
+     <span class="p-dot" style="background:#C2185B"></span>
     <div class="p-swatch">
      <span style="background:#DB7093" onclick="pickSwatch(this,'#DB7093')"></span>
      <span style="background:#CD5C5C" onclick="pickSwatch(this,'#CD5C5C')"></span>
@@ -100,7 +122,7 @@
      <input class="p-hex" value="#C2185B" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:44px"></label>
     </div>
-    <label class="meta"><input type="checkbox" class="p-on" checked> 启用</label>
+    <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
    </div>
 
    <div class="pcard" data-region="foundation" style="width:150px">
@@ -110,6 +132,7 @@
      <rect x="14.4" y="15" width="3.2" height="15" rx="1.6" fill="#8a5a3b"/>
     </svg></div>
     <b class="p-name">粉底 <span class="p-tag">集团产品线</span></b>
+     <span class="p-dot" style="background:#F7D9C4"></span>
     <div class="p-swatch">
      <span style="background:#F7D9C4" onclick="pickSwatch(this,'#F7D9C4')"></span>
      <span style="background:#E8C4A0" onclick="pickSwatch(this,'#E8C4A0')"></span>
@@ -122,7 +145,7 @@
      <input class="p-hex" value="#F7D9C4" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:44px"></label>
     </div>
-    <label class="meta"><input type="checkbox" class="p-on" checked> 启用</label>
+    <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
    </div>
 
    <div class="pcard" data-region="eyeshadow" style="width:150px">
@@ -132,6 +155,7 @@
      <rect x="14.4" y="14.2" width="3.2" height="16" rx="1.6" fill="#8a5a3b"/>
     </svg></div>
     <b class="p-name">眼影</b>
+     <span class="p-dot" style="background:#6b6b6b"></span>
     <div class="p-swatch">
      <span style="background:#B76E79" onclick="pickSwatch(this,'#B76E79')"></span>
      <span style="background:#C9A9A6" onclick="pickSwatch(this,'#C9A9A6')"></span>
@@ -144,7 +168,7 @@
      <input class="p-hex" value="#B76E79" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:44px"></label>
     </div>
-    <label class="meta"><input type="checkbox" class="p-on"> 启用</label>
+    <label class="meta p-en"><input type="checkbox" class="p-on"> 启用</label>
    </div>
 
    <div class="pcard" style="width:150px;opacity:.55">
@@ -162,7 +186,7 @@
  </div>
 
  <div class="row" style="margin-top:10px">
-  <button onclick="tyParts()">开始聚合试妆</button>
+  <button id="tybig" onclick="tyParts()">开始聚合试妆</button>
   <span id="tyms" class="ms"></span></div>
  <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
 
