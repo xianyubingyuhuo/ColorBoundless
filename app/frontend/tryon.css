@@ -1,8 +1,8 @@
 /* def 15v5 · 试妆页样式（自 tryon.html 拆出，改样式只动这个小文件） */
 /* def 15v5 · 布局：上传区占 3/4（左，含聚合按钮）+ 工具列 1/4（右，竖排小卡） */
 .ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px}
-.ty-left{flex:3;min-width:0;display:flex;flex-direction:column;gap:8px}
-.ty-right{flex:1;min-width:172px;display:flex;flex-direction:column;gap:6px;position:relative}
+.ty-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ty-right{width:136px;flex:none;display:flex;flex-direction:column;gap:6px;position:relative}
 #ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -25,8 +25,8 @@
 #tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
 #tybig:disabled{opacity:.6;transform:none;cursor:wait}
 /* 工具列：一列竖排小卡（图标/名/当前色方块）；.grid → 2 列 */
-/* def 15v8 · 工具列默认即统一尺寸方卡（2 列，网格视图规格）；总览浮层另行弹出 */
-#pcards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-items:start}
+/* def 15v9 · 工具列单列方卡（右列收窄 136px，把宽度让给左侧 AI 试妆照片区）；总览浮层另行弹出 */
+#pcards{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
 .pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border:1px solid var(--bd);
  border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:100%;flex:none;
  text-align:center;transition:transform .2s,border-color .2s,box-shadow .2s}
