@@ -234,16 +234,20 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
     return null;
   }
 
-  /* def 22 · 启动：任何导航（站内切页 / F5 / 前进后退 / AI 跳页）都保留会话与展开态——
-     会话历史存 localStorage（跨页面跨刷新持久），切换页面不影响当前对话的决策与总结 */
+  /* def 24 · 启动分流（按导航类型）：
+     - 站内切页 navigate / 前进后退 → 延续当前对话（上下文与展开态完整恢复，AI 跳页同此）
+     - F5 刷新 reload → 自动进入新对话，历史会话保留在栏中（数据不丢，随时可切回）
+     会话历史存 localStorage；展开态存 sessionStorage（刷新后自动恢复展开） */
+  let navType = "navigate";
+  try { navType = (performance.getEntriesByType("navigation")[0] || {}).type || "navigate"; } catch(e){}
   applySavedPos();   /* def 22 · 先恢复球位置（LS_POS），面板弹出位置才正确（函数声明提升，可先调） */
   loadConvs();
-  if (convs.length){
+  if (navType === "reload" || !convs.length){
+    newConv();   /* F5 刷新 → 新对话起点；首次 → 建首个会话（历史会话不删，留在栏中） */
+  } else {
     curId = localStorage.getItem(SS_CUR) && convs.find(c => c.id === localStorage.getItem(SS_CUR))
             ? localStorage.getItem(SS_CUR) : convs[convs.length - 1].id;
     switchConv(curId);
-  } else {
-    newConv();   /* def 22 · 对话开始即自动新建一个会话：此后所有消息都存进去，上下文不丢 */
   }
 
   /* ==== 拖动（保留）+ 面板锚定 ==== */
