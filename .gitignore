@@ -24,3 +24,6 @@ secrets.local.json
 .idea/
 Thumbs.db
 .DS_Store
+
+_backend.log
+_backend_err.log
