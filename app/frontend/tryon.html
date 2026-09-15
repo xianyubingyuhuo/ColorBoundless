@@ -22,18 +22,18 @@
  font-size:11px;opacity:.85}
 @keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 /* def 15v3 · 工具栏：默认一列（CSP 风），hover 放大+下方淡入选色，右下角当前色点，可切 3 列网格 */
-#pcards{display:flex;flex-direction:column;gap:8px;align-items:center}
-#pcards.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
+#pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
+#pcards.list{display:flex;flex-direction:column;gap:8px;align-items:center}
 #pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
  border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
 #pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
-.pcard{position:relative;width:96px;border:1px solid var(--bd);border-radius:12px;padding:10px 6px 8px;
+.pcard{position:relative;border:1px solid var(--bd);border-radius:12px;padding:10px 6px 8px;
  background:rgba(255,255,255,.03);text-align:center;cursor:pointer;
  transition:transform .2s,box-shadow .2s,border-color .2s}
-#pcards.grid .pcard{width:auto}
-.pcard:hover,.pcard.pick-open{transform:scale(1.07);border-color:rgba(229,71,109,.65);z-index:8;
+#pcards.list .pcard{width:96px}
+.pcard:hover,.pcard.pick-open{transform:scale(1.05);border-color:rgba(229,71,109,.65);z-index:8;
  box-shadow:0 10px 28px rgba(229,71,109,.25)}
-.p-icon{width:52px;height:52px;margin:0 auto 2px}
+.p-icon{width:64px;height:64px;margin:0 auto 2px}
 .p-icon svg{width:100%;height:100%;display:block}
 .p-name{display:block;font-size:11.5px;color:var(--tx)}
 .p-tag{font-size:9.5px;color:var(--ac2);font-weight:normal}
@@ -69,8 +69,8 @@
 
 <!-- def 15v2 · 聚合式试妆：[+]上传区（hover 浮起发光+预览淡入）+ 右侧部位卡（画笔形状区分 + 色板/取色器） -->
 <div class="card" id="card-tryon"><b>聚合试妆 · 上传照片 → 多部位 AI 上妆</b>
- <span style="float:right"><button id="pcgridbtn" onclick="toggleGrid()">⊞ 网格视图</button></span>
- <div class="row" style="margin-top:10px;align-items:flex-start;gap:14px;flex-wrap:wrap">
+ <span style="float:right"><button id="pcgridbtn" onclick="toggleGrid()">◫ 列表视图</button></span>
+ <div class="row" style="margin-top:10px;align-items:stretch;gap:14px;flex-wrap:wrap">
   <label id="upzone" for="tyfile" style="width:280px;flex:none;position:relative">
    <span class="plus">+</span>
    <span class="uptxt">点击上传照片（jpg / png）</span>
@@ -216,11 +216,11 @@ function syncFromHex(inp){
     setDot(inp.closest(".pcard"), v);
   }
 }
-/* def 15v3 · 一列/网格切换 + 点击工具卡切换选色浮层（触摸友好）+ 点其他处收起 */
+/* def 15v3 · 网格（默认，3 列铺满）/ 列表（一列紧凑）切换 */
 function toggleGrid(){
   const g = $("pcards");
-  g.classList.toggle("grid");
-  $("pcgridbtn").textContent = g.classList.contains("grid") ? "◫ 列表视图" : "⊞ 网格视图";
+  g.classList.toggle("list");
+  $("pcgridbtn").textContent = g.classList.contains("list") ? "⊞ 网格视图" : "◫ 列表视图";
 }
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
   card.addEventListener("click", (e) => {
