@@ -35,8 +35,8 @@ class NoCacheHTML(BaseHTTPMiddleware):
         return resp
 
 from agents.tools.search_shade import search_shade_tool, coverage16_tool
-from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool
+from agents.tools.foundation_search import foundation_search_tool
 from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
 from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
@@ -46,10 +46,9 @@ from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a
 
 @asynccontextmanager
 async def lifespan(_app):
-    # kb 向量模型预热：不预热则首次提问要干等 62s（模型加载），预热后毫秒级。
-    # 同步阻塞启动最简单可靠（lru_cache 单例没有并发竞态）。
-    print("[lifespan] 预热 kb 向量模型（首次约 60s，仅启动时一次）...")
-    kb_search_tool("预热", 1)
+    # foundation 向量模型预热：不预热则首次粉底推荐要干等约 60s（bge 首载），预热后毫秒级。
+    print("[lifespan] 预热 foundation 向量模型（首次约 60s，仅启动时一次）...")
+    foundation_search_tool("预热", top_k=1)
     print("[lifespan] 预热完成")
     yield
 
@@ -75,10 +74,10 @@ def api_coverage16():
     return coverage16_tool()
 
 
-@app.get("/api/tools/kb_search")
-def api_kb_search(query: str, top_k: int = 5):
-    """工具②：知识库语义检索"""
-    return kb_search_tool(query, top_k)
+@app.get("/api/tools/foundation_search")
+def api_foundation_search(query: str, brand: str = "", shade_level: str = "", top_k: int = 3):
+    """工具②：集团粉底色号推荐（向量检索 + 品牌/明度档过滤）"""
+    return foundation_search_tool(query, brand, shade_level, top_k)
 
 
 @app.get("/api/tools/palette_search")

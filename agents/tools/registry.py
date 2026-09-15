@@ -11,8 +11,8 @@
 import json
 
 from agents.tools.search_shade import search_shade_tool
-from agents.tools.kb_search import kb_search_tool
 from agents.tools.palette_search import palette_search_tool, HUE_GROUPS
+from agents.tools.foundation_search import foundation_search_tool
 from agents.tools.navigate import navigate_tool, PAGES
 from agents.tools.vision_profile import get_vision_profile_tool
 from agents.prompt import TOOL_DESCRIPTIONS      # def 22k · 工具描述话术收拢至 prompt.py
@@ -58,20 +58,27 @@ _REGISTRY = {
             },
         },
     },
-    "kb_search_tool": {
-        "fn": kb_search_tool,
+    "foundation_search_tool": {
+        "fn": foundation_search_tool,
         "schema": {
             "type": "function",
             "function": {
-                "name": "kb_search_tool",
-                "description": TOOL_DESCRIPTIONS["kb_search_tool"],
+                "name": "foundation_search_tool",
+                "description": TOOL_DESCRIPTIONS["foundation_search_tool"],
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "text": {"type": "string", "description": "检索问句，如'冷白皮怎么选粉底'"},
-                        "top_k": {"type": "integer", "description": "返回条数，默认 3"},
+                        "query": {"type": "string",
+                                  "description": "需求描述，如'黄黑皮想要自然提亮的底妆'"},
+                        "brand": {"type": "string",
+                                  "enum": ["Maybelline", "Lancôme", "Make Up For Ever", "L'Oréal"],
+                                  "description": "限定集团品牌，不限定则省略"},
+                        "shade_level": {"type": "string",
+                                        "enum": ["light", "medium", "deep"],
+                                        "description": "按明度档过滤：light=白皙/浅肤色，medium=自然/中等肤色，deep=小麦/深肤色"},
+                        "top_k": {"type": "integer", "description": "返回数量，默认 3"},
                     },
-                    "required": ["text"],
+                    "required": ["query"],
                 },
             },
         },
