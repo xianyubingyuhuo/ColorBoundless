@@ -37,9 +37,9 @@
  animation:pcGridIn .35s ease}
 @keyframes pcGridIn{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
 .pcard{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--bd);
- border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;
+ border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:190px;flex:none;
  transition:transform .2s,border-color .2s,box-shadow .2s}
-#pcards.grid .pcard{flex-direction:column;text-align:center;padding:10px 6px}
+#pcards.grid .pcard{flex-direction:column;text-align:center;padding:10px 6px;width:auto}
 .pcard:hover,.pcard.pick-open{transform:scale(1.03);border-color:rgba(229,71,109,.65);
  box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
 .p-icon{width:44px;height:44px;flex:none;margin:0}
@@ -48,9 +48,6 @@
 .p-name{font-size:12px;color:var(--tx);flex:1;text-align:left}
 #pcards.grid .p-name{text-align:center;flex:none}
 .p-tag{font-size:9.5px;color:var(--ac2);font-weight:normal}
-.p-dot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.55);
- box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
-#pcards.grid .p-dot{position:absolute;right:7px;bottom:7px}
 /* 选色面板：hover/点击 卡内下方 max-height 动画展开（推挤不遮盖，互不干扰） */
 .p-pick{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s ease,opacity .25s,margin .3s;
  margin-top:0;width:100%}
@@ -60,7 +57,7 @@
 .p-swatch span{width:18px;height:18px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);transition:transform .15s}
 .p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
-.pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap}
+.pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 .pr .p-hex{font-size:11px;width:64px}
 #pcmore{align-self:center;border:1px solid var(--bd);background:rgba(255,255,255,.05);
  color:var(--ac2);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;
@@ -75,6 +72,11 @@
 .pcard > .p-swatch,.pcard > .pr,.pcard > label.p-en{display:none}
 .pcard:hover > .p-swatch,.pcard:hover > .pr{display:flex}
 .pcard:hover > label.p-en{display:block}
+.pcard.pick-open > .p-swatch,.pcard.pick-open > .pr{display:flex}
+.pcard.pick-open > label.p-en{display:block}
+#pcards.grid #pcmore{grid-column:1/-1;justify-self:center}
+#pcards:not(.grid) .p-name{padding-right:14px}
+#tyms{display:block;text-align:center;min-height:16px;font-size:11px}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
  background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
  box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
@@ -92,17 +94,21 @@
 
 <!-- def 15v2 · 聚合式试妆：[+]上传区（hover 浮起发光+预览淡入）+ 右侧部位卡（画笔形状区分 + 色板/取色器） -->
 <div class="card" id="card-tryon"><b>聚合试妆 · 上传照片 → 多部位 AI 上妆</b>
- <span style="float:right"><button id="pcgridbtn" onclick="toggleGrid()">◫ 列表视图</button></span>
- <div class="row" style="margin-top:10px;align-items:stretch;gap:14px;flex-wrap:wrap">
-  <label id="upzone" for="tyfile" style="width:320px;flex:none;position:relative">
-   <span class="plus">+</span>
-   <span class="uptxt">点击上传照片（jpg / png）</span>
-  </label>
-  <input id="tyfile" type="file" accept="image/jpeg,image/png" hidden>
-  <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-  <div id="pcards">
+ <div class="ty-layout">
+  <div class="ty-left">
+   <label id="upzone" for="tyfile">
+    <span class="plus">+</span>
+    <span class="uptxt">点击上传照片（jpg / png）</span>
+   </label>
+   <input id="tyfile" type="file" accept="image/jpeg,image/png" hidden>
+   <button id="tybig" onclick="tyParts()">开始聚合试妆</button>
+   <span id="tyms" class="ms"></span>
+  </div>
+  <div class="ty-right">
+   <div id="ty-tools-head"><b>选择部位与颜色</b><button id="pcgridbtn" onclick="toggleGrid()">⊞ 网格视图</button></div>
+   <div id="pcards">
 
-   <div class="pcard" data-region="lip" style="width:150px">
+   <div class="pcard" data-region="lip">
     <div class="p-icon"><svg viewBox="0 0 32 32">
      <path d="M16 2 C18.2 5 18.6 8 17.4 11 L14.6 11 C13.4 8 13.8 5 16 2 Z" fill="#d9a37a"/>
      <rect x="13.4" y="11" width="5.2" height="4" rx="1" fill="#c0a062"/>
@@ -117,7 +123,7 @@
      <span style="background:#8B1E4B" onclick="pickSwatch(this,'#8B1E4B')"></span>
      <span style="background:#B76E79" onclick="pickSwatch(this,'#B76E79')"></span>
     </div>
-    <div class="row" style="align-items:center;justify-content:center">
+    <div class="pr">
      <input type="color" class="p-color" value="#C2185B" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#C2185B" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:44px"></label>
@@ -125,7 +131,7 @@
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
    </div>
 
-   <div class="pcard" data-region="foundation" style="width:150px">
+   <div class="pcard" data-region="foundation">
     <div class="p-icon"><svg viewBox="0 0 32 32">
      <path d="M9 2.5 L23 2.5 L23 9 C23 10.2 22 11 21 11 L11 11 C10 11 9 10.2 9 9 Z" fill="#d9a37a"/>
      <rect x="8.2" y="11" width="15.6" height="4" rx="1" fill="#c0a062"/>
@@ -140,7 +146,7 @@
      <span style="background:#B08968" onclick="pickSwatch(this,'#B08968')"></span>
      <span style="background:#8D5524" onclick="pickSwatch(this,'#8D5524')"></span>
     </div>
-    <div class="row" style="align-items:center;justify-content:center">
+    <div class="pr">
      <input type="color" class="p-color" value="#F7D9C4" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#F7D9C4" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:44px"></label>
@@ -148,7 +154,7 @@
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
    </div>
 
-   <div class="pcard" data-region="eyeshadow" style="width:150px">
+   <div class="pcard" data-region="eyeshadow">
     <div class="p-icon"><svg viewBox="0 0 32 32">
      <circle cx="16" cy="6" r="4.6" fill="#d9a37a"/>
      <rect x="13.4" y="10.6" width="5.2" height="3.6" rx="1" fill="#c0a062"/>
@@ -163,7 +169,7 @@
      <span style="background:#6B4F4F" onclick="pickSwatch(this,'#6B4F4F')"></span>
      <span style="background:#D8BFD8" onclick="pickSwatch(this,'#D8BFD8')"></span>
     </div>
-    <div class="row" style="align-items:center;justify-content:center">
+    <div class="pr">
      <input type="color" class="p-color" value="#B76E79" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#B76E79" size="7" oninput="syncFromHex(this)" style="font-size:11px">
      <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:44px"></label>
@@ -171,7 +177,7 @@
     <label class="meta p-en"><input type="checkbox" class="p-on"> 启用</label>
    </div>
 
-   <div class="pcard" style="width:150px;opacity:.55">
+   <div class="pcard" style="opacity:.55">
     <div class="p-icon"><svg viewBox="0 0 32 32">
      <circle cx="16" cy="7" r="6.4" fill="#d9a37a"/>
      <rect x="13.4" y="13.2" width="5.2" height="3.6" rx="1" fill="#c0a062"/>
@@ -183,11 +189,8 @@
    <button id="pcmore" onclick="toggleGrid()" title="展开工具栏">⌄</button>
 
   </div>
+  </div>
  </div>
-
- <div class="row" style="margin-top:10px">
-  <button id="tybig" onclick="tyParts()">开始聚合试妆</button>
-  <span id="tyms" class="ms"></span></div>
  <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
 
  <div id="tyres" class="res"></div>
@@ -258,10 +261,11 @@ function toggleGrid(){
   const b = $("pcmore");
   b.textContent = toGrid ? "⌃" : "⌄";
   b.title = toGrid ? "收起工具栏" : "展开工具栏";
+  $("pcgridbtn").textContent = toGrid ? "◫ 列表视图" : "⊞ 网格视图";
 }
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
   card.addEventListener("click", (e) => {
-    if(e.target.closest(".p-pick")) return;      // 选色面板内操作不切换
+    if(e.target.closest(".p-pick,.p-swatch,.pr,.p-en,input,button")) return; // 选色面板内操作不切换
     document.querySelectorAll(".pcard.pick-open").forEach(c => { if(c !== card) c.classList.remove("pick-open"); });
     card.classList.toggle("pick-open");
   });
