@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
-<link rel="stylesheet" href="tryon.css?v=def15v9">
+<link rel="stylesheet" href="tryon.css?v=def15v10">
 </head>
 <body>
 <header class="site-head">
@@ -52,7 +52,7 @@
     <div class="pr">
      <input type="color" class="p-color" value="#C2185B" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#C2185B" size="7" oninput="syncFromHex(this)" style="font-size:11px">
-     <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:44px"></label>
+     <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75"></label>
     </div>
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
     </div>
@@ -78,7 +78,7 @@
     <div class="pr">
      <input type="color" class="p-color" value="#F7D9C4" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#F7D9C4" size="7" oninput="syncFromHex(this)" style="font-size:11px">
-     <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:44px"></label>
+     <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.55" step="0.05" value="0.3"></label>
     </div>
     <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
     </div>
@@ -104,9 +104,9 @@
     <div class="pr">
      <input type="color" class="p-color" value="#B76E79" oninput="syncFromColor(this)" style="width:32px;height:26px">
      <input class="p-hex" value="#B76E79" size="7" oninput="syncFromHex(this)" style="font-size:11px">
-     <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:44px"></label>
+     <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45"></label>
     </div>
-    <label class="meta p-en"><input type="checkbox" class="p-on"> 启用</label>
+    <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
     </div>
     </div>
    </div>
@@ -154,6 +154,6 @@
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
 <script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
-<script src="tryon.js?v=def15v9"></script>
+<script src="tryon.js?v=def15v10"></script>
 </body>
 </html>

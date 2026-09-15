@@ -1,12 +1,13 @@
 /* def 15v5 · 试妆页样式（自 tryon.html 拆出，改样式只动这个小文件） */
 /* def 15v5 · 布局：上传区占 3/4（左，含聚合按钮）+ 工具列 1/4（右，竖排小卡） */
-.ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px}
+/* def 15v10 · 布局：右列 absolute 脱离文档流（浮层开关不再压缩照片区），左列独立决定行高 */
+.ty-layout{position:relative;padding-right:150px;display:flex;gap:14px;align-items:stretch;margin-top:10px}
 .ty-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-.ty-right{width:136px;flex:none;display:flex;flex-direction:column;gap:6px;position:relative}
+.ty-right{position:absolute;top:0;right:0;width:136px;display:flex;flex-direction:column;gap:6px}
 #ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
- position:relative;width:100%;flex:1;min-height:340px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
+ position:relative;width:100%;flex:1;min-height:560px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
  background:rgba(255,255,255,.03);transition:transform .25s,box-shadow .25s,border-color .25s}
 #upzone:hover{transform:translateY(-5px);border-color:rgba(229,71,109,.65);
  box-shadow:0 12px 32px rgba(229,71,109,.28),0 0 20px rgba(255,154,181,.18)}
@@ -42,6 +43,8 @@
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
 .pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 .pr .p-hex{font-size:11px;width:64px}
+.pr > label.meta{flex:1 1 100%;display:flex;align-items:center;gap:6px}   /* α 行独占一行，滑轨可拉满 */
+.p-a{flex:1;width:100%;min-width:70px}
 #pcmore{display:flex;align-items:center;justify-content:center;margin:2px auto 0;
  border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--ac2);padding:0;line-height:1;
  border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;transition:all .25s}

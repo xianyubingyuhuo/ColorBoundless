@@ -43,9 +43,11 @@ def save_img(path, img_bgr, ext=".jpg", quality=95):
         f.write(buf.tobytes())
 
 
-def apply_lip_color(image_bgr, parsing, part, color_bgr, alpha=0.75, feather=2.0, gloss=0.3):
+def apply_lip_color(image_bgr, parsing, part, color_bgr, alpha=0.75, feather=2.0, gloss=0.3, mask=None):
     """完整版口红后处理:
     1) Lab 颜色迁移(保留明度纹理) 2) 边缘羽化 3) 高光润泽
+    def 15v10 · mask：传入定制掩码（如眼影的上眼睑带）则忽略 part；
+    gloss 高光仍基于 part 掩码计算，mask 模式请传 gloss=0。
     """
     img_f = image_bgr.astype(np.float32) / 255.0
 
@@ -58,9 +60,9 @@ def apply_lip_color(image_bgr, parsing, part, color_bgr, alpha=0.75, feather=2.0
     new_b = B * (1 - alpha) + tb * alpha
     changed = cv2.cvtColor(cv2.merge([L, new_a, new_b]), cv2.COLOR_LAB2BGR)
 
-    mask = (parsing == part).astype(np.float32)
-    mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=feather)
-    mask = mask[..., None]
+    m = (parsing == part).astype(np.float32) if mask is None else np.asarray(mask, dtype=np.float32)
+    m = cv2.GaussianBlur(m, (0, 0), sigmaX=feather)
+    mask = m[..., None]
 
     if gloss > 0:
         v = cv2.cvtColor(img_f, cv2.COLOR_BGR2HSV)[..., 2]

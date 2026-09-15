@@ -57,6 +57,7 @@ document.querySelectorAll(".pcard[data-region]").forEach(card => {
     hoverTimer = setTimeout(() => card.classList.add("pick-slow"), 3000);
   });
   card.addEventListener("mouseleave", () => {                 // 移出：取消排程 + 收起自动展开
+    if(card.contains(document.activeElement) || card.querySelector(":active")) return; // 输入/拖滑轨/取色中不收起
     clearTimeout(hoverTimer);
     card.classList.remove("pick-slow");
   });
