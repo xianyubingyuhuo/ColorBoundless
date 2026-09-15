@@ -6,14 +6,14 @@
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
 <style>
-/* def 15v4 · 布局：上传区（左，含聚合按钮）+ 工具列（右，默认一列紧凑横条，可切 3 列网格） */
-.ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px;flex-wrap:wrap}
-.ty-left{width:320px;flex:none;display:flex;flex-direction:column;gap:8px}
-.ty-right{flex:1;min-width:280px;display:flex;flex-direction:column;gap:6px}
+/* def 15v5 · 布局：上传区占 3/4（左，含聚合按钮）+ 工具列 1/4（右，竖排小卡） */
+.ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px}
+.ty-left{flex:3;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ty-right{flex:1;min-width:172px;display:flex;flex-direction:column;gap:6px}
 #ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
- position:relative;width:100%;flex:1;min-height:300px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
+ position:relative;width:100%;flex:1;min-height:340px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
  background:rgba(255,255,255,.03);transition:transform .25s,box-shadow .25s,border-color .25s}
 #upzone:hover{transform:translateY(-5px);border-color:rgba(229,71,109,.65);
  box-shadow:0 12px 32px rgba(229,71,109,.28),0 0 20px rgba(255,154,181,.18)}
@@ -21,7 +21,7 @@
 #upzone:hover .plus{transform:scale(1.18)}
 #upzone .uptxt{margin-top:8px;color:var(--tx2);font-size:12.5px}
 #upzone.hasimg{border-style:solid;padding:6px}
-#upzone img{width:100%;height:100%;max-height:320px;object-fit:cover;border-radius:10px;
+#upzone img{width:100%;height:100%;max-height:460px;object-fit:contain;background:rgba(0,0,0,.25);border-radius:10px;
  animation:tyFadeIn .6s ease}
 #upzone .reup{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:var(--tx2);
  font-size:11px;opacity:.85}
@@ -31,29 +31,21 @@
  box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
 #tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
 #tybig:disabled{opacity:.6;transform:none;cursor:wait}
-/* 工具列：默认一列紧凑横条；.grid → 3 列竖卡（动画展开） */
+/* 工具列：一列竖排小卡（图标/名/当前色方块）；.grid → 2 列 */
 #pcards{display:flex;flex-direction:column;gap:6px}
-#pcards.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start;
+#pcards.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-items:start;
  animation:pcGridIn .35s ease}
 @keyframes pcGridIn{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
-.pcard{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--bd);
- border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:190px;flex:none;
- transition:transform .2s,border-color .2s,box-shadow .2s}
-#pcards.grid .pcard{flex-direction:column;text-align:center;padding:10px 6px;width:auto}
+.pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border:1px solid var(--bd);
+ border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:100%;flex:none;
+ text-align:center;transition:transform .2s,border-color .2s,box-shadow .2s}
 .pcard:hover,.pcard.pick-open{transform:scale(1.03);border-color:rgba(229,71,109,.65);
  box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
 .p-icon{width:44px;height:44px;flex:none;margin:0}
-#pcards.grid .p-icon{width:56px;height:56px;margin:0 auto 4px}
 .p-icon svg{width:100%;height:100%;display:block}
-.p-name{font-size:12px;color:var(--tx);flex:1;text-align:left}
-#pcards.grid .p-name{text-align:center;flex:none}
+.p-name{font-size:12px;color:var(--tx);flex:none;text-align:center;line-height:1.35}
 .p-tag{font-size:9.5px;color:var(--ac2);font-weight:normal}
-/* 选色面板：hover/点击 卡内下方 max-height 动画展开（推挤不遮盖，互不干扰） */
-.p-pick{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s ease,opacity .25s,margin .3s;
- margin-top:0;width:100%}
-.pcard:hover .p-pick,.pcard.pick-open .p-pick{max-height:230px;opacity:1;margin-top:6px}
-#pcards.grid .p-pick{width:100%}
-.p-swatch{display:flex;gap:5px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
+.p-swatch{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
 .p-swatch span{width:18px;height:18px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);transition:transform .15s}
 .p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
@@ -66,16 +58,22 @@
 #pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
  border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
 #pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
-/* def 15v4 · 选色区默认隐藏（含启用行），hover 单卡展开——互不干扰 */
-.p-dot{position:absolute;right:8px;bottom:8px;width:15px;height:15px;border-radius:50%;
- border:2px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45)}
-.pcard > .p-swatch,.pcard > .pr,.pcard > label.p-en{display:none}
-.pcard:hover > .p-swatch,.pcard:hover > .pr{display:flex}
-.pcard:hover > label.p-en{display:block}
-.pcard.pick-open > .p-swatch,.pcard.pick-open > .pr{display:flex}
-.pcard.pick-open > label.p-en{display:block}
+/* def 15v5 · 当前色小方块（图标/名之下，流内居中） */
+.p-dot{display:block;width:16px;height:16px;border-radius:4px;margin:3px auto 0;
+ border:1px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
+/* 选色区：hover 延迟 3s → 1s 动画展开色盘+滑轨；点击 pick-open 立即展开；移出即收（推挤不遮盖） */
+.pcard > .p-swatch,.pcard > .pr,.pcard > label.p-en{
+ max-height:0;opacity:0;overflow:hidden;margin-top:0;
+ transition:max-height .35s ease,opacity .3s ease,margin-top .35s ease}
+.pcard:hover > .p-swatch,.pcard:hover > .pr,.pcard:hover > label.p-en{
+ max-height:110px;opacity:1;margin-top:6px;
+ transition:max-height 1s ease 3s,opacity 1s ease 3s,margin-top 1s ease 3s}
+.pcard.pick-open > .p-swatch,.pcard.pick-open > .pr,.pcard.pick-open > label.p-en{
+ max-height:110px;opacity:1;margin-top:6px;
+ transition:max-height .6s ease,opacity .5s ease,margin-top .6s ease}
+#pcards.grid .pcard:hover > .p-swatch,#pcards.grid .pcard:hover > .pr,#pcards.grid .pcard:hover > label.p-en,
+#pcards.grid .pcard.pick-open > .p-swatch,#pcards.grid .pcard.pick-open > .pr,#pcards.grid .pcard.pick-open > label.p-en{max-height:180px}
 #pcards.grid #pcmore{grid-column:1/-1;justify-self:center}
-#pcards:not(.grid) .p-name{padding-right:14px}
 #tyms{display:block;text-align:center;min-height:16px;font-size:11px}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
  background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
