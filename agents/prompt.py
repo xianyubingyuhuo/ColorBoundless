@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""prompt：全部 LLM 提示词集中管理（def 22k 精简版，用户指令：清除无用提示词）
+"""prompt：全部 LLM 提示词集中管理（def 22k 精简版）
 
 精简记录：
     - 删除 OUTPUT_CONTRACT / TTS_RULES / CVD_DIAGNOSTIC_SYSTEM / COLOR_AESTHETICS_SYSTEM /
@@ -13,6 +13,10 @@
 在用符号：
     CHAT_SYSTEM        工具台对话 Agent 系统提示词（agent_loop.function calling 循环）
     TOOL_DESCRIPTIONS  五件工具的 function calling 描述（registry.get_tools_schema 拼装）
+
+待定（def 23 规划，2026-09-16）：
+    用户将自 Kaggle 引入配色/化妆数据集——kb_search（RAG）去留、配色知识是否内置
+    （COLOR_KNOWLEDGE）等改造，待数据规模与结构评估后决策；当前 RAG 管线原样保留。
 """
 
 # ---------------------------------------------------------------------------
