@@ -18,6 +18,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from agents.tools.search_shade import normalize_hex   # def 15 · hex 门卫复用（轻依赖，不拉 torch）
+
 _ROOT = Path(__file__).resolve().parents[2]
 for _p in (str(_ROOT), str(_ROOT / "beauty")):   # cv.face_parsing 要 root，lipstick 要 beauty/
     if _p not in sys.path:
@@ -37,25 +39,59 @@ def _get_net():
     return net, device
 
 
-def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75) -> dict:
-    """def 12a · 试妆主函数：照片字节 + hex 进，原图/上妆图 base64 出。
+_REGION_PARTS = {          # def 15 · region → BiSeNet 解析类（celebAMask 19 类编号）
+    "lip": (12, 13),        # 上唇 + 下唇
+    "foundation": (1,),     # 粉底：皮肤（全脸均匀，低 alpha 防假白）
+    "eyeshadow": (4, 5),    # 眼影：左眼 + 右眼
+    "brow": (2, 3),         # 眉：染眉/加深（预留）
+}
+_DEFAULT_ALPHA = {"lip": 0.75, "foundation": 0.25, "eyeshadow": 0.45, "brow": 0.5}
+
+
+def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75, parts: list = None) -> dict:
+    """def 12a/15 · 试妆主函数：照片字节 + hex 进，原图/上妆图 base64 出。
+
+    def 15 · 多部位聚合：parts = [{"region": "lip|foundation|eyeshadow|brow",
+    "hex": "#xxx", "alpha": 0.x}, ...]；None/缺省 = 单唇模式（向后兼容 def 12）。
+    未指定 alpha 的部位用部位默认值（foundation 低 alpha 防假白面具）。
+    apply_lip_color 本质是"任意部件掩码 + 颜色 + alpha 的混合上色"，换 part 即换部位。
 
     成功: {"ok": true,  "tool": "tryon",
-           "query":  {"hex", "alpha", "device", "wh"},
+           "query":  {"hex", "alpha", "device", "wh", "applied": [部位明细]},
            "results": {"original_b64", "makeup_b64"},   # 前端 <img src=data:...>
            "error": null}
     失败: {"ok": false, "tool": "tryon", "error": "人话原因", "results": {}}
     """
     tool = "tryon"
 
-    # 1) hex 清洗：复用工具①门卫（不重写规则）
-    from agents.tools.search_shade import normalize_hex
+    # 0) parts 规范化（def 15）：None → 单唇向后兼容；非法部位/hex/alpha 立即报错
+    specs = parts if isinstance(parts, list) and parts else [
+        {"region": "lip", "hex": hex_color, "alpha": alpha}]
+    norm_specs = []
+    for spec in specs:
+        if not isinstance(spec, dict):
+            return {"ok": False, "tool": tool, "error": "parts 每项须为对象", "results": {}}
+        region = str(spec.get("region", "lip")).lower()
+        if region not in _REGION_PARTS:
+            return {"ok": False, "tool": tool,
+                    "error": f"未知部位: {region}（可用: {', '.join(_REGION_PARTS)}）", "results": {}}
+        try:
+            hex_r = normalize_hex(spec.get("hex", hex_color))
+        except ValueError as e:
+            return {"ok": False, "tool": tool, "error": f"{region} 色值: {e}", "results": {}}
+        a = spec.get("alpha", _DEFAULT_ALPHA[region])
+        if not isinstance(a, (int, float)) or isinstance(a, bool) or not (0 < float(a) <= 1):
+            return {"ok": False, "tool": tool,
+                    "error": f"{region} alpha 须在 (0,1] 区间，收到 {a!r}", "results": {}}
+        norm_specs.append({"region": region, "hex": hex_r, "alpha": float(a)})
+
+    # 1) 主 hex 清洗：复用工具①门卫（不重写规则）
     try:
         hex_std = normalize_hex(hex_color)
     except ValueError as e:
         return {"ok": False, "tool": tool, "error": str(e), "results": {}}
 
-    # 2) alpha 卫生检查（bool 是 int 子类，照旧排除）
+    # 2) alpha 卫生检查（主 alpha；bool 是 int 子类，照旧排除）
     if not isinstance(alpha, (int, float)) or isinstance(alpha, bool) or not (0 < float(alpha) <= 1):
         return {"ok": False, "tool": tool, "error": f"alpha 须在 (0,1] 区间，收到 {alpha!r}", "results": {}}
     alpha = float(alpha)
@@ -65,7 +101,7 @@ def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75) -> dict:
     if img_bgr is None:
         return {"ok": False, "tool": tool, "error": "无法解码图片，请上传 jpg/png 格式", "results": {}}
 
-    # 4) 分割 + 上妆（算法层零件：segment / apply_lip_color）
+    # 4) 分割 + 多部位聚合渲染（算法层零件：segment / apply_lip_color——任意 part 掩码混合）
     from PIL import Image
     from lipstick.tryon import segment, apply_lip_color, hex2bgr
     try:
@@ -80,8 +116,9 @@ def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75) -> dict:
     H, W = img_bgr.shape[:2]
     p = cv2.resize(parsing, (W, H), interpolation=cv2.INTER_NEAREST)
     out_img = img_bgr.copy()
-    for part in (12, 13):                    # 上唇 + 下唇（算法层定稿的 part 编号）
-        out_img = apply_lip_color(out_img, p, part, hex2bgr(hex_std), alpha=alpha)
+    for spec in norm_specs:                  # def 15 · 聚合渲染：逐部位掩码混合
+        for part in _REGION_PARTS[spec["region"]]:
+            out_img = apply_lip_color(out_img, p, part, hex2bgr(spec["hex"]), alpha=spec["alpha"])
 
     # 5) base64 输出（np→字节→base64，json 安全）
     ok1, buf1 = cv2.imencode(".jpg", img_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
@@ -90,7 +127,8 @@ def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75) -> dict:
         return {"ok": False, "tool": tool, "error": "结果图编码失败", "results": {}}
 
     return {"ok": True, "tool": tool,
-            "query": {"hex": hex_std, "alpha": alpha, "device": device, "wh": [W, H]},
+            "query": {"hex": hex_std, "alpha": alpha, "device": device, "wh": [W, H],
+                      "applied": norm_specs},
             "results": {"original_b64": base64.b64encode(buf1.tobytes()).decode("ascii"),
                         "makeup_b64": base64.b64encode(buf2.tobytes()).decode("ascii")},
             "error": None}

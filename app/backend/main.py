@@ -9,6 +9,7 @@
 算出项目根插入 sys.path——无论从哪个目录启动，agents.tools.* 都能导入。
 """
 import sys
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -42,6 +43,7 @@ from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
 from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a/17b · 色盲测评会话与校色确认
+from products_service import match_product, custom_request   # def 15d · 商品匹配与定制登记
 
 
 @asynccontextmanager
@@ -60,6 +62,17 @@ app.add_middleware(NoCacheHTML)
 class ChatIn(BaseModel):
     message: str
     history: list = None   # def 22l · 多轮上下文 [{role: user|assistant, content: str}, ...] 最近 N 条
+
+
+class ChatIn(BaseModel):
+    message: str
+    history: list = None   # def 22l · 多轮上下文 [{role: user|assistant, content: str}, ...] 最近 N 条
+
+
+class CustomIn(BaseModel):
+    hex: str
+    region: str = "lip"
+    note: str = ""
 
 
 @app.get("/api/tools/search_shade")
@@ -98,18 +111,28 @@ MAX_IMG_BYTES = 10 * 1024 * 1024
 
 @app.post("/api/tryon")
 async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
-                    alpha: float = Form(0.75), correct: bool = Form(True)):
-    """def 12b/17b · 试妆：multipart 照片 + 色号 + 强度 → 原图/上妆图 base64（五件套 JSON）
+                    alpha: float = Form(0.75), correct: bool = Form(True),
+                    parts: str = Form("[]")):
+    """def 12b/17b/15 · 试妆：multipart 照片 + 色号 + 强度 → 原图/上妆图 base64（五件套 JSON）
 
-    def 17b · 校色联动：correct=True（默认）且存在测评档案时，用户所选色号
-    先反解为"标准视觉等意色"再上妆（数据全部来自测评档案，AI 只总结话术）；
-    校正过程与残差在 results.correction 里可解释。
+    def 17b · 校色联动：correct=True（默认）且存在测评档案时，主色号（唇）
+    先反解为"标准视觉等意色"再上妆；校正过程与残差在 results.correction 里可解释。
+    def 15 · parts = JSON 数组 [{"region": "lip|foundation|eyeshadow|brow",
+    "hex": "#xxx", "alpha": 0.x}] 多部位聚合渲染；缺省 "[]" = 单唇模式（兼容 def 12）。
+    校色只作用于唇部主色（foundation/eyeshadow 用原始所选色，v2 再做分部位校正）。
     """
     data = await file.read()
     if not data:
         return {"ok": False, "tool": "tryon", "error": "未收到图片数据", "results": {}}
     if len(data) > MAX_IMG_BYTES:
         return {"ok": False, "tool": "tryon", "error": "图片超过 10MB 限制", "results": {}}
+
+    try:
+        parts_list = json.loads(parts) if parts else None
+        if parts_list is not None and not isinstance(parts_list, list):
+            raise ValueError("parts 须为 JSON 数组")
+    except (json.JSONDecodeError, ValueError) as e:
+        return {"ok": False, "tool": "tryon", "error": f"parts 解析失败: {e}", "results": {}}
 
     # ---- def 17b · 校色组合层：流程纪律 = 测评 → 校色 → 试妆 ----
     hex_use = hex_color
@@ -140,13 +163,31 @@ async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
                 except Exception as exc:   # 校正失败不阻塞试妆：退回原色并如实说明
                     correction = {"applied": False, "reason": f"校正计算失败，已用原色: {exc}"}
 
+    # def 15 · 校色注入：反解后的主色只替换唇部 spec 的 hex（其余部位用原始所选色）
+    if parts_list:
+        for spec in parts_list:
+            if isinstance(spec, dict) and spec.get("region", "lip") == "lip":
+                spec["hex"] = hex_use
+
     # 线程池跑同步推理：冷启动约 30s（torch 全链+权重）也不卡 event loop，/api/chat 照常响应
-    out = await run_in_threadpool(run_tryon, data, hex_use, alpha)
+    out = await run_in_threadpool(run_tryon, data, hex_use, alpha, parts_list)
     if out.get("ok"):
         out["results"]["correction"] = correction
         if correction.get("applied"):
             out["query"]["hex_requested"] = hex_color     # 用户所选（校正前）留痕
     return out
+
+
+@app.get("/api/products/match")
+def api_products_match(hex: str, region: str = "lip"):
+    """def 15d · 所选色号 → 最近集团商品 + 有货/可定制判定（dE ≤ 5.0 有货）"""
+    return match_product(hex, region)
+
+
+@app.post("/api/products/custom")
+def api_products_custom(body: CustomIn):
+    """def 15d · 无现货色号 → 定制申请登记（data/products/custom_requests.json）"""
+    return custom_request(body.hex, body.region, body.note)
 
 
 @app.get("/api/cvd/preview")
