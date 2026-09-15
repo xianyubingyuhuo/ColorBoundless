@@ -12,7 +12,7 @@ import urllib.request
 from config import current_provider
 
 
-def llm_chat(messages, tools=None, tool_choice=None, timeout=60, max_tokens=4096):
+def llm_chat(messages, tools=None, tool_choice=None, timeout=90, max_tokens=4096):
     """def 8 · 一次对话补全调用。
 
     入参：messages = [{"role": "system"|"user"|"assistant"|"tool", "content": ...}]
