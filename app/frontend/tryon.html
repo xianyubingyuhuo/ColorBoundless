@@ -110,6 +110,32 @@
     </div>
     </div>
    </div>
+   <div class="pcard" data-region="brow">
+    <div class="p-icon"><svg viewBox="0 0 32 32">
+     <ellipse cx="16" cy="6.2" rx="3.6" ry="5.2" fill="#d9a37a"/>
+     <path d="M12.6 5.2 L19.4 7.2 M12.6 7.4 L19.4 5.6" stroke="#b8860b" stroke-width="0.8" fill="none"/>
+     <rect x="13.4" y="11.2" width="5.2" height="3.6" rx="1" fill="#c0a062"/>
+     <rect x="14.4" y="14.8" width="3.2" height="14.8" rx="1.6" fill="#8a5a3b"/>
+    </svg></div>
+    <b class="p-name">眉妆 <span class="p-tag">染眉·加深</span></b>
+     <span class="p-dot" style="background:#4A3728"></span>
+    <div class="p-pick"><div class="p-pick-in">
+    <div class="p-swatch">
+     <span style="background:#3E2F23" onclick="pickSwatch(this,'#3E2F23')"></span>
+     <span style="background:#4A3728" onclick="pickSwatch(this,'#4A3728')"></span>
+     <span style="background:#6B4F3A" onclick="pickSwatch(this,'#6B4F3A')"></span>
+     <span style="background:#8B6F47" onclick="pickSwatch(this,'#8B6F47')"></span>
+     <span style="background:#9E8B76" onclick="pickSwatch(this,'#9E8B76')"></span>
+    </div>
+    <div class="pr">
+     <input type="color" class="p-color" value="#4A3728" oninput="syncFromColor(this)" style="width:32px;height:26px">
+     <input class="p-hex" value="#4A3728" size="7" oninput="syncFromHex(this)" style="font-size:11px">
+     <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.8" step="0.05" value="0.5"></label>
+    </div>
+    <label class="meta p-en"><input type="checkbox" class="p-on" checked> 启用</label>
+    </div>
+    </div>
+   </div>
 
    <div class="pcard" style="opacity:.55">
     <div class="p-icon"><svg viewBox="0 0 32 32">
