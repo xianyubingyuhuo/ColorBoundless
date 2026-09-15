@@ -48,24 +48,57 @@ _REGION_PARTS = {          # def 15 · region → BiSeNet 解析类（celebAMask
 _DEFAULT_ALPHA = {"lip": 0.75, "foundation": 0.25, "eyeshadow": 0.45, "brow": 0.5}
 
 
-def _eyeshadow_mask(parsing, parts=(4, 5), top_ext=0.12, band=0.30):
-    """def 15v10b · 眼影掩码：沿眼睛顶界的带状区（上眼皮+眼眶上缘），避开眼球。
+def _eyeshadow_mask(parsing, parts=(4, 5), lid=0.55, rim=0.15):
+    """def 15v13 · 眼影掩码：眼皮皮肤带 + 眼眶内上缘，完全不触眼球。
 
-    celebAMask 4/5 是整只眼（含眼球），直接混色会把虹膜染成眼影色。
-    逐列取 [top - top_ext*h, top + band*h]：向上扩到眼皮皮肤，向内只盖眼眶上缘。
-    合成椭圆自测：虹膜核心行残留 <0.5%。
+    eye 类(4/5)只覆盖眼裂（眼球+眼睑内侧），真实眼影画在其上方的皮肤：
+    lid 段 = 皮肤类(1) ∩ [eye_top - lid*h, eye_top)（眉眼间的眼皮，skin 与眉类互斥自动不越眉），
+    rim 段 = eye 类 ∩ [eye_top, eye_top + rim*h)（睫毛根部着色）。
+    眼球核心（rim 以下）零接触。
     """
-    mask = np.isin(parsing, parts).astype(np.uint8)
-    out = np.zeros_like(mask)
-    H = mask.shape[0]
-    for x in np.where(mask.any(axis=0))[0]:
-        col = np.where(mask[:, x])[0]
+    eye = np.isin(parsing, parts).astype(np.uint8)
+    skin = (parsing == 1).astype(np.uint8)
+    out = np.zeros_like(eye)
+    H = eye.shape[0]
+    for x in np.where(eye.any(axis=0))[0]:
+        col = np.where(eye[:, x])[0]
         top, bot = int(col.min()), int(col.max())
         h = max(1, bot - top)
-        y0 = max(0, top - int(h * top_ext))
-        y1 = min(H, top + int(h * band))
-        out[y0:y1, x] = 1
+        y0 = max(0, top - int(h * lid))
+        y1 = min(H, top + int(h * rim))
+        if y0 < min(y1, top):                      # 眼皮段：只要皮肤
+            out[y0:min(y1, top), x] = skin[y0:min(y1, top), x]
+        if y1 > top:                               # 眼眶内上缘段：只要眼睛类
+            out[max(y0, top):y1, x] |= eye[max(y0, top):y1, x]
     return out
+
+
+def _apply_foundation(img_bgr, parsing, color_bgr, alpha, part=1, smooth=0.6, lum_ratio=0.5):
+    """def 15v13 · 粉底 = 轻度磨皮(双边滤波匀肤) + Lab 全通道迁移。
+
+    原 apply_lip_color 保留明度 L（唇纹纹理需要），粉底恰恰相反：
+    - 磨皮：皮肤区纹理用双边滤波平滑版（smooth 比例混入），匀净底妆感；
+    - 明度：Ls 向目标色明度迁移 lum_ratio=α*0.5（浅粉底提亮/深粉底加深，减半防假白）；
+    - 色度：a/b 按 α 迁移；边缘羽化 sigma=3.0 比唇妆更柔。
+    """
+    img_f = img_bgr.astype(np.float32) / 255.0
+    smooth_bgr = cv2.bilateralFilter(img_bgr, 9, 40, 40).astype(np.float32) / 255.0
+    base = smooth_bgr * smooth + img_f * (1 - smooth)
+
+    lab = cv2.cvtColor(base, cv2.COLOR_BGR2LAB)
+    tar = np.array([[color_bgr]], dtype=np.float32) / 255.0
+    tl, ta, tb = cv2.cvtColor(tar, cv2.COLOR_BGR2LAB)[0, 0]
+    L, A, B = cv2.split(lab)
+    lum = float(np.clip(alpha * lum_ratio, 0, 1))
+    new_l = L * (1 - lum) + tl * lum
+    new_a = A * (1 - alpha) + ta * alpha
+    new_b = B * (1 - alpha) + tb * alpha
+    changed = cv2.cvtColor(cv2.merge([new_l, new_a, new_b]), cv2.COLOR_LAB2BGR)
+
+    mask = (parsing == part).astype(np.float32)
+    mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=3.0)[..., None]
+    result = changed * mask + img_f * (1 - mask)
+    return np.clip(result * 255, 0, 255).astype(np.uint8)
 
 
 def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75, parts: list = None) -> dict:
@@ -138,9 +171,12 @@ def run_tryon(image_bytes: bytes, hex_color: str, alpha: float = 0.75, parts: li
     out_img = img_bgr.copy()
     for spec in norm_specs:                  # def 15 · 聚合渲染：逐部位掩码混合
         region = spec["region"]
-        if region == "eyeshadow":            # def 15v10b · 只染上眼皮带，避开眼球
+        if region == "eyeshadow":            # def 15v13 · 眼皮皮肤带+睫毛根，眼球零接触
             out_img = apply_lip_color(out_img, p, 4, hex2bgr(spec["hex"]),
                                       alpha=spec["alpha"], gloss=0.0, mask=_eyeshadow_mask(p))
+            continue
+        if region == "foundation":           # def 15v13 · 粉底=磨皮+明度/色度全迁移
+            out_img = _apply_foundation(out_img, p, hex2bgr(spec["hex"]), spec["alpha"])
             continue
         gloss = 0.3 if region == "lip" else 0.0   # 唇釉高光仅属唇妆；粉底/眼影/眉不上反光
         for part in _REGION_PARTS[region]:
