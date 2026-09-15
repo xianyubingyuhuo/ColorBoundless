@@ -36,15 +36,17 @@ function syncFromHex(inp){
     setDot(inp.closest(".pcard"), v);
   }
 }
-/* def 15v3 · 网格（默认，3 列铺满）/ 列表（一列紧凑）切换 */
+/* def 15v8 · 网格总览=浮层：把同一份 #pcards 移入/移出浮层（选色状态零同步），不改变工具列布局 */
 function toggleGrid(){
-  const g = $("pcards");
-  const toGrid = !g.classList.contains("grid");
-  g.classList.toggle("grid", toGrid);
+  const cover = $("pcover"), cards = $("pcards");
+  const open = !cover.classList.contains("open");
+  if(open){ $("pcover-slot").appendChild(cards); }
+  else{ $("pcards-home").appendChild(cards); }
+  cover.classList.toggle("open", open);
+  $("pcgridbtn").textContent = open ? "✕ 关闭" : "⊞ 网格视图";
   const b = $("pcmore");
-  b.textContent = toGrid ? "⌃" : "⌄";
-  b.title = toGrid ? "收起工具栏" : "展开工具栏";
-  $("pcgridbtn").textContent = toGrid ? "◫ 列表视图" : "⊞ 网格视图";
+  b.textContent = open ? "⌃" : "⌄";
+  b.title = open ? "收起工具总览" : "展开工具总览";
 }
 /* def 15v6 · 展开：悬停停3s自动1s动画展开(pick-slow,移出即收) / 点击立即展开(pick-open,锁定,点外部或再点收起) */
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
@@ -67,8 +69,11 @@ document.querySelectorAll(".pcard[data-region]").forEach(card => {
   });
 });
 document.addEventListener("click", (e) => {
-  if(!e.target.closest(".pcard")) document.querySelectorAll(".pcard.pick-open,.pcard.pick-slow")
-    .forEach(c => c.classList.remove("pick-open", "pick-slow"));
+  if(!e.target.closest(".pcard,#pcover,#pcgridbtn,#pcmore")){
+    document.querySelectorAll(".pcard.pick-open,.pcard.pick-slow")
+      .forEach(c => c.classList.remove("pick-open", "pick-slow"));
+    if($("pcover").classList.contains("open")) toggleGrid();   // 点浮层外 → 收起总览
+  }
 });
 
 /* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */
