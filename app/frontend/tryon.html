@@ -22,40 +22,42 @@
  font-size:11px;opacity:.85}
 @keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 /* def 15v3 · 工具栏：默认一列（CSP 风），hover 放大+下方淡入选色，右下角当前色点，可切 3 列网格 */
-#pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
-#pcards.list{display:flex;flex-direction:column;gap:8px;align-items:center}
-#pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
- border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
-#pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
-.pcard{position:relative;border:1px solid var(--bd);border-radius:12px;padding:10px 6px 8px;
- background:rgba(255,255,255,.03);text-align:center;cursor:pointer;
- transition:transform .2s,box-shadow .2s,border-color .2s}
-#pcards.list .pcard{width:96px}
-.pcard:hover,.pcard.pick-open{transform:scale(1.05);border-color:rgba(229,71,109,.65);z-index:8;
- box-shadow:0 10px 28px rgba(229,71,109,.25)}
-.p-icon{width:64px;height:64px;margin:0 auto 2px}
+/* def 15v4 · 工具栏：默认一列横条（紧凑），hover 单卡放大+卡内展开选色（互不遮盖），
+   底部箭头动画展开 3 列网格；上传区加大 */
+#upzone{min-height:340px}
+#pcards{display:flex;flex-direction:column;gap:6px}
+#pcards.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start;
+ animation:pcGridIn .35s ease}
+@keyframes pcGridIn{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.pcard{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--bd);
+ border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;
+ transition:transform .2s,border-color .2s,box-shadow .2s}
+#pcards.grid .pcard{flex-direction:column;text-align:center;padding:10px 6px}
+.pcard:hover,.pcard.pick-open{transform:scale(1.04);border-color:rgba(229,71,109,.65);
+ box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
+.p-icon{width:44px;height:44px;flex:none;margin:0}
+#pcards.grid .p-icon{width:60px;height:60px;margin:0 auto 4px}
 .p-icon svg{width:100%;height:100%;display:block}
-.p-name{display:block;font-size:11.5px;color:var(--tx)}
+.p-name{font-size:12px;color:var(--tx);flex:1;text-align:left}
+#pcards.grid .p-name{text-align:center;flex:none}
 .p-tag{font-size:9.5px;color:var(--ac2);font-weight:normal}
-.p-dot{position:absolute;right:7px;bottom:7px;width:15px;height:15px;border-radius:50%;
- border:2px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45)}
-.p-pick{position:absolute;left:-4px;right:-4px;top:calc(100% + 6px);z-index:30;
- background:rgba(30,20,36,.97);border:1px solid var(--bd);border-radius:10px;padding:8px;
- opacity:0;visibility:hidden;transform:translateY(-6px);
- transition:opacity .22s,transform .22s,visibility .22s;box-shadow:0 12px 30px rgba(0,0,0,.55);cursor:default}
-.pcard:hover .p-pick,.pcard.pick-open .p-pick{opacity:1;visibility:visible;transform:translateY(0)}
-#pcards.grid .p-pick{left:0;right:0}
-.p-swatch{display:flex;gap:5px;justify-content:center;margin-bottom:6px}
+.p-dot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.55);
+ box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
+#pcards.grid .p-dot{position:absolute;right:7px;bottom:7px}
+.p-pick{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s ease,opacity .25s,margin .3s;
+ margin-top:0;width:100%}
+.pcard:hover .p-pick,.pcard.pick-open .p-pick{max-height:220px;opacity:1;margin-top:6px}
+#pcards.grid .p-pick{width:100%}
+.p-swatch{display:flex;gap:5px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
 .p-swatch span{width:18px;height:18px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);transition:transform .15s}
 .p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
 .pcard .p-hex{font-size:11px;width:64px}
 .pcard .row{justify-content:center;gap:4px;margin:4px 0}
-.p-swatch{display:flex;gap:5px;margin:6px 0}
-.p-swatch span{width:20px;height:20px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
- transition:transform .15s}
-.p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
-.p-color{width:36px;height:28px;padding:0;border:none;background:none;cursor:pointer}
+#pcmore{align-self:center;border:1px solid var(--bd);background:rgba(255,255,255,.05);
+ color:var(--ac2);border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer;
+ transition:all .25s;margin:2px auto 0;display:block}
+#pcmore:hover{border-color:rgba(229,71,109,.6);box-shadow:0 0 14px rgba(229,71,109,.3)}
 </style>
 </head>
 <body>
@@ -71,12 +73,13 @@
 <div class="card" id="card-tryon"><b>聚合试妆 · 上传照片 → 多部位 AI 上妆</b>
  <span style="float:right"><button id="pcgridbtn" onclick="toggleGrid()">◫ 列表视图</button></span>
  <div class="row" style="margin-top:10px;align-items:stretch;gap:14px;flex-wrap:wrap">
-  <label id="upzone" for="tyfile" style="width:280px;flex:none;position:relative">
+  <label id="upzone" for="tyfile" style="width:320px;flex:none;position:relative">
    <span class="plus">+</span>
    <span class="uptxt">点击上传照片（jpg / png）</span>
   </label>
   <input id="tyfile" type="file" accept="image/jpeg,image/png" hidden>
-  <div id="pcards" style="flex:1;min-width:300px;display:flex;gap:10px;flex-wrap:wrap">
+  <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+  <div id="pcards">
 
    <div class="pcard" data-region="lip" style="width:150px">
     <div class="p-icon"><svg viewBox="0 0 32 32">
@@ -153,6 +156,7 @@
     <b class="p-name">腮红 <span class="p-tag">v2 即将上线</span></b>
     <div class="meta" style="font-size:11px">颧骨定位精化中</div>
    </div>
+   <button id="pcmore" onclick="toggleGrid()" title="展开工具栏">⌄</button>
 
   </div>
  </div>
@@ -167,7 +171,13 @@
  <div id="matchres" style="margin-top:4px"></div>
  <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
  <details class="corbox"><summary>高级 · 颜色校正设置（默认跟随测评档案，一般无需改动）</summary>
-  <div class="row" style="margin-top:8px">
+  <div class="row" style="margin-top:8px;align-items:center">
+   <label class="meta">校正开关
+    <select id="cormode">
+     <option value="on">跟随测评档案（推荐）</option>
+     <option value="off">关闭校正（用原始所选色号）</option>
+    </select>
+   </label>
    <span class="meta">校正 = 把唇部主色反解为"标准视觉下的等意色"再上妆，</span>
    <span class="meta">参数全部来自你的测评档案；粉底/眼影当前使用原始所选色。</span>
   </div>
@@ -219,8 +229,11 @@ function syncFromHex(inp){
 /* def 15v3 · 网格（默认，3 列铺满）/ 列表（一列紧凑）切换 */
 function toggleGrid(){
   const g = $("pcards");
-  g.classList.toggle("list");
-  $("pcgridbtn").textContent = g.classList.contains("list") ? "⊞ 网格视图" : "◫ 列表视图";
+  const toGrid = !g.classList.contains("grid");
+  g.classList.toggle("grid", toGrid);
+  const b = $("pcmore");
+  b.textContent = toGrid ? "⌃" : "⌄";
+  b.title = toGrid ? "收起工具栏" : "展开工具栏";
 }
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
   card.addEventListener("click", (e) => {
