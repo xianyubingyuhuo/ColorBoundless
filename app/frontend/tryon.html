@@ -15,31 +15,55 @@
 </header>
 <p class="sub">上传照片 → AI 上妆 · 图像在本地后端处理，一切由代码计算</p>
 
-<!-- def 12 · 唇妆试妆（已上线） -->
-<div class="card" id="card-tryon"><b><span class="step">STEP 1</span>唇妆 /api/tryon · 上传照片 → AI 上妆</b>
+<!-- def 15 · 聚合式试妆：多部位卡片（占位图 + 各自选色）→ 一次聚合渲染 + 商品匹配/定制 -->
+<div class="card" id="card-tryon"><b><span class="step">STEP 3</span>聚合试妆 /api/tryon · 上传照片 → 多部位 AI 上妆</b>
  <div class="row" style="margin-top:8px">
   <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
-  <input id="tyhex" value="#C2185B" size="9" placeholder="#C2185B">
-  <label class="meta">强度 <input id="tyalpha" type="range" min="0.3" max="1" step="0.05" value="0.75" oninput="$('tyav').textContent=this.value"> <span id="tyav">0.75</span></label>
-  <button onclick="ty()">开始试妆</button><span id="tyms" class="ms"></span></div>
+  <label class="meta">校正 <select id="cormode">
+   <option value="on">跟随测评档案（推荐）</option>
+   <option value="off">关闭校正</option>
+  </select></label>
+  <button onclick="tyParts()">开始聚合试妆</button><span id="tyms" class="ms"></span></div>
  <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
+
+ <div class="row" style="margin-top:10px;gap:10px;flex-wrap:wrap">
+  <div class="pcard" data-region="lip" style="width:180px;border:1px solid var(--bd);padding:8px">
+   <img src="/assets/lipstick_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="lipstick">
+   <b class="meta">唇妆（主色 · 参与校色）</b>
+   <div class="row"><input class="p-hex" value="#C2185B" size="8"><label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:56px"></label></div>
+   <label class="meta"><input type="checkbox" class="p-on" checked> 启用该部位</label>
+  </div>
+  <div class="pcard" data-region="foundation" style="width:180px;border:1px solid var(--bd);padding:8px">
+   <img src="/assets/foundation_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="foundation">
+   <b class="meta">粉底（集团产品线）</b>
+   <div class="row"><input class="p-hex" value="#F7D9C4" size="8"><label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:56px"></label></div>
+   <label class="meta"><input type="checkbox" class="p-on" checked> 启用该部位</label>
+  </div>
+  <div class="pcard" data-region="eyeshadow" style="width:180px;border:1px solid var(--bd);padding:8px">
+   <img src="/assets/eyeshadow_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="eyeshadow">
+   <b class="meta">眼影</b>
+   <div class="row"><input class="p-hex" value="#B76E79" size="8"><label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:56px"></label></div>
+   <label class="meta"><input type="checkbox" class="p-on"> 启用该部位</label>
+  </div>
+  <div style="width:180px;border:1px dashed var(--bd);padding:8px;opacity:.55">
+   <img src="/assets/blush_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="blush">
+   <b class="meta">腮红</b>
+   <div class="meta">v2 即将上线（颧骨定位精化中）</div>
+  </div>
+ </div>
+
  <div id="tyres" class="res"></div>
+ <b class="meta" style="display:block;margin-top:8px">商品匹配（所选色号 → 最近集团商品 / 定制）</b>
+ <div id="matchres" style="margin-top:4px"></div>
  <details><summary>原始 JSON</summary><pre id="tyjson"></pre></details>
  <details class="corbox"><summary>高级 · 颜色校正设置（默认跟随测评档案，一般无需改动）</summary>
   <div class="row" style="margin-top:8px">
-   <label class="meta">校正开关
-    <select id="cormode">
-     <option value="on">跟随测评档案（推荐）</option>
-     <option value="off">关闭校正（用原始所选色号）</option>
-    </select>
-   </label>
-   <span class="meta">校正 = 把你所选色号反解为"标准视觉下的等意色"再上妆，</span>
-   <span class="meta">参数全部来自你的测评档案；手动覆盖后续版本提供逐项调节。</span>
+   <span class="meta">校正 = 把唇部主色反解为"标准视觉下的等意色"再上妆，</span>
+   <span class="meta">参数全部来自你的测评档案；粉底/眼影当前使用原始所选色。</span>
   </div>
  </details>
 </div>
 
-<!-- def 15 预留位：眼影 / 粉底卡片（parts=[{region,hex,alpha}] 参数化，随 def 16 肤色分析接入） -->
 <!-- def 16 预留位：上传即分析 → 自动肤色 → 精确色号回填表单（确认权在用户） -->
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
@@ -75,37 +99,85 @@ const $ = id => document.getElementById(id);
   }
 })();
 
-async function ty(){
+async function tyParts(){
   const f = $("tyfile").files[0];
   if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
+  const parts = [];
+  document.querySelectorAll(".pcard[data-region]").forEach(card => {
+    if(!card.querySelector(".p-on").checked) return;                 // 未启用部位跳过
+    parts.push({ region: card.dataset.region,
+                 hex: card.querySelector(".p-hex").value.trim(),
+                 alpha: parseFloat(card.querySelector(".p-a").value) });
+  });
+  if(!parts.length){ $("tyres").innerHTML = `<span class="err">[错误] 至少启用一个部位</span>`; return; }
+  const lip = parts.find(p => p.region === "lip") || {hex: "#C2185B", alpha: 0.75};
   const fd = new FormData();
   fd.append("file", f);
-  fd.append("hex_color", $("tyhex").value.trim());
-  fd.append("alpha", $("tyalpha").value);
+  fd.append("hex_color", lip.hex);                                   // 主色=唇（校色对象）
+  fd.append("alpha", lip.alpha);
   fd.append("correct", $("cormode").value === "on" ? "true" : "false");
+  fd.append("parts", JSON.stringify(parts));
   $("tyms").textContent = "";
-  $("tyres").innerHTML = `<div class="meta">[等待] 上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
+  $("tyres").innerHTML = `<div class="meta">[等待] 聚合上妆中…（首次约 30s 加载 AI 模型，之后每次约 0.1s）</div>`;
+  $("matchres").innerHTML = "";
   const t0 = performance.now();
   try{
     const r = await fetch("/api/tryon", {method:"POST", body: fd});
     const j = await r.json();
     const ms = Math.round(performance.now()-t0);
     $("tyjson").textContent = JSON.stringify(j, null, 2)
-      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${j.results&&j.results.original_b64 ? Math.floor(j.results.original_b64.length*3/4/1024)+"KB 图>" : ""}"`)
+      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${Math.floor((j.results?.original_b64||"").length*3/4/1024)}KB 图>"`)
       .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
-    $("tyms").textContent = ms + "ms";
+    $("tyms").textContent = ms + "ms · device=" + (j.query?.device || "?");
     if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
-    $("tyms").textContent += " · device=" + j.query.device;
     const c = (j.results.correction) || {};
     const corLine = c.applied
-      ? `<div class="meta">已校正：${c.original_hex} → <b style="color:var(--tx)">${c.corrected_hex}</b> · ${c.cvd_type} @ ${c.severity} · 残差 ΔE=${c.delta_e_residual}（数字来自测评档案）</div>`
+      ? `<div class="meta">已校正（唇部主色）：${c.original_hex} → <b style="color:var(--tx)">${c.corrected_hex}</b> · 残差 ΔE=${c.delta_e_residual}</div>`
       : `<div class="meta">未校正：${c.reason || ""}</div>`;
+    const applied = (j.query.applied || []).map(a =>
+      `<span class="ms">${a.region}=#${a.hex}@α${a.alpha}</span>`).join(" · ");
     $("tyres").innerHTML =
       `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
-      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>#${j.query.hex} · α=${j.query.alpha}</figcaption></figure></div>` +
-      corLine;
+      `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>聚合上妆</figcaption></figure></div>` +
+      `<div class="meta">已渲染部位：${applied}</div>` + corLine;
+    /* def 15d · 商品匹配：逐部位所选色 → 最近集团商品 + 有货/定制 */
+    for(const p of parts){ await matchAndShow(p.hex, p.region); }
   }catch(e){
     $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
+  }
+}
+
+/* def 15d · 商品匹配（所选色 → 最近集团商品，dE≤5 有货，否则可定制） */
+async function matchAndShow(hex, region){
+  const box = $("matchres");
+  try{
+    const r = await (await fetch(`/api/products/match?hex=${encodeURIComponent(hex)}&region=${encodeURIComponent(region)}`)).json();
+    if(!r.ok){ box.insertAdjacentHTML("beforeend", `<div class="meta">${region} · #${hex} 匹配失败: ${r.error}</div>`); return; }
+    const n = r.results.nearest, av = r.results.available;
+    const line = av
+      ? `<span style="color:#7de0a6">✓ 有货</span> 最近商品：<b>${n.brand} ${n.product}</b>（#${n.hex} · ΔE=${n.dE}）`
+      : `<span style="color:#ff8a80">✗ 无接近现货</span>（最近 #${n.hex} · ΔE=${n.dE}） <button onclick="customReq('${hex}','${region}',this)">申请定制</button> <span class="cbh-${region}-${hex}"></span>`;
+    box.insertAdjacentHTML("beforeend",
+      `<div class="meta" style="margin:3px 0">${region} · #${hex} → ${line}</div>`);
+  }catch(e){
+    box.insertAdjacentHTML("beforeend", `<div class="meta">${region} · #${hex} 匹配请求失败</div>`);
+  }
+}
+
+/* def 15d · 定制申请登记（无现货色号 → data/products/custom_requests.json） */
+async function customReq(hex, region, btn){
+  const note = prompt("定制备注（可写想要的质地/风格，留空即可）：", "") || "";
+  btn.disabled = true; btn.textContent = "提交中…";
+  try{
+    const r = await (await fetch("/api/products/custom", {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({hex, region, note})})).json();
+    const host = btn.parentElement;
+    host.innerHTML = r.ok
+      ? `<span style="color:#7de0a6">✓ 定制申请已登记（#${hex}）</span>`
+      : `<span class="err">登记失败: ${r.error}</span>`;
+  }catch(e){
+    btn.disabled = false; btn.textContent = "申请定制（重试）";
   }
 }
 </script>
