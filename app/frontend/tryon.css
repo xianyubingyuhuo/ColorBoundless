@@ -2,7 +2,7 @@
 /* def 15v5 · 布局：上传区占 3/4（左，含聚合按钮）+ 工具列 1/4（右，竖排小卡） */
 .ty-layout{display:flex;gap:14px;align-items:stretch;margin-top:10px}
 .ty-left{flex:3;min-width:0;display:flex;flex-direction:column;gap:8px}
-.ty-right{flex:1;min-width:172px;display:flex;flex-direction:column;gap:6px}
+.ty-right{flex:1;min-width:172px;display:flex;flex-direction:column;gap:6px;position:relative}
 #ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -25,10 +25,8 @@
 #tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
 #tybig:disabled{opacity:.6;transform:none;cursor:wait}
 /* 工具列：一列竖排小卡（图标/名/当前色方块）；.grid → 2 列 */
-#pcards{display:flex;flex-direction:column;gap:6px}
-#pcards.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-items:start;
- animation:pcGridIn .35s ease}
-@keyframes pcGridIn{from{opacity:.35;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+/* def 15v8 · 工具列默认即统一尺寸方卡（2 列，网格视图规格）；总览浮层另行弹出 */
+#pcards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-items:start}
 .pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border:1px solid var(--bd);
  border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:100%;flex:none;
  text-align:center;transition:transform .2s,border-color .2s,box-shadow .2s}
@@ -44,10 +42,21 @@
 .p-color{width:32px;height:26px;padding:0;border:none;background:none;cursor:pointer}
 .pr{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
 .pr .p-hex{font-size:11px;width:64px}
-#pcmore{display:flex;align-items:center;justify-content:center;align-self:center;margin:2px auto 0;
+#pcmore{display:flex;align-items:center;justify-content:center;margin:2px auto 0;
  border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--ac2);padding:0;line-height:1;
  border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;transition:all .25s}
 #pcmore:hover{border-color:rgba(229,71,109,.6);box-shadow:0 0 14px rgba(229,71,109,.3)}
+/* def 15v8 · 工具总览浮层：覆盖在页面之上（absolute，不改变工具列布局）；同一份 #pcards 移入/移出，状态零同步 */
+#pcover{display:none;position:absolute;top:0;right:0;width:372px;z-index:60;
+ background:rgba(24,17,40,.98);border:1px solid rgba(229,71,109,.35);border-radius:14px;padding:10px;
+ box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#pcover.open{display:block;animation:pcCoverIn .22s ease}
+@keyframes pcCoverIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+#pcover-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#pcover-head b{color:var(--tx)}
+#pcover-x{border:none;background:none;color:var(--tx2);font-size:15px;cursor:pointer;padding:0 4px}
+#pcover-x:hover{color:var(--ac2)}
+#pcover #pcards{grid-template-columns:repeat(3,1fr)}
 #pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
  border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
 #pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
@@ -63,7 +72,6 @@
  transition:grid-template-rows .6s ease,opacity .5s ease,margin-top .6s ease}
 .pcard.pick-slow > .p-pick{grid-template-rows:1fr;opacity:1;margin-top:6px;
  transition:grid-template-rows 1s ease,opacity 1s ease,margin-top 1s ease}
-#pcards.grid #pcmore{grid-column:1/-1;justify-self:center}
 #tyms{display:block;text-align:center;min-height:16px;font-size:11px}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
  background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;

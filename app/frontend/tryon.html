@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
-<link rel="stylesheet" href="tryon.css?v=def15v7">
+<link rel="stylesheet" href="tryon.css?v=def15v8">
 </head>
 <body>
 <header class="site-head">
@@ -30,6 +30,7 @@
   </div>
   <div class="ty-right">
    <div id="ty-tools-head"><b>选择部位与颜色</b><button id="pcgridbtn" onclick="toggleGrid()">⊞ 网格视图</button></div>
+   <div id="pcards-home">
    <div id="pcards">
 
    <div class="pcard" data-region="lip">
@@ -119,9 +120,14 @@
     <b class="p-name">腮红 <span class="p-tag">v2 即将上线</span></b>
     <div class="meta" style="font-size:11px">颧骨定位精化中</div>
    </div>
-   <button id="pcmore" onclick="toggleGrid()" title="展开工具栏">⌄</button>
-
   </div>
+  </div>
+
+   <button id="pcmore" onclick="toggleGrid()" title="展开工具总览">⌄</button>
+   <div id="pcover">
+    <div id="pcover-head"><b>全部工具</b><button id="pcover-x" onclick="toggleGrid()">✕</button></div>
+    <div id="pcover-slot"></div>
+   </div>
   </div>
  </div>
  <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
@@ -148,6 +154,6 @@
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
 <script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
-<script src="tryon.js?v=def15v7"></script>
+<script src="tryon.js?v=def15v8"></script>
 </body>
 </html>
