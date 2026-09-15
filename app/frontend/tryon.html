@@ -5,6 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>试妆 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
+<style>
+/* def 15v2 · 上传区 [+]（hover 浮起+发光）+ 预览淡入 + 部位卡画笔图标 + 色板 */
+#upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
+ position:relative;width:100%;min-height:230px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
+ background:rgba(255,255,255,.03);transition:transform .25s,box-shadow .25s,border-color .25s}
+#upzone:hover{transform:translateY(-5px);border-color:rgba(229,71,109,.65);
+ box-shadow:0 12px 32px rgba(229,71,109,.28),0 0 20px rgba(255,154,181,.18)}
+#upzone .plus{font-size:48px;line-height:1;color:var(--ac2);transition:transform .25s}
+#upzone:hover .plus{transform:scale(1.18)}
+#upzone .uptxt{margin-top:8px;color:var(--tx2);font-size:12.5px}
+#upzone.hasimg{border-style:solid;padding:6px}
+#upzone img{width:100%;height:100%;max-height:320px;object-fit:cover;border-radius:10px;
+ animation:tyFadeIn .6s ease}
+#upzone .reup{position:absolute;bottom:10px;left:0;right:0;text-align:center;color:var(--tx2);
+ font-size:11px;opacity:.85}
+@keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+.pcard{border:1px solid var(--bd);border-radius:12px;padding:10px;background:rgba(255,255,255,.03);
+ transition:transform .25s,box-shadow .25s}
+.pcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.pcard img{width:100%;height:92px;object-fit:cover;border-radius:8px;margin-bottom:6px}
+.pcard .brush{width:16px;height:16px;stroke:var(--ac2);fill:none;stroke-width:1.8;
+ stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;margin-right:3px}
+.p-swatch{display:flex;gap:5px;margin:6px 0}
+.p-swatch span{width:20px;height:20px;border-radius:6px;cursor:pointer;border:1px solid var(--bd);
+ transition:transform .15s}
+.p-swatch span:hover{transform:scale(1.2);border-color:var(--ac2)}
+.p-color{width:36px;height:28px;padding:0;border:none;background:none;cursor:pointer}
+</style>
 </head>
 <body>
 <header class="site-head">
@@ -15,42 +43,83 @@
 </header>
 <p class="sub">上传照片 → AI 上妆 · 图像在本地后端处理，一切由代码计算</p>
 
-<!-- def 15 · 聚合式试妆：多部位卡片（占位图 + 各自选色）→ 一次聚合渲染 + 商品匹配/定制 -->
-<div class="card" id="card-tryon"><b><span class="step">STEP 3</span>聚合试妆 /api/tryon · 上传照片 → 多部位 AI 上妆</b>
- <div class="row" style="margin-top:8px">
-  <input id="tyfile" type="file" accept="image/jpeg,image/png" style="flex:1;min-width:180px">
-  <label class="meta">校正 <select id="cormode">
-   <option value="on">跟随测评档案（推荐）</option>
-   <option value="off">关闭校正</option>
-  </select></label>
-  <button onclick="tyParts()">开始聚合试妆</button><span id="tyms" class="ms"></span></div>
- <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
+<!-- def 15v2 · 聚合式试妆：[+]上传区（hover 浮起发光+预览淡入）+ 右侧部位卡（画笔形状区分 + 色板/取色器） -->
+<div class="card" id="card-tryon"><b>聚合试妆 · 上传照片 → 多部位 AI 上妆</b>
+ <div class="row" style="margin-top:10px;align-items:flex-start;gap:14px;flex-wrap:wrap">
+  <label id="upzone" for="tyfile" style="width:280px;flex:none;position:relative">
+   <span class="plus">+</span>
+   <span class="uptxt">点击上传照片（jpg / png）</span>
+  </label>
+  <input id="tyfile" type="file" accept="image/jpeg,image/png" hidden>
+  <div id="pcards" style="flex:1;min-width:300px;display:flex;gap:10px;flex-wrap:wrap">
 
- <div class="row" style="margin-top:10px;gap:10px;flex-wrap:wrap">
-  <div class="pcard" data-region="lip" style="width:180px;border:1px solid var(--bd);padding:8px">
-   <img src="/assets/lipstick_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="lipstick">
-   <b class="meta">唇妆（主色 · 参与校色）</b>
-   <div class="row"><input class="p-hex" value="#C2185B" size="8"><label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:56px"></label></div>
-   <label class="meta"><input type="checkbox" class="p-on" checked> 启用该部位</label>
-  </div>
-  <div class="pcard" data-region="foundation" style="width:180px;border:1px solid var(--bd);padding:8px">
-   <img src="/assets/foundation_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="foundation">
-   <b class="meta">粉底（集团产品线）</b>
-   <div class="row"><input class="p-hex" value="#F7D9C4" size="8"><label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:56px"></label></div>
-   <label class="meta"><input type="checkbox" class="p-on" checked> 启用该部位</label>
-  </div>
-  <div class="pcard" data-region="eyeshadow" style="width:180px;border:1px solid var(--bd);padding:8px">
-   <img src="/assets/eyeshadow_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="eyeshadow">
-   <b class="meta">眼影</b>
-   <div class="row"><input class="p-hex" value="#B76E79" size="8"><label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:56px"></label></div>
-   <label class="meta"><input type="checkbox" class="p-on"> 启用该部位</label>
-  </div>
-  <div style="width:180px;border:1px dashed var(--bd);padding:8px;opacity:.55">
-   <img src="/assets/blush_placeholder.jpg" style="width:100%;height:100px;object-fit:cover" alt="blush">
-   <b class="meta">腮红</b>
-   <div class="meta">v2 即将上线（颧骨定位精化中）</div>
+   <div class="pcard" data-region="lip" style="width:172px">
+    <img src="/assets/lipstick_placeholder.jpg" alt="lipstick">
+    <b class="meta"><svg class="brush" viewBox="0 0 24 24"><path d="M12 2 L14.2 7.5 L13 14 L11 14 L9.8 7.5 Z"/><line x1="12" y1="14" x2="12" y2="21"/></svg>唇妆（主色·校色）</b>
+    <div class="p-swatch">
+     <span style="background:#DB7093" onclick="pickSwatch(this,'#DB7093')"></span>
+     <span style="background:#CD5C5C" onclick="pickSwatch(this,'#CD5C5C')"></span>
+     <span style="background:#C2185B" onclick="pickSwatch(this,'#C2185B')"></span>
+     <span style="background:#8B1E4B" onclick="pickSwatch(this,'#8B1E4B')"></span>
+     <span style="background:#B76E79" onclick="pickSwatch(this,'#B76E79')"></span>
+    </div>
+    <div class="row" style="align-items:center">
+     <input type="color" class="p-color" value="#C2185B" oninput="syncFromColor(this)">
+     <input class="p-hex" value="#C2185B" size="8" oninput="syncFromHex(this)">
+     <label class="meta">α <input class="p-a" type="range" min="0.3" max="1" step="0.05" value="0.75" style="width:52px"></label>
+    </div>
+    <label class="meta"><input type="checkbox" class="p-on" checked> 启用</label>
+   </div>
+
+   <div class="pcard" data-region="foundation" style="width:172px">
+    <img src="/assets/foundation_placeholder.jpg" alt="foundation">
+    <b class="meta"><svg class="brush" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="6.5" rx="2"/><line x1="12" y1="9" x2="12" y2="21"/></svg>粉底（集团产品线）</b>
+    <div class="p-swatch">
+     <span style="background:#F7D9C4" onclick="pickSwatch(this,'#F7D9C4')"></span>
+     <span style="background:#E8C4A0" onclick="pickSwatch(this,'#E8C4A0')"></span>
+     <span style="background:#D2A679" onclick="pickSwatch(this,'#D2A679')"></span>
+     <span style="background:#B08968" onclick="pickSwatch(this,'#B08968')"></span>
+     <span style="background:#8D5524" onclick="pickSwatch(this,'#8D5524')"></span>
+    </div>
+    <div class="row" style="align-items:center">
+     <input type="color" class="p-color" value="#F7D9C4" oninput="syncFromColor(this)">
+     <input class="p-hex" value="#F7D9C4" size="8" oninput="syncFromHex(this)">
+     <label class="meta">α <input class="p-a" type="range" min="0.1" max="0.4" step="0.05" value="0.25" style="width:52px"></label>
+    </div>
+    <label class="meta"><input type="checkbox" class="p-on" checked> 启用</label>
+   </div>
+
+   <div class="pcard" data-region="eyeshadow" style="width:172px">
+    <img src="/assets/eyeshadow_placeholder.jpg" alt="eyeshadow">
+    <b class="meta"><svg class="brush" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="3.2"/><line x1="12" y1="8.7" x2="12" y2="21"/></svg>眼影</b>
+    <div class="p-swatch">
+     <span style="background:#B76E79" onclick="pickSwatch(this,'#B76E79')"></span>
+     <span style="background:#C9A9A6" onclick="pickSwatch(this,'#C9A9A6')"></span>
+     <span style="background:#8E7C93" onclick="pickSwatch(this,'#8E7C93')"></span>
+     <span style="background:#6B4F4F" onclick="pickSwatch(this,'#6B4F4F')"></span>
+     <span style="background:#D8BFD8" onclick="pickSwatch(this,'#D8BFD8')"></span>
+    </div>
+    <div class="row" style="align-items:center">
+     <input type="color" class="p-color" value="#B76E79" oninput="syncFromColor(this)">
+     <input class="p-hex" value="#B76E79" size="8" oninput="syncFromHex(this)">
+     <label class="meta">α <input class="p-a" type="range" min="0.2" max="0.7" step="0.05" value="0.45" style="width:52px"></label>
+    </div>
+    <label class="meta"><input type="checkbox" class="p-on"> 启用</label>
+   </div>
+
+   <div style="width:172px;border:1px dashed var(--bd);border-radius:12px;padding:10px;opacity:.55">
+    <img src="/assets/blush_placeholder.jpg" alt="blush">
+    <b class="meta"><svg class="brush" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="4.6"/><line x1="12" y1="10.5" x2="12" y2="21"/></svg>腮红</b>
+    <div class="meta">v2 即将上线（颧骨定位精化中）</div>
+   </div>
+
   </div>
  </div>
+
+ <div class="row" style="margin-top:10px">
+  <button onclick="tyParts()">开始聚合试妆</button>
+  <span id="tyms" class="ms"></span></div>
+ <div id="corstatus" class="meta" style="margin-top:6px">校正状态检查中…</div>
 
  <div id="tyres" class="res"></div>
  <b class="meta" style="display:block;margin-top:8px">商品匹配（所选色号 → 最近集团商品 / 定制）</b>
@@ -70,6 +139,32 @@
 <script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
 <script>
 const $ = id => document.getElementById(id);
+
+/* def 15v2 · 上传预览淡入：选择照片 → upzone 内缩略图淡入（点击可更换） */
+$("tyfile").addEventListener("change", () => {
+  const f = $("tyfile").files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const z = $("upzone");
+    z.classList.add("hasimg");
+    z.innerHTML = `<img src="${rd.result}" alt="preview"><span class="reup">点击更换照片</span>`;
+  };
+  rd.readAsDataURL(f);
+});
+/* def 15v2 · 色板 / 取色器 / hex 三向联动 */
+function pickSwatch(sw, hex){
+  const card = sw.closest(".pcard");
+  card.querySelector(".p-hex").value = hex.toUpperCase();
+  card.querySelector(".p-color").value = hex;
+}
+function syncFromColor(inp){
+  inp.closest(".pcard").querySelector(".p-hex").value = inp.value.toUpperCase();
+}
+function syncFromHex(inp){
+  const v = inp.value.trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(v)) inp.closest(".pcard").querySelector(".p-color").value = v;
+}
 
 /* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */
 (async () => {
