@@ -1,9 +1,15 @@
 /* def 15v5 · 试妆页样式（自 tryon.html 拆出，改样式只动这个小文件） */
 /* def 15v5 · 布局：上传区占 3/4（左，含聚合按钮）+ 工具列 1/4（右，竖排小卡） */
 /* def 15v10 · 布局：右列 absolute 脱离文档流（浮层开关不再压缩照片区），左列独立决定行高 */
+/* def 15v14 · 右列 absolute + 高度锁定 100%（底边=左列"开始聚合试妆"下缘）；
+   内部 pcards-home 滚动容器：工具塞不下时滚动，展开面板随滚延伸不撑破布局 */
 .ty-layout{position:relative;padding-right:150px;display:flex;gap:14px;align-items:stretch;margin-top:10px}
 .ty-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-.ty-right{position:absolute;top:0;right:0;width:136px;display:flex;flex-direction:column;gap:6px}
+.ty-right{position:absolute;top:0;right:0;width:136px;height:100%;display:flex;flex-direction:column;gap:6px}
+#pcards-home{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px}
+#pcards-home::-webkit-scrollbar{width:6px}
+#pcards-home::-webkit-scrollbar-thumb{background:rgba(229,71,109,.35);border-radius:3px}
+#pcards-home::-webkit-scrollbar-track{background:transparent}
 #ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #ty-tools-head b{color:var(--tx)}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -72,7 +78,7 @@
  border:1px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
 /* 选色区展开：grid-rows 真实高度动画（0fr→1fr，无空走/无减速尾段，视觉时长=声明时长）。
    延迟由 JS 定时器控制：pick-slow=悬停停3s自动展开(1s,移出即收) / pick-open=点击立即展开(0.6s,锁定) */
-.p-pick{display:grid;grid-template-rows:0fr;opacity:0;margin-top:0;overflow:hidden;
+.p-pick{display:grid;grid-template-rows:0fr;width:100%;opacity:0;margin-top:0;overflow:hidden;
  transition:grid-template-rows .35s ease,opacity .3s ease,margin-top .35s ease}
 .p-pick-in{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:6px}
 .pcard.pick-open > .p-pick{grid-template-rows:1fr;opacity:1;margin-top:6px;
