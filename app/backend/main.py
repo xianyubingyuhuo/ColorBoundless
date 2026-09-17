@@ -43,7 +43,7 @@ from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
 from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a/17b · 色盲测评会话与校色确认
-from products_service import match_product, custom_request   # def 15d · 商品匹配与定制登记
+from products_service import match_product, custom_request, list_products, list_custom   # def 15d/18a
 
 
 @asynccontextmanager
@@ -188,6 +188,18 @@ def api_products_match(hex: str, region: str = "lip"):
 def api_products_custom(body: CustomIn):
     """def 15d · 无现货色号 → 定制申请登记（data/products/custom_requests.json）"""
     return custom_request(body.hex, body.region, body.note)
+
+
+@app.get("/api/products/list")
+def api_products_list(region: str = "foundation"):
+    """def 18a · 产品库全量列表（products 页浏览：lip 官方库 / foundation 集团库）"""
+    return list_products(region)
+
+
+@app.get("/api/products/custom/list")
+def api_products_custom_list():
+    """def 15d · 定制申请记录读取（products 页时间线，最新在前）"""
+    return list_custom()
 
 
 @app.get("/api/cvd/preview")

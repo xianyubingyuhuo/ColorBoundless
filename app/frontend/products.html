@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>产品库 · ColorBoundless</title>
 <link rel="stylesheet" href="style.css?v=def17b">
+<link rel="stylesheet" href="products.css?v=def18a">
 </head>
 <body>
 <header class="site-head">
@@ -13,24 +14,37 @@
   <a href="/palette.html">选色</a><span class="sep">|</span><a href="/tryon.html">试妆</a><span class="sep">|</span><a href="/cvd.html">色盲校验</a><span class="sep">|</span><a class="on" href="/products.html">产品库</a>
  </nav>
 </header>
-<p class="sub">产品库 · 色盲友好推荐的落点 · AI 自动调度的目的地 · 一切数字由代码计算</p>
+<p class="sub">产品库 · 所选色号 → 最近集团商品（ΔE ≤ 5 有货，否则可定制）· 伴随 AI 自动调度的目的地</p>
 
-<!-- def 17/18 联动 · 产品库骨架：数据侧等 products.json（tool④ submit_custom 数据源）导入后激活 -->
-<div class="card" id="card-products"><b><span class="step">规划</span>产品库 /api/products · 建设中</b>
- <div class="meta" style="line-height:1.9;margin-top:8px">
-  · 数据侧：等待 products.json 样例导入（产品名 / 色号 / 质地 / 价格 / 适合肤色 / 官方链接），导入后按 Lab 色号建索引<br>
-  · 推荐链路 A：<b style="color:var(--ac2)">def 17</b> 色盲测评完成 → AI 分析色觉档案 → 本页展示"色盲友好"产品清单<br>
-  · 推荐链路 B：<b style="color:var(--ac2)">def 18</b> RAG 配色输出真实色号 → 匹配在售产品 → 自动填充试妆表单（确认权在用户）<br>
-  · AI 调度：伴随 AI 可经 navigate action 自动跳转本页并携带推荐结果（doAction 通道已预留）
+<!-- def 18a · 色号查询器：支持 ?hex=..&region=.. URL 参数（伴随 AI navigate 跳转落点，def 18 通道） -->
+<div class="card" id="card-lookup"><b>色号 → 商品匹配</b>
+ <div class="row" style="margin-top:8px;align-items:center">
+  <input id="qhex" value="#C2185B" size="9" style="font-weight:600" aria-label="色号">
+  <select id="qregion" aria-label="部位">
+   <option value="lip">唇妆 · 官方库</option>
+   <option value="foundation">粉底 · 集团库</option>
+  </select>
+  <button id="qbtn">查询最近商品</button>
+  <span id="qms" class="ms"></span>
  </div>
- <details><summary>原始 JSON（API 就绪后激活）</summary><pre id="pjson"></pre></details>
+ <div id="pres" class="res" style="margin-top:10px"></div>
 </div>
 
-<!-- def 17 预留位：测评结果 → 产品推荐列表渲染区 -->
-<div class="res" id="pres"></div>
+<!-- def 18a · 商品库浏览：唇妆官方库(20) / 粉底集团库(168) -->
+<div class="card" id="card-browse"><b>浏览商品库</b>
+ <details open style="margin-top:8px"><summary>唇妆 · 官方库（<span id="lipn">…</span> 色）</summary>
+  <div id="lipgrid" class="pgrid"></div></details>
+ <details open style="margin-top:6px"><summary>粉底 · 欧莱雅集团库（<span id="fdn">…</span> 色）</summary>
+  <div id="fdgrid" class="pgrid"></div></details>
+</div>
 
-<footer>推荐结果一律来自后端数据检索，AI 只负责组织语言——排序依据（ΔE 距离 / 色盲安全规则 / 价格）全部可复现。</footer>
+<!-- def 15d · 定制申请记录（时间线，最新在前） -->
+<div class="card" id="card-custom"><b>我的定制申请</b>
+ <div id="customlist" class="meta" style="margin-top:8px">加载中…</div>
+</div>
+
+<footer>推荐结果一律来自后端数据检索，AI 只负责组织语言——判定依据（CIEDE2000 ΔE ≤ 5 有货）全部可复现。</footer>
 <script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
-<script src="products.js?v=def15v10"></script>
+<script src="products.js?v=def18a"></script>
 </body>
 </html>

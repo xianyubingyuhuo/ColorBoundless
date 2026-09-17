@@ -107,3 +107,33 @@ def custom_request(hex_color: str, region: str = "lip", note: str = "") -> dict:
                 "error": None}
     except Exception as e:
         return {"ok": False, "tool": tool, "error": f"登记失败: {e}", "results": {}}
+
+
+def list_products(region: str = "foundation") -> dict:
+    """def 18a · 产品库全量列表（products 页浏览）。
+
+    lip        官方唇色库 20 色（name/tone/desc 齐全，三方共用单一数据源）
+    foundation 集团粉底库 168 条（brand 已从 titles 前缀回填）
+    """
+    tool = "products_list"
+    if region == "foundation":
+        items = [{"brand": it["brand"], "product": it["product"], "hex": it["hex"],
+                  "L": it["L"], "desc": "欧莱雅集团在售粉底色号"} for it in _shades_pool()]
+    elif region == "lip":
+        items = [{"brand": "ColorBoundless Official", "product": s["name"], "hex": s["hex"],
+                  "tone": s.get("tone", ""), "desc": s.get("desc", "")} for s in _core.SHADES]
+    else:
+        return {"ok": False, "tool": tool,
+                "error": f"未知部位: {region}（可用: lip / foundation）", "results": {}}
+    return {"ok": True, "tool": tool, "query": {"region": region},
+            "results": {"count": len(items), "items": items}, "error": None}
+
+
+def list_custom() -> dict:
+    """def 15d · 定制申请记录读取（products 页时间线展示，最新在前）。"""
+    try:
+        data = json.loads(_CUSTOM_JSON.read_text(encoding="utf-8")) if _CUSTOM_JSON.exists() else []
+        return {"ok": True, "tool": "products_custom_list",
+                "results": {"count": len(data), "records": list(reversed(data))}, "error": None}
+    except Exception as e:
+        return {"ok": False, "tool": "products_custom_list", "error": f"读取失败: {e}", "results": {}}
