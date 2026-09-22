@@ -15,13 +15,14 @@ async function doQuery(){
     const r = await (await fetch(`/api/products/match?hex=${encodeURIComponent(hex)}&region=${encodeURIComponent(region)}`)).json();
     $("qms").textContent = Math.round(performance.now() - t0) + "ms";
     if(!r.ok){ $("pres").innerHTML = `<span class="err">[错误] ${esc(r.error)}</span>`; return; }
-    const n = r.results.nearest, av = r.results.available;
+    const n = r.results.nearest, av = r.results.available, sc = r.results.showcase_txt;
     $("pres").innerHTML = `
       <div class="match-card">
         <span class="sw" style="background:#${esc(n.hex)}"></span>
         <div style="min-width:0">
           <div><b>${esc(n.brand)}</b> · ${esc(n.product)}</div>
           <div class="meta">#${esc(n.hex)} · ΔE=${esc(n.dE)} · 阈值 ${esc(r.query.threshold_dE)}（CIEDE2000）</div>
+          <div class="meta">橱窗归属：${esc(sc || "—")}</div>
           <div style="margin-top:6px">${av
             ? '<span class="badge-ok">✓ 有现货</span>'
             : '<span class="badge-no">✗ 无接近现货</span> <button onclick="customReq()">申请定制</button>'}</div>

@@ -298,9 +298,11 @@ function renderMatchLine(hex, region, r){
   const cat = REG_NAME[region] || region;
   if(!r.ok){ box.insertAdjacentHTML("beforeend", `<div class="meta">${cat} · #${hex} 匹配失败: ${r.error}</div>`); return; }
   const n = r.results.nearest, av = r.results.available;
+  const sc = (r.results && r.results.showcase_txt) || "";   // def 46c · 橱窗归属（品类 · 分支 · 色号）
+  const own = sc ? ` · 橱窗：${sc}` : "";
   const line = av
-    ? `<span style="color:#7de0a6">✓ 有货</span> 最近商品：<b>${n.brand} ${n.product}</b>（#${n.hex} · ΔE=${n.dE}）`
-    : `<span style="color:#ff8a80">✗ 无接近现货</span>（近似：${n.brand} ${n.product} · #${n.hex} · ΔE=${n.dE}）——见下方定制面板`;
+    ? `<span style="color:#7de0a6">✓ 有货</span> 最近商品：<b>${n.brand} ${n.product}</b>（#${n.hex} · ΔE=${n.dE}）${own}`
+    : `<span style="color:#ff8a80">✗ 无接近现货</span>（近似：${n.brand} ${n.product} · #${n.hex} · ΔE=${n.dE}）——见下方定制面板${own}`;
   box.insertAdjacentHTML("beforeend", `<div class="meta" style="margin:3px 0">${cat} · #${hex} → ${line}</div>`);
 }
 function openCustomPanel(missing){

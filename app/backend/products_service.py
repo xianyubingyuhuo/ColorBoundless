@@ -84,8 +84,29 @@ def _shades_pool() -> list:
     return pool
 
 
+def _showcase_owners(hex_std: str) -> list:
+    """def 46c · 商品色 hex → 橱窗归属反查（精确命中；橱窗色板与匹配池同源，必可回溯）。
+    返回 [{category: 品类中文名, item: 橱窗分支名, shade: 色号名}]（跨品类同色可多条）。"""
+    h = str(hex_std).strip().lstrip("#").upper()   # npz 粉底池 hex 为小写——统一大写再比对
+    owners = []
+    for it in _showcase_items():
+        for s in it["shades"]:
+            if str(s["hex"]).upper() == h:
+                owners.append({"category": _cn(it["category"]), "item": it["name"],
+                               "shade": s["name"]})
+                break
+    return owners
+
+
+def _owner_label(o: dict) -> str:
+    """def 46c · 归属条目 → 展示文本；item 名已含品类词时不再重复前缀。"""
+    name = o["item"]
+    return name if o["category"] in name else f"{o['category']} · {name}"
+
+
 def match_product(hex_color: str, region: str = "lip") -> dict:
-    """def 15d · 所选色号 → 最近商品 + 有货判定（dE 阈值 _AVAILABLE_D）。"""
+    """def 15d/46c · 所选色号 → 最近商品 + 有货判定（dE 阈值 _AVAILABLE_D）；
+    results 附 showcase/showcase_txt——最近商品色在商品橱窗中的归属（品类 · 分支 · 色号）。"""
     tool = "products_match"
     try:
         hex_std = str(hex_color).strip().lstrip("#").upper()
@@ -142,12 +163,17 @@ def match_product(hex_color: str, region: str = "lip") -> dict:
         return {"ok": False, "tool": tool, "error": f"商品匹配失败: {e}", "results": {}}
 
     dE = nearest["dE"]
+    owners = _showcase_owners(nearest["hex"])   # def 46c · 归属按最近商品色反查（非查询色）
     return {"ok": True, "tool": tool,
             "query": {"hex": hex_std, "region": region, "threshold_dE": _AVAILABLE_D},
             "results": {"nearest": nearest,
                         "available": bool(dE <= _AVAILABLE_D),
                         "verdict": ("有现货——最近集团商品色差很小" if dE <= _AVAILABLE_D
-                                    else "无接近现货——可申请定制")},
+                                    else "无接近现货——可申请定制"),
+                        "showcase": owners,
+                        "showcase_txt": ("；".join(
+                            f"{_owner_label(o)} · {o['shade']}" for o in owners)
+                            or "（暂未在橱窗系列陈列）")},
             "error": None}
 
 
