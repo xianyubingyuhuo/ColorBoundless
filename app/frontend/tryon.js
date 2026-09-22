@@ -105,6 +105,7 @@ function toggleGrid(){
   clearTimeout(tyCoverTimer);
   if(opening){
     $("pcover-slot").appendChild(cards);        // 同一份 DOM 移入浮层（选色状态零同步）
+    cover.style.height = $("upzone").offsetHeight + "px";   // 面板高度=照片窗口等高（不锁满右列）
     cover.classList.add("open");                // 面板向左生长 + 卡片错落入场（CSS 单段并发）
   }else{
     cover.classList.remove("open");
@@ -150,6 +151,10 @@ document.addEventListener("click", (e) => {
       .forEach(c => c.classList.remove("pick-open", "pick-slow"));
     if($("pcover").classList.contains("open")) toggleGrid();   // 点浮层外 → 收起总览
   }
+});
+/* 展开期间视口尺寸变化 → 面板高度跟随照片窗口（等高关系保持） */
+window.addEventListener("resize", () => {
+  if($("pcover").classList.contains("open")) $("pcover").style.height = $("upzone").offsetHeight + "px";
 });
 
 /* def 18 · AI 色号回填：chatbox action 通道调用；每部位填 hex（复用三向联动）+ 强制启用。

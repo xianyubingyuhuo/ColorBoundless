@@ -84,10 +84,10 @@
 #pcmore.open{left:-247px;transition:left .5s cubic-bezier(.22,.9,.34,1),color .25s,border-color .25s,box-shadow .25s}
 #pcmore:hover{color:var(--ac2);border-color:rgb(from var(--ac) r g b / .6);box-shadow:0 0 12px rgb(from var(--ac) r g b / .35)}
 /* def 15v8 · 工具总览浮层：覆盖在页面之上（absolute，不改变工具列布局）；同一份 #pcards 移入/移出，状态零同步 */
-/* def 15v14b · 浮层纵向锁满右列：top:0+bottom:0 → 底边与右列同一条基准线（"开始聚合试妆"按钮下缘）；
-   内容不满时面板仍撑满到底，塞不下时 slot 内部滚动（与 pcards-home 同款品牌色细滚条），
-   展开的选色面板随滚延伸，不撑破浮层 */
-#pcover{display:none;position:absolute;top:0;bottom:0;right:0;width:372px;z-index:60;
+/* def 46 · 浮层高度=左侧照片窗口（#upzone）等高：不再纵向锁满右列（旧行为 top:0+bottom:0
+   在总览改双列网格后下方大片留白）；JS 打开时同步 upzone.offsetHeight 写入 height，
+   底边与照片窗口下缘齐平；内容超出时 slot 内部滚动（与 pcards-home 同款品牌色细滚条） */
+#pcover{display:none;position:absolute;top:0;right:0;width:372px;height:560px;z-index:60;
  background:rgba(24,17,40,.98);border:1px solid rgb(from var(--ac) r g b / .35);border-radius:14px;padding:10px;
  box-shadow:0 18px 50px rgba(0,0,0,.5)}
 #pcover.open{display:flex;flex-direction:column;animation:pcCoverIn .5s cubic-bezier(.22,.9,.34,1)}
