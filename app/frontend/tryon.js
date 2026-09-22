@@ -255,9 +255,6 @@ async function tyParts(){
     const r = await fetch("/api/tryon", {method:"POST", body: fd});
     const j = await r.json();
     const ms = Math.round(performance.now()-t0);
-    $("tyjson").textContent = JSON.stringify(j, null, 2)
-      .replace(/"original_b64": "[^"]+"/, `"original_b64": "<${Math.floor((j.results?.original_b64||"").length*3/4/1024)}KB 图>"`)
-      .replace(/"makeup_b64": "[^"]+"/, `"makeup_b64": "<…>"`);
     $("tyms").textContent = ms + "ms · device=" + (j.query?.device || "?");
     if(!j.ok){ $("tyres").innerHTML = `<span class="err">[错误] ${j.error}</span>`; return; }
     const c = (j.results.correction) || {};

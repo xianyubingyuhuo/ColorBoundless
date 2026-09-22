@@ -8,7 +8,6 @@ async function t1(){
   try{
     const{j, ms} = await getJSON(`/api/tools/search_shade?hex=${hex}&top_k=${k}`);
     $("s1ms").textContent = `官方库 ${ms}ms`;
-    $("s1json").textContent = JSON.stringify(j, null, 2);
     if(!j.ok){
       /* 防御：把真实响应打进错误区，便于定位（正常不应触发） */
       $("s1res").innerHTML = `<span class="err">[错误] ${j.error || "后端返回异常结构（请展开下方调试信息）"}</span>` +
