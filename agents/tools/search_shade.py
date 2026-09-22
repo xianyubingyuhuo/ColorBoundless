@@ -72,21 +72,40 @@ def _imported_rows():
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         _PS_MOD = mod
+        # def 48（用户 2026-09-22）：文案口径「已导入商品」→「已匹配商品」；
+        # match_txt = 前端三行展示用的结构化短文本（品类 · 品牌）。
         rows = []
         for it in mod._shades_pool():
             rows.append({"hex": it["hex"], "name": it["product"],
-                         "desc": f"已导入商品 · 粉底 · {it['brand']}"})
+                         "desc": f"已匹配商品 · 粉底 · {it['brand']}",
+                         "match_txt": f"粉底 · {it['brand']}"})
         for it in mod._EYESHADOW_POOL:
             rows.append({"hex": it["hex"], "name": it["name"],
-                         "desc": "已导入商品 · 眼影"})
+                         "desc": "已匹配商品 · 眼影", "match_txt": "眼影"})
         for it in mod._BROW_POOL:
             rows.append({"hex": it["hex"], "name": it["name"],
-                         "desc": "已导入商品 · 眉妆"})
+                         "desc": "已匹配商品 · 眉妆", "match_txt": "眉妆"})
         for it in mod._BLUSH_POOL:
             rows.append({"hex": it["hex"], "name": it["product"],
-                         "desc": f"已导入商品 · 腮红 · {it['brand']}"})
+                         "desc": f"已匹配商品 · 腮红 · {it['brand']}",
+                         "match_txt": f"腮红 · {it['brand']}"})
         _IMP_CACHE = rows
     return _IMP_CACHE
+
+
+def _owner_txt(hex_std: str) -> str:
+    """def 48（用户 2026-09-22）：命中色 → 橱窗归属文本（用户要求的"所属商品名"）。
+    复用 products_service 的 _showcase_owners（精确 hex 反查橱窗色板）+
+    _owner_label（item 名自带品类词时去重），形如
+    「Ultra HD 高清粉底（Make Up For Ever） · 225」；跨品类同色多条以「；」连接。
+    反查源不可用 / 无精确陈列归属 → 空串，前端不渲染该行（诚实边界）。"""
+    if _PS_MOD is None:
+        return ""
+    try:
+        owners = _PS_MOD._showcase_owners(hex_std)
+        return "；".join(f"{_PS_MOD._owner_label(o)} · {o['shade']}" for o in owners)
+    except Exception:
+        return ""
 
 
 def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
@@ -130,6 +149,7 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
         try:
             lab_q = list(_core.hex2lab(hex_std))
             full_imp = [{"hex": it["hex"], "name": it["name"], "desc": it["desc"],
+                         "match_txt": it.get("match_txt", ""),
                          "imported": True,
                          "dE": round(float(_core.ciede2000(
                              lab_q, list(_core.hex2lab(it["hex"])))), 2)}
@@ -138,6 +158,13 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
                           key=lambda r: float(r.get("dE", 999.0)))[:k]
         except Exception:
             pass                         # 合并失败退回纯官方库结果
+
+    # def 48（用户 2026-09-22）：命中条目统一反查「所属商品」橱窗分支——官方唇色
+    # 与已匹配商品色都标注；已匹配但未进入橱窗陈列的库存色（粉底库存 168 > 陈列 118）
+    # 给出与 match_product 一致的 fallback 文案；dE>1 远色精确反查落空 → 空串。
+    for r in rows:
+        r["owner"] = _owner_txt(r["hex"]) or (
+            "暂未在橱窗系列陈列" if r.get("imported") else "")
 
     # 4) 组装契约：query 里的 lab 是代码算的物理量，LLM 只准引用不准心算
     lab = [round(float(x), 2) for x in _core.hex2lab(hex_std)]

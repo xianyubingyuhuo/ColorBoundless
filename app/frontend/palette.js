@@ -4,7 +4,7 @@ async function getJSON(url){const t0=performance.now();const r=await fetch(url);
 
 async function t1(){
   const hex = encodeURIComponent($("s1hex").value), k = $("s1k").value;
-  $("s1res").innerHTML = `<div class="meta">查询中（判定库 = 官方色号 + 已导入商品色）…</div>`;
+  $("s1res").innerHTML = `<div class="meta">查询中（判定库 = 官方色号 + 已匹配商品）…</div>`;
   try{
     const{j, ms} = await getJSON(`/api/tools/search_shade?hex=${hex}&top_k=${k}`);
     $("s1ms").textContent = `官方库 ${ms}ms`;
@@ -25,13 +25,16 @@ async function t1(){
     /* 商品可提供性（def 18r · 全域恒真行已删）：有 → 命中清单；无 → 定制提示 */
     const tip = j.query.has_official ? "" :
       `<div class="item" style="border-color:rgba(255,154,181,.5)"><div><b>暂无商品色可提供</b>` +
-      `<div class="meta">判定库 ${j.query.pool_size || "—"} 条（官方色号 + 已导入商品色）中无 dE≤1.0 的颜色——此色可走定制申请（口红/眼影/粉底任意色）</div></div></div>`;
+      `<div class="meta">判定库 ${j.query.pool_size || "—"} 条（官方色号 + 已匹配商品）中无 dE≤1.0 的颜色——此色可走定制申请（口红/眼影/粉底任意色）</div></div></div>`;
 
     /* 只列官方命中条目（dE≤1.0）——"最近替代"与"全库精确匹配"已按需求移除（def 18j） */
     const hitList = j.results.filter(r => r.dE <= 1).map(r =>
       `<div class="item"><span class="sw" style="background:#${r.hex}"></span>` +
       `<div><b>#${r.hex}</b>　${r.name ? `<span style="color:#c4475d">${r.name}</span>` : ""}${r.tone ? `　<span class="meta">[${r.tone}]</span>` : ""}` +
-      `<div class="meta">dE=${r.dE} · ${r.desc || (r.imported ? "已导入商品色" : "官方色号")}</div></div>` +
+      `<div class="meta">dE=${r.dE}${r.imported ? "" : (r.desc ? " · " + r.desc : " · 官方色号")}</div>` +
+      (r.imported ? `<div class="meta">已匹配商品：${r.match_txt || (r.desc || "").replace("已匹配商品 · ", "")}</div>` : "") +
+      (r.owner ? `<div class="meta">所属商品：${r.owner}</div>` : "") +
+      `</div>` +
       `<span style="margin-left:auto;flex:none;font-size:12px;color:#7de0a6">商品有 ✓</span></div>`).join("");
 
     $("s1res").innerHTML = gbLine + tip + hitList;
@@ -40,7 +43,7 @@ async function t1(){
 }
 
 /* def 18n · 全域色盘：256×256 canvas（横轴 R/纵轴 G）+ B 通道滑轨
-   —— 256 层 × 65,536 色 = 16,777,216 全部可显示；绿框标记已导入商品色；
+   —— 256 层 × 65,536 色 = 16,777,216 全部可显示；绿框标记已匹配商品色；
       hover 显示商品归属；点击取色联动查询框；查询后自动跳层+高亮 */
 (function(){
   const cv = $("uniwall"), sl = $("unib"), bv = $("unibv"), info = $("unipick");
@@ -118,12 +121,12 @@ async function t1(){
     const g = Math.min(255, Math.max(0, Math.round((e.clientY - rect.top) / rect.height * 255)));
     const s = snap(Number(sl.value), r, g);
     if(s){
-      info.textContent = "吸附 → #" + s + " · 已导入商品：" + (CMP.byHex.get(s) || "").split("\n").join(" / ");
+      info.textContent = "吸附 → #" + s + " · 已匹配商品：" + (CMP.byHex.get(s) || "").split("\n").join(" / ");
       return;
     }
     const hx = [r, g, Number(sl.value)].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
     const owned = CMP.byHex.get(hx);
-    info.textContent = "#" + hx + (owned ? " · 已导入商品：" + owned.split("\n").join(" / ") : "（非商品色）");
+    info.textContent = "#" + hx + (owned ? " · 已匹配商品：" + owned.split("\n").join(" / ") : "（非商品色）");
   });
   cv.addEventListener("mouseleave", () => { info.textContent = layerTip(Number(sl.value)); });
   let dragging = false, moved = 0, sx = 0, sy = 0, t0x = 0, t0y = 0;
@@ -213,7 +216,7 @@ async function t1(){
     if(/^[0-9a-fA-F]{6}$/.test(h)){ sl.value = parseInt(h.slice(4,6),16); }   // 自动跳到查询色所在层
     draw();
   };
-  (async () => {                                    // 已导入商品色索引（compare 端点）
+  (async () => {                                    // 已匹配商品色索引（compare 端点）
     try{
       const j = await (await fetch("/api/products/compare")).json();
       if(!j.ok) return;
