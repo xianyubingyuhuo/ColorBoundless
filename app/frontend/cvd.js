@@ -24,8 +24,14 @@ async function toggleCalSwitch(){
       $("calstatus").innerHTML = `<span class="ms">已关闭校色配色（此前为未测评临时口径：对称红绿增强）——完成 22 题测评后可获个性化校色</span>`;
       return;
     }
-    $("calstatus").innerHTML = `<span class="err">暂无测评档案——请先在"色盲测评"完成 22 题</span>`;
-    showTab("exam"); return;   /* 兜底保留：真无档案仍引导去测评，但仅在首次无档案时发生 */
+    /* def 51b · 与全站 calswitch 同口径：无档案开启 = 对称红绿增强临时口径（后端 enabled 路径放行），
+       不再踢回测评 tab——同一功能两个入口行为必须一致，否则用户感知「点不动」 */
+    calBusy = true;
+    if(window.CVDTheme && window.CVDTheme.setSession && !window.__cvd_url_sim)
+      window.CVDTheme.setSession({mode:"correct", kind:"uncertain", sev:1.0});
+    await doCalibrate(null, true);
+    calBusy = false;
+    return;
   }
   const on = !sw.classList.contains("on");   /* def 34 · 开关 = 唯一启停：只切 enabled，导入的配置(mode)不动 */
   calBusy = true;
@@ -86,6 +92,15 @@ function renderCalState(cal){
   if(window.CVDTheme && !window.__cvd_url_sim){
     const res = applyColorState();
     themeApplied = !!(res && res.applied); themeReason = (res && res.reason) || "";
+  }
+  /* def 51b（用户 2026-09-22「根本点不动」+ TypeError）· cal 为空（无档案/请求失败路径传
+     null）时安全渲染——此前无条件读 cal.mode 直接 TypeError，把守门错误吞成
+     「[错误] 请求失败: TypeError: Cannot read properties of null (reading 'mode')」 */
+  if(!cal){
+    $("calstatus").innerHTML = on
+      ? `<span class="ms">全站校色开启中（未测评临时口径：对称红绿增强）——顶部开关可关闭；完成测评后可导入个性化配置</span>`
+      : `<span class="meta">尚未导入校色配置——在下方选「校色模式 / 模拟模式」导入（需先完成测评）；顶部开关只负责启用 / 停用</span>`;
+    return;
   }
   const modeCN = cal.mode === "correct" ? "校色模式" : (cal.mode === "simulate" ? "模拟模式" : "");
   const kindTxt = `${cal.kind} @ severity ${cal.severity}`;
