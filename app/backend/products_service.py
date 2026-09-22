@@ -252,6 +252,16 @@ def list_products(region: str = "foundation") -> dict:
 
 
 
+def reset_custom() -> None:
+    """def 50 · 后端重启即清定制申请时间线（用户 2026-09-22：重启 = 全新演示态）。
+    由启动钩子 main.lifespan 调用；格式与 list_custom 的空态读取兼容（"[]"）。"""
+    try:
+        _DATA_DIR.mkdir(parents=True, exist_ok=True)
+        _CUSTOM_JSON.write_text("[]", encoding="utf-8")
+    except Exception:
+        pass
+
+
 def list_custom() -> dict:
 
     """def 15d · 定制申请记录读取（products 页时间线展示，最新在前）。"""

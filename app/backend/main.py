@@ -10,6 +10,7 @@
 """
 import sys
 import json
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -43,13 +44,18 @@ from agent_loop import agent_reply, agent_reply_stream      # def 11/29 · 大�
 from tryon_service import run_tryon, run_face_profile     # def 12a/43 · 试妆 + 人脸属性档案（torch 全延迟导入）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
-from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a/17b · 色盲测评会话与校色确认
-from products_service import match_product, custom_request, list_products, list_custom, catalog, cancel_custom, compare_library   # def 15d/18a/18d/18h/18i
+from cvd_exam import start_exam, answer_exam, get_profile, calibrate, reset_profile   # def 17a/17b/50 · 色盲测评会话与校色确认 + 重启清档案
+from products_service import match_product, custom_request, list_products, list_custom, catalog, cancel_custom, compare_library, reset_custom   # def 15d/18a/18d/18h/18i/50
 from shade_review import shade_review   # def 27 · 社会视角守门（选色主流性判定+社会等效色+主流替代）
 
 
 @asynccontextmanager
 async def lifespan(_app):
+    # def 50 · 重启 = 全新演示态（用户 2026-09-22）：运行态文件归零。
+    # 放在预热前：预热约 60s 期间前端 state_clear.js 轮询 /api/health 即可拿到新 boot_id。
+    reset_profile()
+    reset_custom()
+    print("[lifespan] 演示态已清空（CVD 档案 + 定制申请时间线）")
     # foundation 向量模型预热：不预热则首次粉底推荐要干等约 60s（bge 首载），预热后毫秒级。
     print("[lifespan] 预热 foundation 向量模型（首次约 60s，仅启动时一次）...")
     foundation_search_tool("预热", top_k=1)
@@ -58,6 +64,14 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="ColorBoundless 工具测试台", lifespan=lifespan)
+
+_BOOT_ID = str(time.time_ns())          # def 50 · 进程启动标识（重启必变，前端轮询比对）
+
+
+@app.get("/api/health")
+def api_health():
+    """def 50 · 前端重启检测：state_clear.js 每 4s 轮询 boot_id，变化即清演示缓存并刷新。"""
+    return {"ok": True, "boot_id": _BOOT_ID}
 app.add_middleware(NoCacheHTML)
 
 

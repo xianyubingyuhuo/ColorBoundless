@@ -70,6 +70,18 @@ def _load_profile() -> None:
 _load_profile()
 
 
+def reset_profile() -> None:
+    """def 50 · 后端重启即清档案（用户 2026-09-22：重启 = 全新演示态）。
+    与 def 26「落盘保活」的分工：落盘解决的是进程崩溃恢复（运行中断链）；
+    reset 由启动钩子 main.lifespan 显式调用——每次重启归零，测评从头演示。"""
+    _PROFILE.clear()
+    try:
+        if _PROFILE_PATH.exists():
+            _PROFILE_PATH.unlink()
+    except Exception:
+        pass
+
+
 def _img_b64(img) -> str:
     """RGB uint8 ndarray → PNG base64（前端 <img src="data:image/png;base64,...">）"""
     ok, buf = cv2.imencode(".png", img[:, :, ::-1])   # RGB→BGR 后编码

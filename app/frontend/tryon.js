@@ -337,6 +337,7 @@ async function submitCustomAll(btn){
   }
   if(okN){
     ms.textContent = `已提交 ${okN}/${items.length} 项——正在前往产品库查看…`;
+    window.cbNavKeep && window.cbNavKeep();   /* def 50 · 站内跳转标记：时间线读取依赖跳转后状态保留 */
     setTimeout(() => { location.href = "products.html#custom"; }, 900);
   } else {
     ms.textContent = "提交失败（服务未响应）——可重试";

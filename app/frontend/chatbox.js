@@ -619,6 +619,7 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
       }
       addMsg("meta", `[调度] 正在前往 ${a.page}${a.reason ? " · " + a.reason : ""}`);
       try { sessionStorage.setItem(SS_OPEN, "1"); } catch(e){}   /* 锁定展开态：跳页后对话窗口必定恢复 */
+      window.cbNavKeep && window.cbNavKeep();   /* def 50 · 站内跳转标记：目标页保留演示态 */
       setTimeout(() => { location.href = a.page; }, 350);
     }
     /* def 18 · 色号回填：tryon 页就地填卡；其他页 → sessionStorage 中转 → 跳试妆页自动填 */
@@ -632,6 +633,7 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
       try { sessionStorage.setItem("cb_fill", JSON.stringify(a.parts)); } catch(e){}
       try { sessionStorage.setItem(SS_OPEN, "1"); } catch(e){}
       addMsg("meta", "[调度] 正在前往试妆页 · 推荐色号会自动填入");
+      window.cbNavKeep && window.cbNavKeep();   /* def 50 · 站内跳转标记：cb_fill 跨页中转依赖缓存保留 */
       setTimeout(() => { location.href = "/tryon.html"; }, 350);
     }
   };
