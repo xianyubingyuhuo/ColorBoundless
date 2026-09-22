@@ -121,6 +121,10 @@
     /* def 42 · 摘下色盘/照片滤镜，回归原色 */
     filterOn = false;
     document.querySelectorAll(MEDIA_Q).forEach((el) => { el.style.filter = ""; });
+    /* def 53 · SVG 滤镜定义一并移除——复位后与"从未开启"状态完全一致（节点虽不可见，
+       但残留会让自动化采样/状态判断误认为滤镜仍生效） */
+    const svg = document.getElementById("cvdmat-svg");
+    if(svg && svg.parentNode) svg.parentNode.removeChild(svg);
   }
 
   /* ==== def 42 · 色盘/照片矩阵滤镜（用户 2026-09-21：校色要覆盖色盘和上传的照片） ====

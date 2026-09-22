@@ -477,6 +477,19 @@ function simAll(kind){
       window.CVDTheme.setSession({mode:"simulate", kind,
         sev:Math.min(1, Math.max(0, parseFloat($("cvdsev").value) || 1.0))});
     }else{
+      /* def 53（用户 2026-09-22「恢复原色为什么是校色后的配置」）· 临时口径（无档案）下
+         「恢复原色」= 真原色：没有测评就没有所谓"配置层"——临时增强一并关闭（含同步后端
+         归零、清临时校准缓存）；有档案时保持 def 37 定稿口径（退出演示，回到配置层配色） */
+      if($("calswitch").dataset.hasProfile !== "1"){
+        window.CVDTheme.setSession(null);
+        syncCalSwitch(false);
+        window.__cvd_cal_cache = null;
+        fetch("/api/cvd/exam/calibrate", {method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({enabled:false})}).catch(() => {});
+        renderCalState(null);
+        st.innerHTML = '<span class="ms">已恢复原色（未测评临时口径的校色已一并关闭）——完成 22 题测评后可获个性化校色</span>';
+        return;
+      }
       const c = window.__cvd_cal_cache;
       window.CVDTheme.setSession(c && c.mode && c.mode !== "off" ? {mode:c.mode, kind:c.kind, sev:c.severity} : null);
     }
