@@ -10,6 +10,7 @@ import importlib.util
 import json
 import math
 import re
+import sys
 from pathlib import Path
 
 # 6 位 hex 的合法形态：0-9 / a-f / A-F，恰好 6 位
@@ -46,6 +47,48 @@ _core = importlib.util.module_from_spec(_core_spec)
 _core_spec.loader.exec_module(_core)
 
 
+# ---------------------------------------------------------------------------
+# def 18j · 已导入商品色并入官方判定库（用户 2026-09-19：粉底/眼影等已导入的
+# 颜色查官方库时"压根没有匹配"——判定库从 20 条唇色扩为「官方色号 + 全部已导入
+# 商品色」，商品色自身精确命中 dE=0 → has_official=true）
+# 依赖说明：importlib 直载 products_service（数据聚合层，纯色差计算无重依赖）；
+# 拿不到（文件缺失/加载失败）时退回纯官方库，工具永不因合并而挂。
+# ---------------------------------------------------------------------------
+_PS_MOD = None
+_IMP_CACHE = None
+
+
+def _imported_rows():
+    """已导入商品色行：粉底 168 / 眼影 12 / 眉 5 / 腮红 5（唇色即官方库本身，不重复并入）。"""
+    global _PS_MOD, _IMP_CACHE
+    if _IMP_CACHE is None:
+        root = Path(__file__).resolve().parents[2]
+        if str(root) not in sys.path:
+            # products_service 内部有 `from agents.tools...` 包导入（def 18j 实测：
+            # 裸直载链路缺项目根会 ModuleNotFoundError → 合并静默失效），先补齐
+            sys.path.insert(0, str(root))
+        ps_path = root / "app" / "backend" / "products_service.py"
+        spec = importlib.util.spec_from_file_location("products_service_imp", ps_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _PS_MOD = mod
+        rows = []
+        for it in mod._shades_pool():
+            rows.append({"hex": it["hex"], "name": it["product"],
+                         "desc": f"已导入商品 · 粉底 · {it['brand']}"})
+        for it in mod._EYESHADOW_POOL:
+            rows.append({"hex": it["hex"], "name": it["name"],
+                         "desc": "已导入商品 · 眼影"})
+        for it in mod._BROW_POOL:
+            rows.append({"hex": it["hex"], "name": it["name"],
+                         "desc": "已导入商品 · 眉妆"})
+        for it in mod._BLUSH_POOL:
+            rows.append({"hex": it["hex"], "name": it["product"],
+                         "desc": f"已导入商品 · 腮红 · {it['brand']}"})
+        _IMP_CACHE = rows
+    return _IMP_CACHE
+
+
 def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
     """def 2 · 工具① 主函数：脏 hex 进，结构化 JSON 出（LLM 可直接引用）。
 
@@ -69,13 +112,32 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
     if not isinstance(top_k, int) or isinstance(top_k, bool):
         return {"ok": False, "tool": tool,
                 "error": f"top_k 必须是整数，收到 {top_k!r}", "results": []}
-    k = max(1, min(top_k, len(_core.SHADES)))
+    # def 18j · 判定库容量 = 官方色号 + 已导入商品色
+    try:
+        imp_rows = _imported_rows()
+    except Exception:
+        imp_rows = []                    # 合并源不可用 → 退回纯官方库
+    k = max(1, min(top_k, len(_core.SHADES) + len(imp_rows)))
 
     # 3) 调算法层：CIEDE2000 全库比对，数字永远由代码算
     try:
         rows = _core.search_shade(hex_std, top_k=k)
     except Exception as e:               # 算法层意外错误同样不穿透
         return {"ok": False, "tool": tool, "error": f"检索失败: {e}", "results": []}
+
+    # def 18j · 已导入商品色并入同一次最近邻排序（命中商品色 dE=0 → 官方有）
+    if imp_rows:
+        try:
+            lab_q = list(_core.hex2lab(hex_std))
+            full_imp = [{"hex": it["hex"], "name": it["name"], "desc": it["desc"],
+                         "imported": True,
+                         "dE": round(float(_core.ciede2000(
+                             lab_q, list(_core.hex2lab(it["hex"])))), 2)}
+                        for it in imp_rows]
+            rows = sorted(rows + full_imp,
+                          key=lambda r: float(r.get("dE", 999.0)))[:k]
+        except Exception:
+            pass                         # 合并失败退回纯官方库结果
 
     # 4) 组装契约：query 里的 lab 是代码算的物理量，LLM 只准引用不准心算
     lab = [round(float(x), 2) for x in _core.hex2lab(hex_std)]
@@ -85,11 +147,21 @@ def search_shade_tool(raw_hex: str, top_k: int = 3) -> dict:
     has_official = bool(rows) and float(rows[0].get("dE", 999.0)) <= 1.0
     rgb255 = [int(hex_std[i:i + 2], 16) for i in (0, 2, 4)]
     gb = _gb_lookup(hex_std, rgb255, lab)
+    # def 18k · 全域色库升级（用户 2026-09-19：16³ 采样格点全是 #AABBCC 型重复结构，
+    # "这不叫全覆盖"）——全域库改为 256³ = 16,777,216 色真全覆盖：不再落盘采样文件，
+    # 由 GB/T 15608 标号算法（gb_color_name）对任意 #ABCDEF 型色值即时定义，
+    # 任何色都是全域成员（in_universe 恒真）。has_official 保留第二层语义：
+    # 「商品可提供性」判定（官方唇色 + 已导入商品色 210 条，dE≤1.0）——
+    # 两层分工：全域有此色（恒真）/ 有无商品能直接给（判定库）。
     return {"ok": True, "tool": tool,
             "query": {"hex": hex_std, "lab": lab,
                       "gb_label": gb["label"], "gb_cn": gb["cn"],
+                      "in_universe": True,
+                      "universe_total": 256 ** 3,
+                      "universe_note": "全域色库 = 256³ 真全覆盖（16,777,216 色，任意 RGB 组合），GB/T 标号即时计算",
                       "has_official": has_official,
-                      "official_threshold_dE": 1.0},
+                      "official_threshold_dE": 1.0,
+                      "pool_size": len(_core.SHADES) + len(imp_rows)},
             "results": rows,
             "error": None}
 
@@ -147,7 +219,6 @@ def gb_color_name(rgb255, lab):
 
 
 _GBNAMES_JSON = Path(__file__).resolve().parents[2] / "data" / "shades" / "gb_names_16.json"
-_COV_CACHE = None         # (官方库条数, items, stats)——shades.json 扩充后自动重算
 _COV_MAP = None           # hex → (gb_label, gb_cn)，单色查询懒加载缓存
 
 
@@ -164,49 +235,3 @@ def _gb_lookup(hex_std, rgb255, lab):
     if hit:
         return {"label": hit[0], "cn": hit[1]}
     return gb_color_name(rgb255, lab)
-
-
-def coverage16_tool() -> dict:
-    """def 17d · 全色域覆盖检查（职责分离版，用户 2026-09-13 定稿）。
-
-    数据流：
-        GB 命名 → data/shades/gb_names_16.json（generate_gb_names_16.py 产物，纯命名）
-        官方匹配 → 运行时从 shades.json 逐点 ΔE00 取最近（官方库扩充自动跟随，
-                    无需重跑任何生成脚本；结果按官方库条数缓存）
-    输出 items = GB 命名字段 + official_hex/official_name/dE/has_official 组合。
-    """
-    tool = "coverage16"
-    global _COV_CACHE
-    try:
-        gb_data = json.loads(_GBNAMES_JSON.read_text(encoding="utf-8"))
-        shades = _core.SHADES
-
-        if _COV_CACHE and _COV_CACHE[0] == len(shades):     # 官方库未变 → 复用缓存
-            items, stats = _COV_CACHE[1], _COV_CACHE[2]
-        else:
-            off_lab = {s["hex"]: list(_core.hex2lab(s["hex"])) for s in shades}
-            items, hits = [], 0
-            for it in gb_data["items"]:
-                lab = list(_core.hex2lab(it["hex"]))
-                best_k, best_d = 0, 1e9
-                for k, s in enumerate(shades):              # ΔE00 全量取最小（修欧氏背离）
-                    dE = float(_core.ciede2000(lab, off_lab[s["hex"]]))
-                    if dE < best_d:
-                        best_k, best_d = k, dE
-                s = shades[best_k]
-                has = best_d <= 1.0
-                hits += int(has)
-                items.append({**it, "official_hex": s["hex"], "official_name": s["name"],
-                              "dE": round(best_d, 2), "has_official": has})
-            stats = {"total": len(items), "hits": hits, "miss": len(items) - hits,
-                     "coverage_pct": round(100.0 * hits / len(items), 2),
-                     "official_shades": len(shades)}
-            _COV_CACHE = (len(shades), items, stats)
-
-        return {"ok": True, "tool": tool,
-                "query": {"sampling": gb_data["sampling"], "official_shades": len(shades),
-                          "threshold_dE": 1.0},
-                "results": {**stats, "items": items},
-                "error": None}
-    except Exception as exc:                                    # 错误不穿透
-        return {"ok": False, "tool": tool, "error": str(exc), "results": {}}

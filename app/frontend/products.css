@@ -5,10 +5,78 @@
 .pitem .tx{min-width:0;font-size:11.5px;line-height:1.45;color:var(--tx)}
 .pitem .tx b{display:block;font-size:12px}
 .pitem .tx .meta{font-size:10.5px;display:block}
-.match-card{display:flex;gap:14px;align-items:center;border:1px solid rgba(229,71,109,.45);border-radius:12px;background:rgba(229,71,109,.06);padding:12px;margin-top:6px}
+.match-card{display:flex;gap:14px;align-items:center;border:1px solid rgb(from var(--ac) r g b / .45);border-radius:12px;background:rgb(from var(--ac) r g b / .06);padding:12px;margin-top:6px}
 .match-card .sw{width:64px;height:64px;border-radius:12px;flex:none;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.45)}
 .badge-ok{display:inline-block;background:rgba(125,224,166,.15);color:#7de0a6;border:1px solid rgba(125,224,166,.4);border-radius:999px;padding:2px 10px;font-size:12px}
 .badge-no{display:inline-block;background:rgba(255,138,128,.12);color:#ff8a80;border:1px solid rgba(255,138,128,.4);border-radius:999px;padding:2px 10px;font-size:12px}
-.tl{border-left:2px solid rgba(229,71,109,.4);margin:6px 0 0 8px;padding-left:14px}
+.tl{border-left:2px solid rgb(from var(--ac) r g b / .4);margin:6px 0 0 8px;padding-left:14px}
 .tl-item{position:relative;padding:4px 0}
-.tl-item::before{content:"";position:absolute;left:-19px;top:13px;width:8px;height:8px;border-radius:50%;background:#e5476d}
+.tl-item::before{content:"";position:absolute;left:-19px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--ac)}
+/* def 18d · 商品橱窗：品类窗口网格 */
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+.shopcard{display:flex;gap:10px;align-items:center;text-align:left;padding:10px;
+ border:1px solid var(--bd);background:rgba(255,255,255,.04);cursor:pointer;color:var(--tx);
+ transition:border-color .2s,box-shadow .2s;font-family:inherit}
+.shopcard:hover{border-color:rgb(from var(--ac) r g b / .6);box-shadow:0 6px 18px rgb(from var(--ac) r g b / .18)}
+.shopimg img{width:72px;height:72px;object-fit:cover;border:1px solid var(--bd);display:block}
+.shoptx{display:flex;flex-direction:column;gap:2px;min-width:0}
+
+/* def 18d · 详情弹层：紧凑色盘（现实色盘式密集排布）+ 配比/成分表占位 */
+.pd-overlay{position:fixed;inset:0;background:rgba(10,7,16,.85);
+ z-index:90;display:flex;align-items:center;justify-content:center;padding:20px} /* def 38 · 去 blur(6px)：74%→85% 底色补偿可读性 */
+.pd-overlay[hidden]{display:none}
+.pd-panel{position:relative;width:min(680px,100%);max-height:86vh;overflow-y:auto;
+ background:rgba(24,17,40,.98);border:1px solid rgb(from var(--ac) r g b / .35);border-radius:12px;padding:18px;
+ box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#pd-x{position:absolute;top:10px;right:10px;padding:2px 8px;font-size:13px;background:none;
+ border:1px solid var(--bd);color:var(--tx2);cursor:pointer;border-radius:6px}
+#pd-x:hover{color:var(--ac2);border-color:rgb(from var(--ac) r g b / .55)}
+.pd-head{display:flex;gap:14px;align-items:flex-start}
+.pd-head img{width:120px;height:120px;object-fit:cover;border:1px solid var(--bd);flex:none}
+.shade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:5px;margin-top:8px}
+.swcell{width:26px;height:26px;border:1px solid rgba(255,255,255,.28);cursor:pointer;padding:0;
+ border-radius:5px;transition:transform .15s;font-family:inherit}
+.swcell:hover{transform:scale(1.14)}
+.swcell.cur{outline:2px solid var(--ac2);outline-offset:1px}
+
+/* def 18f · 橱窗按品类分区：区块标题 + 组内窗口网格 */
+.shop-cat{margin-top:18px}
+.shop-cat:first-child{margin-top:2px}
+.shop-cat-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;
+ border-bottom:1px solid var(--bd);padding-bottom:6px}
+.shop-cat-head b{font-size:14px;letter-spacing:1.5px}
+
+/* def 18g · 详情改淘宝式：左大图 + 右选色栏；色盘固定块不均分；悬停浮出色名 */
+.shade-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.swcell{width:26px;height:26px;flex:none;position:relative;border-radius:5px}
+.swcell:hover::after{content:attr(data-name);position:absolute;bottom:calc(100% + 6px);left:50%;
+ transform:translateX(-50%);background:rgba(12,8,20,.94);color:#fff;padding:3px 9px;
+ border-radius:4px;font-size:11px;white-space:nowrap;z-index:8;border:1px solid rgba(255,255,255,.2)}
+.pd-cols{display:flex;gap:16px;align-items:flex-start}
+.pd-left{flex:none;width:230px}
+.pd-left img{width:230px;height:230px;object-fit:cover;border:1px solid var(--bd);display:block}
+.pd-right{flex:1;min-width:0}
+.pd-title{font-size:17px;display:block;margin-bottom:4px}
+.pd-selrow{display:flex;gap:8px;align-items:center;margin-top:12px;padding:8px 10px;
+ border:1px dashed var(--bd);background:rgba(255,255,255,.03)}
+.pd-selnone{color:var(--tx2);font-weight:400}
+.pd-sec{margin-top:14px;margin-bottom:2px;letter-spacing:1px;color:var(--ac2);font-size:12px}
+.pd-sec2{display:block;margin-top:14px;letter-spacing:1px}
+.pd-foot{margin-top:16px;border-top:1px solid var(--bd);padding-top:12px}
+
+/* def 18h · 定制时间线条目美化：大色块 + 品类标签；试妆跳转来的高亮 */
+.tl-sw{display:inline-block;width:22px;height:22px;border-radius:6px;vertical-align:-6px;
+ margin-right:6px;border:1px solid rgba(255,255,255,.45);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.tl-tag{display:inline-block;background:rgb(from var(--ac) r g b / .12);color:var(--ac2);
+ border:1px solid rgb(from var(--ac) r g b / .35);border-radius:999px;padding:1px 8px;font-size:11px;margin-right:6px}
+.card-flash{animation:cardFlash 1.4s ease 2}
+@keyframes cardFlash{0%,100%{box-shadow:0 12px 36px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 3px rgb(from var(--ac) r g b / .55),0 12px 36px rgba(0,0,0,.35)}}
+
+/* def 18h · 定制时间线：商品图 + 内容 + 取消按钮（和橱窗卡同观感） */
+.tl-item{display:flex;gap:10px;align-items:flex-start}
+.tl-img{width:56px;height:56px;object-fit:cover;border:1px solid var(--bd);flex:none}
+.tl-tx{min-width:0;flex:1;font-size:12px;line-height:1.5}
+.tl-cancel{flex:none;background:none;border:1px solid var(--bd);color:var(--tx2);
+ padding:3px 10px;font-size:11px;cursor:pointer;border-radius:6px;font-family:inherit;transition:all .2s}
+.tl-cancel:hover{color:#ff8a80;border-color:rgba(255,138,128,.55)}
+

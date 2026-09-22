@@ -51,6 +51,18 @@ tryon("data/faces/11053.jpg", color=chosen["hex"])
 [face-parsing.PyTorch](https://github.com/zllrunning/face-parsing.PyTorch) 获取后放入该目录。
 检索索引（`models/vector_store/*.npz`）为自建资产，已入库，克隆即用。
 
+## 大模型接入（LLM "大脑"）
+
+密钥与地址全部走**环境变量**（def 45：代码与仓库文件里零明文 key，防泄露/盗用）：
+复制 `app/backend/.env.example` 为同目录 `.env`（.gitignore 已排除，永不入库），
+按注释填 `LLM_PROVIDER` 与 `LLM_<名字>_API_KEY`；部署平台也可直接配环境变量
+（真实环境变量优先级高于 .env）。云端（DeepSeek / 智谱 GLM 等 OpenAI 兼容 API）
+填 key；本地大模型选 `llamacpp`（默认 `http://127.0.0.1:8080/v1/chat/completions`）
+或 `ollama`（`http://127.0.0.1:11434/v1/chat/completions`），填 `LLM_<名字>_MODEL`、
+key 留空即可（本地服务无鉴权）。每次对话重读环境，改完 `.env` 即时生效。
+**打包/分享项目时无需任何处理——.env 本就不在仓库里；如 key 曾在其他渠道泄露过，
+建议去服务商控制台轮换。**
+
 ## 目录结构
 
 ```text

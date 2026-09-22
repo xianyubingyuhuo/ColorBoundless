@@ -19,8 +19,10 @@ if str(ROOT) not in sys.path:
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Optional
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -35,15 +37,15 @@ class NoCacheHTML(BaseHTTPMiddleware):
             resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return resp
 
-from agents.tools.search_shade import search_shade_tool, coverage16_tool
-from agents.tools.palette_search import palette_search_tool
+from agents.tools.search_shade import search_shade_tool
 from agents.tools.foundation_search import foundation_search_tool
-from agent_loop import agent_reply      # def 11 · 大脑循环（function calling）
-from tryon_service import run_tryon     # def 12a · 试妆（torch 全延迟导入，本模块级只拉 cv2/numpy）
+from agent_loop import agent_reply, agent_reply_stream      # def 11/29 · 大脑循环（function calling）+ 流式版
+from tryon_service import run_tryon, run_face_profile     # def 12a/43 · 试妆 + 人脸属性档案（torch 全延迟导入）
 from cvd_service import check_pair, preview_hex   # def 14 · 色盲视角（纯 numpy，零重依赖）
 from cvd_service import correct_hex_for_profile             # def 17b · 试妆校色（档案反解）
 from cvd_exam import start_exam, answer_exam, get_profile, calibrate   # def 17a/17b · 色盲测评会话与校色确认
-from products_service import match_product, custom_request, list_products, list_custom   # def 15d/18a
+from products_service import match_product, custom_request, list_products, list_custom, catalog, cancel_custom, compare_library   # def 15d/18a/18d/18h/18i
+from shade_review import shade_review   # def 27 · 社会视角守门（选色主流性判定+社会等效色+主流替代）
 
 
 @asynccontextmanager
@@ -64,11 +66,6 @@ class ChatIn(BaseModel):
     history: list = None   # def 22l · 多轮上下文 [{role: user|assistant, content: str}, ...] 最近 N 条
 
 
-class ChatIn(BaseModel):
-    message: str
-    history: list = None   # def 22l · 多轮上下文 [{role: user|assistant, content: str}, ...] 最近 N 条
-
-
 class CustomIn(BaseModel):
     hex: str
     region: str = "lip"
@@ -81,29 +78,36 @@ def api_search_shade(hex: str, top_k: int = 5):
     return search_shade_tool(hex, top_k)
 
 
-@app.get("/api/tools/coverage16")
-def api_coverage16():
-    """def 17d · 全色域覆盖检查：16³=4096 采样点 vs 官方色号库（每点标注官方有/无）"""
-    return coverage16_tool()
-
-
 @app.get("/api/tools/foundation_search")
 def api_foundation_search(query: str, brand: str = "", shade_level: str = "", top_k: int = 3):
     """工具②：集团粉底色号推荐（向量检索 + 品牌/明度档过滤）"""
     return foundation_search_tool(query, brand, shade_level, top_k)
 
 
-@app.get("/api/tools/palette_search")
-def api_palette_search(hex: str, hue_group: str = None, top_k: int = 5):
-    """工具③：全库色板粗排+精排"""
-    return palette_search_tool(hex, hue_group=hue_group, top_k=top_k)
-
-
 @app.post("/api/chat")
 def api_chat(body: ChatIn):
     """def 11 · 大脑循环版：自动选工具 → 代码执行 → 结果喂回 → 正文
-       def 22l · 接入多轮 history——对话不再失忆（割裂修复）"""
+       def 22l · 接入多轮 history——对话不再失忆（割裂修复）
+       def 29 · 保留：内部调用（测评后自动总结）与流式不可用时的回退路径"""
     return agent_reply(body.message, body.history)
+
+
+@app.post("/api/chat/stream")
+def api_chat_stream(body: ChatIn):
+    """def 29 · 流式对话（SSE）：首字 1~2s 上屏 + 工具轨迹实时可见。
+
+    为什么：非流式下首字延迟 = 全部生成时间，flash 档生成 1500+ token 长回复
+    要 40~90s，前端 90s 硬死线必炸且后端白烧 token（掐断了还在跑）。
+    同步 generator 交给 StreamingResponse（FastAPI 自动 iterate_in_threadpool，
+    不卡 event loop）；X-Accel-Buffering=no 防反代缓冲。
+    """
+    def _gen():
+        for ev in agent_reply_stream(body.message, body.history):
+            yield "data: " + json.dumps(ev, ensure_ascii=False) + "\n\n"
+
+    return StreamingResponse(_gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no"})
 
 
 MAX_IMG_BYTES = 10 * 1024 * 1024
@@ -147,6 +151,9 @@ async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
                 correction = {"applied": False,
                               "reason": "尚未完成校色步骤——旅程为 测评 → 校色 → 试妆，"
                                         "请先在色盲校验页完成测评并选择校色模式"}
+            elif not cal.get("enabled", True):   # def 34 · 启停位：开关未开不做反解（旧档案无此字段按开启对待）
+                correction = {"applied": False,
+                              "reason": "校色配置未启用（页面顶部「校色配色」开关未开），试妆色号不做反解"}
             elif cal.get("mode") != "correct":
                 correction = {"applied": False,
                               "reason": f"当前校色模式为 {cal.get('mode')}，试妆色号不做反解"}
@@ -178,6 +185,21 @@ async def api_tryon(file: UploadFile = File(...), hex_color: str = Form(...),
     return out
 
 
+@app.post("/api/face_profile")
+async def api_face_profile(file: UploadFile = File(...)):
+    """def 43 · 人脸属性档案：上传照片 → 白平衡校正 + BiSeNet 部位解析 →
+    肤色（hex+ITA 档位+冷暖底调）/ 发色 / 眉色 / 瞳色 / 唇色 / 脸型 结构化数据。
+    前端上传后自动调用：渲染「AI 面部分析」面板，并作为事实上下文一键注入 AI 推荐
+    （AI 不看图、不反问外貌——参数由代码检测填好，AI 只做推荐推理，省 token 提效率）。
+    """
+    data = await file.read()
+    if not data:
+        return {"ok": False, "tool": "face_profile", "error": "未收到图片数据", "results": {}}
+    if len(data) > MAX_IMG_BYTES:
+        return {"ok": False, "tool": "face_profile", "error": "图片超过 10MB 限制", "results": {}}
+    return await run_in_threadpool(run_face_profile, data)
+
+
 @app.get("/api/products/match")
 def api_products_match(hex: str, region: str = "lip"):
     """def 15d · 所选色号 → 最近集团商品 + 有货/可定制判定（dE ≤ 5.0 有货）"""
@@ -202,6 +224,24 @@ def api_products_custom_list():
     return list_custom()
 
 
+@app.post("/api/products/custom/cancel")
+def api_products_custom_cancel(hex: str = "", region: str = "", ts: str = ""):
+    """def 18h · 取消定制申请（试妆/产品库时间线：按 hex+region+ts 定位删除）"""
+    return cancel_custom(hex, region, ts)
+
+
+@app.get("/api/products/catalog")
+def api_products_catalog():
+    """def 18d · 商品橱窗：品类多窗口（口红1/2、粉底1/2、眼影1、腮红1）+ 色板切片"""
+    return catalog()
+
+
+@app.get("/api/products/compare")
+def api_products_compare():
+    """def 18i · 对比库：全商品颜色汇集（hex → 有此色的商品清单）+ 官方库覆盖标记"""
+    return compare_library()
+
+
 @app.get("/api/cvd/preview")
 def api_cvd_preview(hex: str, cvd_type: str = "deuteranopia", severity: float = 1.0):
     """def 14 · 色盲视角预览：该色号在指定色觉缺陷用户眼中的等效颜色"""
@@ -220,7 +260,15 @@ class ExamAnswerIn(BaseModel):
 
 
 class CalibrateIn(BaseModel):
-    mode: str   # correct / simulate / off
+    # def 34 · 配置导入与启停拆分：按钮只传 mode（导入），开关只传 enabled（启停）。
+    # 显式 Optional（pydantic v2 不做 implicit optional 推断，str = None 传 null 会炸）
+    mode: Optional[str] = None        # correct / simulate / off（导入配置时传）
+    enabled: Optional[bool] = None    # 顶部开关启停位（True/False；与 mode 二选一）
+
+
+class ShadeReviewIn(BaseModel):
+    hex: str      # 用户所选色 #RRGGBB
+    region: str   # lip / foundation / eyeshadow / brow / blush
 
 
 @app.post("/api/cvd/exam/start")
@@ -243,8 +291,14 @@ def api_cvd_exam_profile():
 
 @app.post("/api/cvd/exam/calibrate")
 def api_cvd_exam_calibrate(body: CalibrateIn):
-    """def 17b · 校色确认（旅程第二步）：测评完成后选择校色模式（correct/simulate/off）"""
-    return calibrate(body.mode)
+    """def 17b/34 · 校色确认：按钮传 mode=只导入配置；开关传 enabled=启停（二选一）"""
+    return calibrate(body.mode, body.enabled)
+
+
+@app.post("/api/tryon/shade_review")
+def api_tryon_shade_review(body: ShadeReviewIn):
+    """def 27 · 社会视角守门：选色主流性判定 + 正常人视角翻译 + 社会等效色 + 在售主流替代推荐"""
+    return shade_review(body.hex, body.region)
 
 
 # 前端静态页挂在 "/"，必须放在 API 路由之后定义（先注册的先匹配）

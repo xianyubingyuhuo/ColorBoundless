@@ -2,168 +2,260 @@
 const $ = id => document.getElementById(id);
 async function getJSON(url){const t0=performance.now();const r=await fetch(url);const j=await r.json();return{j,ms:Math.round(performance.now()-t0)}}
 
-function swatch(r, extra){
-  return `<div class="item"><span class="sw" style="background:#${r.hex}"></span><div><b>#${r.hex}</b> 　dE=${r.dE}` +
-    (r.name?`　<span style="color:#c4475d">${r.name}</span>`:"") +
-    (r.tone?`　<span class="meta">[${r.tone}]</span>`:"") +
-    (r.rgb?`　<span class="meta">rgb(${r.rgb.join(",")}) · ${r.hue_group}</span>`:"") +
-    `<div class="meta">${extra||r.desc||r.content||""}</div></div></div>`;
-}
-
-function render(pid, jid, mid, j, fmt){
-  $(mid).textContent = j._ms + "ms · ok=" + j.ok;
-  $(jid).textContent = JSON.stringify(j, null, 2);
-  const el = $(pid); el.innerHTML = "";
-  if(!j.ok){el.innerHTML = `<span class="err">[错误] ${j.error || j._error || "调用失败"}</span>`; return}
-  j.results.forEach(r => el.insertAdjacentHTML("beforeend", fmt(r)));
-}
-
 async function t1(){
   const hex = encodeURIComponent($("s1hex").value), k = $("s1k").value;
-  $("s1res").innerHTML = `<div class="meta">查询中（官方库 + 全库 26 万色并行）…</div>`;
+  $("s1res").innerHTML = `<div class="meta">查询中（判定库 = 官方色号 + 已导入商品色）…</div>`;
   try{
-    const safe = async (url) => {
-      try {
-        const {j, ms} = await getJSON(url);          // getJSON 返回 {j, ms} 包装，需解构出五件套
-        return {...j, _ms: ms};
-      } catch(e){ return {ok: false, error: "请求失败: " + e, results: []}; }
-    };
-    const [off, full] = await Promise.all([
-      safe(`/api/tools/search_shade?hex=${hex}&top_k=${k}`),
-      safe(`/api/tools/palette_search?hex=${hex}&top_k=${k}`)
-    ]);
-    $("s1ms").textContent = `官方 ${off._ms ?? "?"}ms · 全库 ${full._ms ?? "?"}ms`;
-    $("s1json").textContent = JSON.stringify({official: off, full_palette: full}, null, 2);
-    if(!off.ok){
+    const{j, ms} = await getJSON(`/api/tools/search_shade?hex=${hex}&top_k=${k}`);
+    $("s1ms").textContent = `官方库 ${ms}ms`;
+    $("s1json").textContent = JSON.stringify(j, null, 2);
+    if(!j.ok){
       /* 防御：把真实响应打进错误区，便于定位（正常不应触发） */
-      $("s1res").innerHTML = `<span class="err">[错误] ${off.error || "后端返回异常结构（请展开下方调试信息）"}</span>` +
-        `<details><summary>调试信息（点击展开，截图发我）</summary><pre>${JSON.stringify(off).slice(0, 600)}</pre></details>`;
+      $("s1res").innerHTML = `<span class="err">[错误] ${j.error || "后端返回异常结构（请展开下方调试信息）"}</span>` +
+        `<details><summary>调试信息（点击展开，截图发我）</summary><pre>${JSON.stringify(j).slice(0, 600)}</pre></details>`;
       return;
     }
 
     /* 分区零：GB/T 15608 近似命名（R-07 · 现阶段标注体系） */
-    const gbLine = off.query && off.query.gb_cn
-      ? `<div class="item"><div><b>GB/T 15608 近似命名：${off.query.gb_cn}</b>　` +
-        `<span class="meta">标号 ${off.query.gb_label}</span>` +
+    const gbLine = j.query && j.query.gb_cn
+      ? `<div class="item"><div><b>GB/T 15608 近似命名：${j.query.gb_cn}</b>　` +
+        `<span class="meta">标号 ${j.query.gb_label}</span>` +
         `<div class="meta">（近似换算；精确标号以《中国颜色体系》国家标准样册为准）</div></div></div>` : "";
 
-    /* 分区一：官方库判定（has_official 由后端按 dE≤1.0 判定） */
-    const head = off.query.has_official
-      ? `<div class="item" style="border-color:rgba(125,224,166,.6)"><div><b style="color:#7de0a6">官方色号库有此颜色 ✓</b>` +
-        `<div class="meta">以下为官方色号（按接近度排序）</div></div></div>`
-      : `<div class="item" style="border-color:rgba(255,138,128,.6)"><div><b class="err">官方色号库无此颜色 ✗</b>` +
-        `<div class="meta">最接近的官方色号如下（仅供参考）——此色可走定制申请</div></div></div>`;
+    /* 商品可提供性（def 18r · 全域恒真行已删）：有 → 命中清单；无 → 定制提示 */
+    const tip = j.query.has_official ? "" :
+      `<div class="item" style="border-color:rgba(255,154,181,.5)"><div><b>暂无商品色可提供</b>` +
+      `<div class="meta">判定库 ${j.query.pool_size || "—"} 条（官方色号 + 已导入商品色）中无 dE≤1.0 的颜色——此色可走定制申请（口红/眼影/粉底任意色）</div></div></div>`;
 
-    /* 分区二：全库精确匹配（262K 任意色，定制链路的数据源） */
-    const fullResults = (full.ok && full.results) ? full.results : [];
-    const f0 = fullResults[0];
-    const exact = f0 ? `<div class="item" style="border-color:rgba(255,154,181,.5)">` +
-      `<span class="sw" style="background:${f0.hex}"></span>` +
-      `<div><b>${f0.hex}</b>　<span style="color:var(--ac2)">全库精确匹配</span>` +
-      `<div class="meta">dE=${f0.dE} · 非官方色号 · 可用于定制申请（口红/眼影/粉底任意色）</div></div></div>` : "";
-
-    const offList = off.results.map(r =>
+    /* 只列官方命中条目（dE≤1.0）——"最近替代"与"全库精确匹配"已按需求移除（def 18j） */
+    const hitList = j.results.filter(r => r.dE <= 1).map(r =>
       `<div class="item"><span class="sw" style="background:#${r.hex}"></span>` +
       `<div><b>#${r.hex}</b>　${r.name ? `<span style="color:#c4475d">${r.name}</span>` : ""}${r.tone ? `　<span class="meta">[${r.tone}]</span>` : ""}` +
-      `<div class="meta">dE=${r.dE} · ${r.desc || ""}</div></div>` +
-      `<span style="margin-left:auto;flex:none;font-size:12px;${r.dE <= 1 ? "color:#7de0a6" : "color:var(--tx2)"}">${r.dE <= 1 ? "官方有 ✓" : "最近替代"}</span></div>`).join("");
-    const fullList = fullResults.map(r =>
-      `<div class="item"><span class="sw" style="background:${r.hex}"></span>` +
-      `<div><b>${r.hex}</b>　<span class="meta">dE=${r.dE} · ${r.hue_group || ""} · 非官方色号（可定制）</div></div></div>`).join("");
+      `<div class="meta">dE=${r.dE} · ${r.desc || (r.imported ? "已导入商品色" : "官方色号")}</div></div>` +
+      `<span style="margin-left:auto;flex:none;font-size:12px;color:#7de0a6">商品有 ✓</span></div>`).join("");
 
-    $("s1res").innerHTML = gbLine + head + offList +
-      `<div class="meta" style="margin:12px 0 4px">── 全库精确匹配（262,144 色全色域，任意色可查）──</div>` + exact + fullList;
+    $("s1res").innerHTML = gbLine + tip + hitList;
+    if(window.__uniSetMark) window.__uniSetMark(j.query.hex);   // def 18m · 色盘跳到查询色所在层并高亮（成功后才标记）
   }catch(e){ $("s1res").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
 }
-async function t3(){
-  const hg = $("s3hg").value;
-  const{j,ms} = await getJSON(`/api/tools/palette_search?hex=${encodeURIComponent($("s3hex").value)}&hue_group=${encodeURIComponent(hg)}&top_k=${$("s3k").value}`);
-  j._ms = ms; render("s3res","s3json","s3ms", j, r=>swatch(r));
-}
-async function t2(){
-  const{j,ms} = await getJSON(`/api/tools/kb_search?query=${encodeURIComponent($("s2q").value)}&top_k=${$("s2k").value}`);
-  j._ms = ms; render("s2res","s2json","s2ms", j, r=>
-    `<div class="item"><div><b>${r.title}</b>　<span class="ms">sim=${r.sim}</span><div class="meta">${r.content}</div><div class="meta">tags: ${r.tags}</div></div></div>`);
-}
 
-/* ==== def 17d · 官方库全色域覆盖检查（16³=4096） ==== */
-let covData = null, covLayer = 8, covView = "grid";
-async function runCoverage(){
-  $("covms").textContent = "计算中（4096 点 × 官方库全量比对，1~3 秒）…";
-  try{
-    const r = await (await fetch("/api/tools/coverage16")).json();
-    $("covms").textContent = "";
-    if(!r.ok){ $("covstat").innerHTML = `<span class="err">[错误] ${r.error}</span>`; return; }
-    covData = r.results;
-    $("covstat").innerHTML =
-      `<div class="item"><div><b>覆盖率 ${covData.coverage_pct}%</b>　` +
-      `<span class="ms">官方有 ${covData.hits}</span> / <span class="err">官方缺 ${covData.miss}</span> / 共 ${covData.total} 点` +
-      `<div class="meta">官方色号库共 ${covData.official_shades} 条——下方红框缺口就是色号图片库扩充 shades.json 的目标清单（把图片库放进 data/color_cards 即可跑扩充）</div></div></div>`;
-    renderLayer();
-  }catch(e){ $("covstat").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`; }
-}
-function renderLayer(){
-  if(!covData) return;
-  const levels = [...Array(16)].map((_, i) => Math.round(i * 255 / 15));
-  const b = levels[covLayer];
-  const byIdx = {};
-  covData.items.forEach((it, j) => { byIdx[j] = it; });
-  const cellIdxOf = (ri, gi) => ri * 256 + gi * 16 + covLayer;   // items 顺序 = r→g→b 嵌套
-
-  /* 视图切换一行 + B 通道层换行独立一行 */
-  let head = `<div class="row" style="margin-bottom:6px">` +
-    `<button onclick="covView='grid';renderLayer()" style="${covView === "grid" ? "background:var(--ac)" : "opacity:.65"}">网格视图</button>` +
-    `<button onclick="covView='list';renderLayer()" style="${covView === "list" ? "background:var(--ac)" : "opacity:.65"}">命名清单（本层 256 色）</button>` +
-    `</div><div class="row" style="margin-bottom:6px"><span class="meta">B 通道层：</span>`;
-  for(let i = 0; i < 16; i++)
-    head += `<button onclick="covLayer=${i};renderLayer()" style="padding:2px 7px;font-size:11px;${i === covLayer ? "background:var(--ac)" : "opacity:.65"}">B${i}</button>`;
-  head += `</div>`;
-
-  if(covView === "grid"){
-    let html = head + `<div style="display:grid;grid-template-columns:repeat(16,1fr);gap:2px">`;
-    for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
-      const cellIdx = cellIdxOf(ri, gi);
-      const it = byIdx[cellIdx];
-      html += `<div data-cell="${cellIdx}" title="#${it.hex} → GB:${it.gb_cn}(${it.gb_label}) → 官方最近: ${it.official_name}(${it.official_hex}) dE=${it.dE} ${it.has_official ? "官方有" : "官方缺"}"` +
-        ` style="aspect-ratio:1;background:#${it.hex};border:2px ${it.has_official ? "solid rgba(125,224,166,.9)" : "solid rgba(255,138,128,.55)"}"></div>`;
-    }
-    html += `</div><div class="meta" style="margin-top:6px">绿框 = 官方有 · 红框 = 官方缺 · <b style="color:var(--tx)">点击色块</b>在上方查看名称与色号详情 · 横轴 R / 纵轴 G（B 固定当前层）</div>`;
-    $("covgrid").innerHTML = html;
-    [...$("covgrid").querySelectorAll("div[data-cell]")].forEach(d => {
-      d.onclick = () => selectCovCell(covData.items[Number(d.dataset.cell)], d);
+/* def 18n · 全域色盘：256×256 canvas（横轴 R/纵轴 G）+ B 通道滑轨
+   —— 256 层 × 65,536 色 = 16,777,216 全部可显示；绿框标记已导入商品色；
+      hover 显示商品归属；点击取色联动查询框；查询后自动跳层+高亮 */
+(function(){
+  const cv = $("uniwall"), sl = $("unib"), bv = $("unibv"), info = $("unipick");
+  const jumpPanel = $("ujpanel"), wrap = $("uniwrap"), home = $("unihome"), fsEl = $("unifs"), zlbl = $("uzlbl");
+  if(!cv || !sl || !wrap) return;
+  const ctx = cv.getContext("2d");                   // def 18q 修复：此前编辑丢失的两行（img 未定义 → 色盘全黑）
+  const img = ctx.createImageData(256, 256);
+  let FS = false, Z = 1, TX = 0, TY = 0;             // def 18q · 全屏标志/缩放/平移（canvas CSS px）
+  let CMP = null;                                   // {byHex: Map<hex, 归属文本>, byB: Map<层, [hex]>}
+  function layerTip(b){
+    const n = CMP ? (CMP.byB.get(b) || []).length : 0;
+    let near = 0;
+    if(CMP) [b - 1, b + 1, b - 2, b + 2].forEach(bb => {
+      if(bb >= 0 && bb <= 255) near += (CMP.byB.get(bb) || []).length;
     });
-    return;
+    return "本层商品色 " + n + "（绿框）· 附近 ±2 层 " + near + "（黄框：实线=±1，虚线=±2）· 点击任意色自动查询";
   }
+  function draw(){
+    const b = Number(sl.value);
+    bv.textContent = "B=" + b;
+    const d = img.data;
+    for(let g = 0; g < 256; g++){
+      const row = g * 256 * 4;
+      for(let r = 0; r < 256; r++){
+        const i = row + r * 4;
+        d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    if(CMP){
+      (CMP.byB.get(b) || []).forEach(hx => {        // 本层 = 绿框
+        const x = parseInt(hx.slice(0,2),16), y = parseInt(hx.slice(2,4),16);
+        ctx.strokeStyle = "#7de0a6"; ctx.lineWidth = 1;
+        ctx.strokeRect(x - 2.5, y - 2.5, 5, 5);
+      });
+      [[b - 1, false], [b + 1, false], [b - 2, true], [b + 2, true]].forEach(([bb, far]) => {
+        if(bb < 0 || bb > 255) return;              // 附近 ±2 层 = 黄框（虚线=±2）
+        ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 1;
+        ctx.setLineDash(far ? [3, 3] : []);
+        (CMP.byB.get(bb) || []).forEach(hx => {
+          const x = parseInt(hx.slice(0,2),16), y = parseInt(hx.slice(2,4),16);
+          ctx.strokeRect(x - 2.5, y - 2.5, 5, 5);
+        });
+      });
+      ctx.setLineDash([]);
+    }
+    info.textContent = layerTip(b);
+    if(window.__unimark) mark();
+  }
+  function mark(){
+    const h = window.__unimark;
+    if(!/^[0-9a-fA-F]{6}$/.test(h)) return;
+    const x = parseInt(h.slice(0,2),16), y = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    if(b !== Number(sl.value)) return;              // 不在当前层不画框（层由查询自动切）
+    ctx.strokeStyle = (x + y) > 255 ? "#000" : "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - 4, y - 4, 8, 8);
+  }
+  function snap(b, r, g){                            // def 18r · 靠近商品色（绿框）自动吸附
+    if(!CMP) return null;
+    let best = null, bd = 1e9;
+    (CMP.byB.get(b) || []).forEach(hx => {
+      const x = parseInt(hx.slice(0,2),16), y = parseInt(hx.slice(2,4),16);
+      const d2 = (x - r) * (x - r) + (y - g) * (y - g);
+      if(d2 < bd){ bd = d2; best = hx; }
+    });
+    const R = 12;                                    // 吸附半径（色阶）
+    return (best && bd <= R * R) ? best : null;
+  }
+  sl.addEventListener("input", draw);
+  cv.addEventListener("mousemove", e => {
+    if(!CMP) return;
+    const rect = cv.getBoundingClientRect();
+    const r = Math.min(255, Math.max(0, Math.round((e.clientX - rect.left) / rect.width * 255)));
+    const g = Math.min(255, Math.max(0, Math.round((e.clientY - rect.top) / rect.height * 255)));
+    const s = snap(Number(sl.value), r, g);
+    if(s){
+      info.textContent = "吸附 → #" + s + " · 已导入商品：" + (CMP.byHex.get(s) || "").split("\n").join(" / ");
+      return;
+    }
+    const hx = [r, g, Number(sl.value)].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+    const owned = CMP.byHex.get(hx);
+    info.textContent = "#" + hx + (owned ? " · 已导入商品：" + owned.split("\n").join(" / ") : "（非商品色）");
+  });
+  cv.addEventListener("mouseleave", () => { info.textContent = layerTip(Number(sl.value)); });
+  let dragging = false, moved = 0, sx = 0, sy = 0, t0x = 0, t0y = 0;
+  cv.addEventListener("mousedown", e => {            // 全屏 z>1：拖拽平移
+    moved = 0;
+    if(!FS || Z <= 1) return;
+    dragging = true; sx = e.clientX; sy = e.clientY; t0x = TX; t0y = TY;
+    e.preventDefault();
+  });
+  window.addEventListener("mousemove", e => {
+    if(!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+    const W = cv.clientWidth || 1, H = cv.clientHeight || W;
+    TX = Math.min(W - W / Z, Math.max(0, t0x - dx / Z));
+    TY = Math.min(H - H / Z, Math.max(0, t0y - dy / Z));
+    applyT();
+  });
+  window.addEventListener("mouseup", () => { dragging = false; });
+  wrap.addEventListener("wheel", e => {              // 全屏：滚轮缩放（以鼠标为中心）
+    if(!FS) return;
+    e.preventDefault();
+    const wrect = wrap.getBoundingClientRect();
+    const mx = e.clientX - wrect.left, my = e.clientY - wrect.top;
+    const z1 = Math.min(32, Math.max(1, Z * Math.pow(1.0015, -e.deltaY)));
+    if(z1 === Z) return;
+    const px = TX + mx / Z, py = TY + my / Z;
+    Z = z1;
+    TX = px - mx / Z; TY = py - my / Z;
+    clampT(); applyT();
+  }, { passive: false });
+  function applyT(){
+    cv.style.transform = (FS && Z > 1) ? `scale(${Z}) translate(${-TX}px, ${-TY}px)` : "";
+    if(zlbl) zlbl.textContent = Math.round(Z * 100) + "%";
+  }
+  function clampT(){
+    const W = cv.clientWidth || 1, H = cv.clientHeight || W;
+    TX = Math.min(W - W / Z, Math.max(0, TX));
+    TY = Math.min(H - H / Z, Math.max(0, TY));
+  }
+  cv.addEventListener("click", e => {
+    if(moved > 4) return;                            // 拖拽平移不取色
+    const rect = cv.getBoundingClientRect();
+    const r = Math.min(255, Math.max(0, Math.round((e.clientX - rect.left) / rect.width * 255)));
+    const g = Math.min(255, Math.max(0, Math.round((e.clientY - rect.top) / rect.height * 255)));
+    const s = snap(Number(sl.value), r, g);          // def 18r · 靠近商品色自动吸附
+    const hx = (s || [r, g, Number(sl.value)].map(v => v.toString(16).padStart(2, "0")).join("")).toUpperCase();
+    $("s1hex").value = "#" + hx;
+    if(s) info.textContent = "已吸附到商品色 #" + hx + "：" + (CMP.byHex.get(hx) || "").split("\n").join(" / ");
+    t1();
+  });
+  jumpPanel.addEventListener("click", e => e.stopPropagation());
+  window.uniStep = d => {                            // def 18p · < > 微调滑轨
+    sl.value = Math.min(255, Math.max(0, Number(sl.value) + d));
+    draw();
+  };
+  window.uniZoom = d => {                            // def 18q · 缩放按钮（中心缩放/重置）
+    const W = cv.clientWidth || 1, H = cv.clientHeight || W;
+    if(d === 0){ Z = 1; TX = 0; TY = 0; }
+    else{
+      const mx = W / 2, my = H / 2;
+      const px = TX + mx / Z, py = TY + my / Z;
+      Z = Math.min(32, Math.max(1, d > 0 ? Z * 1.5 : Z / 1.5));
+      TX = px - mx / Z; TY = py - my / Z;
+    }
+    clampT(); applyT();
+  };
+  window.uniFs = on => {                             // def 18q · 全屏开关（色盘节点整体搬家，状态零丢失）
+    FS = on;
+    if(on){
+      $("fsslot").appendChild(wrap);                 // 搬进全屏槽位
+    }else{
+      home.insertBefore(wrap, home.children[1] || null);   // 精确回位：标题行之后、滑轨行之前
+    }
+    fsEl.hidden = !on;
+    cv.style.maxWidth = on ? "none" : "512px";
+    Z = 1; TX = 0; TY = 0;
+    applyT(); draw();
+  };
+  document.addEventListener("keydown", e => { if(e.key === "Escape" && FS) window.uniFs(false); });
+  window.ujToggle = e => { e.stopPropagation(); jumpPanel.hidden = !jumpPanel.hidden; };
+  document.addEventListener("click", e => {
+    if(!jumpPanel.hidden && !jumpPanel.contains(e.target)) jumpPanel.hidden = true;
+  });
+  window.__uniSetMark = h => {
+    window.__unimark = h;
+    if(/^[0-9a-fA-F]{6}$/.test(h)){ sl.value = parseInt(h.slice(4,6),16); }   // 自动跳到查询色所在层
+    draw();
+  };
+  (async () => {                                    // 已导入商品色索引（compare 端点）
+    try{
+      const j = await (await fetch("/api/products/compare")).json();
+      if(!j.ok) return;
+      const byHex = new Map(), byB = new Map();
+      j.results.swatches.forEach(s => {
+        byHex.set(s.hex, s.products_txt);
+        const b = parseInt(s.hex.slice(4,6), 16);
+        if(!byB.has(b)) byB.set(b, []);
+        byB.get(b).push(s.hex);
+      });
+      CMP = {byHex, byB};
+      jumpPanel.innerHTML = "";
+      Array.from(byB.keys()).sort((a, c) => a - c).forEach(b => {
+        const d = document.createElement("div");
+        d.className = "ujitem";
+        d.innerHTML = "<b>B=" + b + "</b><span>" + byB.get(b).length + " 色</span>";
+        d.onclick = () => { sl.value = b; jumpPanel.hidden = true; draw(); };
+        jumpPanel.appendChild(d);
+      });
+      draw();
+    }catch(e){}
+  })();
+  draw();
+})();
 
-  /* 命名清单视图：本层 256 色，滚动容器最多同时显示约 50 行，超出滚轮下滚（表头吸顶） */
-  let rows = `<div class="meta">命名清单 · B 层 = ${b}（本层 256 行 · 视口约 50 行，超出用滚轮下滚浏览）</div>` +
-    `<div style="max-height:1780px;overflow-y:auto;border:1px solid var(--bd)">` +
-    `<table style="width:100%;border-collapse:collapse;font-size:12.5px">` +
-    `<thead style="position:sticky;top:0;z-index:1;background:#1e1424"><tr style="color:var(--ac2);text-align:left"><th style="padding:6px 4px">色</th><th style="padding:6px 4px">hex</th><th style="padding:6px 4px">GB 名称</th><th style="padding:6px 4px">GB 标号</th><th style="padding:6px 4px">最近官方色号</th><th style="padding:6px 4px">ΔE</th><th style="padding:6px 4px">是否拥有</th></tr></thead>` +
-    `<tbody>`;
-  for(let ri = 0; ri < 16; ri++) for(let gi = 0; gi < 16; gi++){
-    const it = byIdx[cellIdxOf(ri, gi)];
-    rows += `<tr style="border-top:1px solid var(--bd)">` +
-      `<td style="padding:3px"><span style="display:inline-block;width:28px;height:28px;background:#${it.hex};border:1px solid var(--bd)"></span></td>` +
-      `<td>#${it.hex}</td><td><b>${it.gb_cn}</b>（${it.gb_label}）</td>` +
-      `<td>${it.official_name}（${it.official_hex}）</td><td>${it.dE}</td>` +
-      `<td style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "拥有 ✓" : "缺失 ✗"}</td></tr>`;
-  }
-  rows += `</tbody></table></div>`;
-  $("covgrid").innerHTML = head + rows;
+/* ==== def 25 · 对比库（全商品色板）浮窗——自产品库页搬入，与商品色吸附同场景 ==== */
+let cmpLoaded = false;
+async function cmpOpen(){
+  document.getElementById("cmpfs").hidden = false;
+  if (cmpLoaded) return;
+  const grid = document.getElementById("cmpgrid");
+  grid.innerHTML = '<span class="meta">加载中……</span>';
+  try{
+    const j = await (await fetch("/api/products/compare")).json();
+    if(!j.ok){ grid.innerHTML = `<span style="color:#ff8a80">[错误] ${j.error}</span>`; return; }
+    document.getElementById("cmpn").textContent = `· ${j.results.swatches.length} 色`;
+    grid.innerHTML = j.results.swatches.map(s =>
+      `<button class="cmpsw${s.official ? " cmp-off" : ""}" style="background:#${s.hex}" data-name="${(s.products_txt || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"></button>`).join("");
+    cmpLoaded = true;
+  }catch(e){ grid.innerHTML = `<span style="color:#ff8a80">[错误] 请求失败: ${e}</span>`; }
 }
-function selectCovCell(it, el){
-  [...$("covgrid").querySelectorAll("div[data-sel='1']")].forEach(d => { d.dataset.sel = "0"; d.style.outline = "none"; });
-  if(el){ el.dataset.sel = "1"; el.style.outline = "2px solid var(--tx)"; }
-  const name = it.has_official ? it.official_name : "";   // 官方库无此色 → 名称输出空（用户 2026-09-13 规则）
-  $("covdetail").innerHTML =
-    `<div class="item" style="border-color:${it.has_official ? "rgba(125,224,166,.6)" : "rgba(255,138,128,.6)"}">` +
-    `<span class="sw" style="background:#${it.hex};width:56px;height:56px"></span>` +
-    `<div><b>该颜色：#${it.hex}</b>　<span class="meta">（16³ 采样点）</span>` +
-    `<div style="margin-top:4px"><b style="color:${it.has_official ? "#7de0a6" : "#ff8a80"}">${it.has_official ? "官方色号库有此颜色 ✓" : "官方色号库无此颜色 ✗"}</b></div>` +
-    `<div class="meta" style="margin-top:4px">名称（GB/T 15608 近似）：${it.gb_cn} · 标号 ${it.gb_label}</div>` +
-    `<div class="meta">名称（官方库定义）：${name}</div>` +
-    `<div class="meta">最近官方色号：#${it.official_hex} · ΔE=${it.dE}（判定阈值 1.0）</div>` +
-    `<div class="meta">${it.has_official ? "可直接用于试妆与定制。" : "此色不在官方库——可走定制申请，或以上述最近官方色号替代。"}</div>` +
-    `</div></div>`;
-}
+function cmpClose(){ document.getElementById("cmpfs").hidden = true; }
+document.getElementById("cmpfs").addEventListener("click", e => { if(e.target.id === "cmpfs") cmpClose(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !document.getElementById("cmpfs").hidden) cmpClose(); });
+if(location.hash === "#cmp") cmpOpen();

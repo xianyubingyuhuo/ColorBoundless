@@ -3,20 +3,40 @@
 /* def 15v10 · 布局：右列 absolute 脱离文档流（浮层开关不再压缩照片区），左列独立决定行高 */
 /* def 15v14 · 右列 absolute + 高度锁定 100%（底边=左列"开始聚合试妆"下缘）；
    内部 pcards-home 滚动容器：工具塞不下时滚动，展开面板随滚延伸不撑破布局 */
+/* def 15v14b · 总览浮层同样纵向锁满：top+bottom → 底边=右列底边同一条线，slot 内滚动 */
+/* def 15v14c · "选择部位与颜色"上移至卡片标题行（.ty-head）；网格视图按钮删除，浮层开关仅剩列底 ⌄ */
+/* def 15v14d · 悬停放大不再被裁：scale 1.03→1.02（框缩小一点）+ 两个滚动容器补 padding-left:3px，
+   给中心放大的左右溢出（约 1.1~1.3px）留出容身处，左侧不再被 overflow-x:hidden 切出硬边 */
+/* def 15v14e · 浮层展开改"从工具列生长弹出"：右缘锚定 + width 136px→372px 生长动画（0.55s 缓出），
+   grid 改 auto-fit → 列数随宽度 1→2→3 实时重排（工具跟着框变化移动位置），卡片再逐张错落滑入 */
+/* def 15v14f · 双向动画（FLIP）：开=面板生长后卡片从列中原位飞入格位（JS 测位移补 transform）；
+   关=面板带卡缩回（auto-fit 3→2→1 重排）后卡片移回列中依次淡入归位；JS 防重入锁防连点 */
+/* def 15v14g · 面板改左缘弹出（left:0，不再盖工具列）+ 单段并发动画：面板生长与卡片错落入场同时进行，
+   删 FLIP 两段接力（跟不上）；关闭=面板带卡缩回左缘后卡片回列依次淡入归位 */
+/* def 15v14h · 回滚锚定：right:0 恢复"从工具列向左弹出"（136px→372px 向左生长）；展开按钮 #pcmore
+   移到左列"开始聚合试妆"下方并改长条形（面板打开时不被盖住，可随时点它收起） */
+/* def 15v14i · 展开按钮改竖向长条把手：贴在照片区右缘与工具列之间的缝里（列左侧、垂直居中），
+   z-index 70 浮于面板左缘之上 → 打开时像抽屉把手、可随时点它收起 */
+/* def 15v14j · 把手跟随面板移动 + 箭头改左右：收起态停在列左缝（left:-13px，箭头 ‹=向左展开）；
+   展开态滑到面板左缘骑缘而立（left:-247px，箭头 ›=向右收回），transition 与面板生长/缩回
+   同曲线同步 → 把手"推着"面板左缘一起走；状态类 .open 由 JS 与面板 class 同步挂摘 */
 .ty-layout{position:relative;padding-right:150px;display:flex;gap:14px;align-items:stretch;margin-top:10px}
 .ty-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .ty-right{position:absolute;top:0;right:0;width:136px;height:100%;display:flex;flex-direction:column;gap:6px}
-#pcards-home{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px}
+#pcards-home{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-left:3px;padding-right:4px}
 #pcards-home::-webkit-scrollbar{width:6px}
-#pcards-home::-webkit-scrollbar-thumb{background:rgba(229,71,109,.35);border-radius:3px}
+#pcards-home::-webkit-scrollbar-thumb{background:rgb(from var(--ac) r g b / .35);border-radius:3px}
 #pcards-home::-webkit-scrollbar-track{background:transparent}
-#ty-tools-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-#ty-tools-head b{color:var(--tx)}
+/* def 15v14c · 卡片标题行：左=卡片标题，右="选择部位与颜色"（.ty-layout 与标题行同宽、
+   右列 absolute right:0 贴 layout 右缘 → 右侧文字自动与右列右缘对齐，不再受 136px 列宽挤压换行。
+   注意标题原走 style.css 的 .card>b（display:block;margin-bottom:2px），包进容器后失效，此处补偿） */
+.ty-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:2px}
+.ty-head .ty-where{color:var(--tx);font-size:12.5px;flex:none}
 #upzone{display:flex;flex-direction:column;align-items:center;justify-content:center;
  position:relative;width:100%;flex:1;min-height:560px;border:2px dashed var(--bd);border-radius:14px;cursor:pointer;
  background:rgba(255,255,255,.03);transition:transform .25s,box-shadow .25s,border-color .25s}
-#upzone:hover{transform:translateY(-5px);border-color:rgba(229,71,109,.65);
- box-shadow:0 12px 32px rgba(229,71,109,.28),0 0 20px rgba(255,154,181,.18)}
+#upzone:hover{transform:translateY(-5px);border-color:rgb(from var(--ac) r g b / .65);
+ box-shadow:0 12px 32px rgb(from var(--ac) r g b / .28),0 0 20px rgba(255,154,181,.18)}
 #upzone .plus{font-size:48px;line-height:1;color:var(--ac2);transition:transform .25s}
 #upzone:hover .plus{transform:scale(1.18)}
 #upzone .uptxt{margin-top:8px;color:var(--tx2);font-size:12.5px}
@@ -27,9 +47,9 @@
  font-size:11px;opacity:.85}
 @keyframes tyFadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
- background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
- box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
-#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
+ background:linear-gradient(135deg,var(--ac2),var(--ac) 55%,var(--vio));color:#fff;font-size:14px;font-weight:600;
+ box-shadow:0 8px 24px rgb(from var(--ac) r g b / .35);transition:transform .2s,box-shadow .2s}
+#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgb(from var(--ac) r g b / .45)}
 #tybig:disabled{opacity:.6;transform:none;cursor:wait}
 /* 工具列：一列竖排小卡（图标/名/当前色方块）；.grid → 2 列 */
 /* def 15v9 · 工具列单列方卡（右列收窄 136px，把宽度让给左侧 AI 试妆照片区）；总览浮层另行弹出 */
@@ -37,8 +57,8 @@
 .pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border:1px solid var(--bd);
  border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;position:relative;width:100%;flex:none;
  text-align:center;transition:transform .2s,border-color .2s,box-shadow .2s}
-.pcard:hover,.pcard.pick-open,.pcard.pick-slow{transform:scale(1.03);border-color:rgba(229,71,109,.65);
- box-shadow:0 6px 22px rgba(229,71,109,.22);z-index:5}
+.pcard:hover,.pcard.pick-open,.pcard.pick-slow{transform:scale(1.02);border-color:rgb(from var(--ac) r g b / .65);
+ box-shadow:0 6px 22px rgb(from var(--ac) r g b / .22);z-index:5}
 .p-icon{width:44px;height:44px;flex:none;margin:0}
 .p-icon svg{width:100%;height:100%;display:block}
 .p-name{font-size:12px;color:var(--tx);flex:none;text-align:center;line-height:1.35}
@@ -52,27 +72,59 @@
 .pr > label.meta{flex:1 1 100%;display:flex;align-items:center;gap:6px}   /* α 行独占一行，滑轨可拉满 */
 /* def 15v10b · 滑轨命中修正：style.css 27 行的全局 input 规则给 range 加了 padding:7px 10px+border，
    两端各 10px 成了死区（点轨道右端/拖到头都无效）——这里清零并加高碰撞箱到 22px */
-.p-a{flex:1;width:100%;min-width:70px;height:22px;padding:0;border:none;background:none;
- cursor:pointer;accent-color:#e5476d;margin:0}
+.p-a,.p-sz{flex:1;width:100%;min-width:70px;height:22px;padding:0;border:none;background:none;
+ cursor:pointer;accent-color:var(--ac);margin:0}
 .p-hex{padding:3px 6px}
-#pcmore{display:flex;align-items:center;justify-content:center;margin:2px auto 0;
- border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--ac2);padding:0;line-height:1;
- border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;transition:all .25s}
-#pcmore:hover{border-color:rgba(229,71,109,.6);box-shadow:0 0 14px rgba(229,71,109,.3)}
+/* def 15v14j · 竖向长条把手（收起态）：列左缝内垂直居中；transition 里的 left 走"关闭节奏"
+   （.38s ease-in，与面板 closing 同步），展开时由 .open 覆盖为"生长节奏" */
+#pcmore{position:absolute;left:-13px;top:50%;transform:translateY(-50%);width:12px;height:120px;
+ display:flex;align-items:center;justify-content:center;padding:0;line-height:1;
+ border:1px solid var(--bd);border-radius:6px;background:rgba(255,255,255,.06);color:var(--tx2);
+ font-size:12px;cursor:pointer;transition:left .38s ease-in,color .25s,border-color .25s,box-shadow .25s;z-index:70}
+#pcmore.open{left:-247px;transition:left .5s cubic-bezier(.22,.9,.34,1),color .25s,border-color .25s,box-shadow .25s}
+#pcmore:hover{color:var(--ac2);border-color:rgb(from var(--ac) r g b / .6);box-shadow:0 0 12px rgb(from var(--ac) r g b / .35)}
 /* def 15v8 · 工具总览浮层：覆盖在页面之上（absolute，不改变工具列布局）；同一份 #pcards 移入/移出，状态零同步 */
-#pcover{display:none;position:absolute;top:0;right:0;width:372px;z-index:60;
- background:rgba(24,17,40,.98);border:1px solid rgba(229,71,109,.35);border-radius:14px;padding:10px;
+/* def 15v14b · 浮层纵向锁满右列：top:0+bottom:0 → 底边与右列同一条基准线（"开始聚合试妆"按钮下缘）；
+   内容不满时面板仍撑满到底，塞不下时 slot 内部滚动（与 pcards-home 同款品牌色细滚条），
+   展开的选色面板随滚延伸，不撑破浮层 */
+#pcover{display:none;position:absolute;top:0;bottom:0;right:0;width:372px;z-index:60;
+ background:rgba(24,17,40,.98);border:1px solid rgb(from var(--ac) r g b / .35);border-radius:14px;padding:10px;
  box-shadow:0 18px 50px rgba(0,0,0,.5)}
-#pcover.open{display:block;animation:pcCoverIn .22s ease}
-@keyframes pcCoverIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+#pcover.open{display:flex;flex-direction:column;animation:pcCoverIn .5s cubic-bezier(.22,.9,.34,1)}
+#pcover-slot{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-left:3px;padding-right:4px}
+#pcover-slot::-webkit-scrollbar{width:6px}
+#pcover-slot::-webkit-scrollbar-thumb{background:rgb(from var(--ac) r g b / .35);border-radius:3px}
+#pcover-slot::-webkit-scrollbar-track{background:transparent}
+/* def 15v14h · 向左弹出：右缘不动(right:0)，宽度从列宽 136px 长到 372px → 从工具列向左生长展开；
+   前段快速显形、后段缓出收尾；卡片同步错落入场（单段并发，不脱节） */
+@keyframes pcCoverIn{from{width:136px;opacity:0}30%{opacity:1}to{width:372px;opacity:1}}
+/* def 15v14h · 卡片错落入场：跟随面板向左生长，从右侧微滑依次显形（.05s 步进，backwards 延迟期不可见） */
+#pcover.open .pcard{animation:pcCardIn .35s ease backwards}
+#pcover.open .pcard:nth-child(1){animation-delay:.12s}
+#pcover.open .pcard:nth-child(2){animation-delay:.17s}
+#pcover.open .pcard:nth-child(3){animation-delay:.22s}
+#pcover.open .pcard:nth-child(4){animation-delay:.27s}
+#pcover.open .pcard:nth-child(5){animation-delay:.32s}
+@keyframes pcCardIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 #pcover-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 #pcover-head b{color:var(--tx)}
 #pcover-x{border:none;background:none;color:var(--tx2);font-size:15px;cursor:pointer;padding:0 4px}
 #pcover-x:hover{color:var(--ac2)}
-#pcover #pcards{grid-template-columns:repeat(3,1fr)}
-#pcgridbtn{border:1px solid var(--bd);background:rgba(255,255,255,.05);color:var(--tx2);
- border-radius:8px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s}
-#pcgridbtn:hover{color:var(--ac2);border-color:rgba(229,71,109,.5)}
+/* def 15v14g · auto-fit 自适应列数：面板 0→372px 生长期间列数 1→2→3 逐帧重排，
+   每张工具卡跟着框的变化移动位置（静态全宽 3 列布局不变：345px 内容宽恰容 3×96+2×8） */
+#pcover #pcards{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))}
+/* def 15v14h · 关闭动画：面板带着卡片向右缩回列宽（width 372→136 + 渐出，auto-fit 同步 3→2→1 重排）；
+   forwards 停在末帧（136px≈列宽、透明），JS 400ms 后摘除并把卡片移回列中归位 */
+#pcover.closing{display:flex;flex-direction:column;animation:pcCoverOut .38s ease-in forwards}
+@keyframes pcCoverOut{to{width:136px;opacity:0}}
+/* def 15v14f · 归位：卡片移回列后从右 20px 依次淡入（.04s 步进；JS 挂 .reback，360ms 后摘除） */
+#pcards.reback .pcard{animation:pcBack .3s ease backwards}
+#pcards.reback .pcard:nth-child(2){animation-delay:.04s}
+#pcards.reback .pcard:nth-child(3){animation-delay:.08s}
+#pcards.reback .pcard:nth-child(4){animation-delay:.12s}
+#pcards.reback .pcard:nth-child(5){animation-delay:.16s}
+@keyframes pcBack{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+/* def 15v14c · 网格视图按钮已删：总览浮层开关 = 列底 ⌄（#pcmore）/ 浮层头 ✕ / 点击浮层外 */
 /* def 15v5 · 当前色小方块（图标/名之下，流内居中） */
 .p-dot{display:block;width:16px;height:16px;border-radius:4px;margin:3px auto 0;
  border:1px solid rgba(255,255,255,.55);box-shadow:0 1px 4px rgba(0,0,0,.45);flex:none}
@@ -87,6 +139,36 @@
  transition:grid-template-rows 1s ease,opacity 1s ease,margin-top 1s ease}
 #tyms{display:block;text-align:center;min-height:16px;font-size:11px}
 #tybig{width:100%;padding:12px;border:none;border-radius:24px;cursor:pointer;
- background:linear-gradient(135deg,#ff9ab5,#e5476d 55%,#7654ff);color:#fff;font-size:14px;font-weight:600;
- box-shadow:0 8px 24px rgba(229,71,109,.35);transition:transform .2s,box-shadow .2s}
-#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(229,71,109,.45)}
+ background:linear-gradient(135deg,var(--ac2),var(--ac) 55%,var(--vio));color:#fff;font-size:14px;font-weight:600;
+ box-shadow:0 8px 24px rgb(from var(--ac) r g b / .35);transition:transform .2s,box-shadow .2s}
+#tybig:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgb(from var(--ac) r g b / .45)}
+
+/* def 43 · AI 面部分析面板：档案行 = 色块 + 名称 + hex（unknown 灰显降级） */
+#faceprof{margin-top:12px}
+#faceprof[hidden]{display:none}
+#fp-rows{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.fp-row{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.45}
+.fp-row .sw{width:22px;height:22px;border-radius:6px;flex:none;border:1px solid rgba(255,255,255,.4);
+ box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.fp-row.fp-na{opacity:.5}
+.fp-row b{font-weight:600}
+#fp-ai{padding:8px 14px;border:1px solid rgb(from var(--ac) r g b / .55);border-radius:18px;cursor:pointer;
+ background:rgb(from var(--ac) r g b / .12);color:var(--tx);font-size:12px;font-weight:600;
+ transition:background .2s,box-shadow .2s}
+#fp-ai:hover{background:rgb(from var(--ac) r g b / .25);box-shadow:0 4px 14px rgb(from var(--ac) r g b / .3)}
+#fp-ai:disabled{opacity:.45;cursor:wait}
+#fp-ms{font-size:11px}
+
+/* def 18c+ · 试妆后定制面板：无现货颜色清单 + 近似推荐 + 一键提交；淡入动画 */
+.cpanel{margin-top:12px;border:1px solid rgb(from var(--ac) r g b / .4);border-radius:12px;
+ background:rgb(from var(--ac) r g b / .05);padding:12px 14px;opacity:0;transform:translateY(8px);
+ transition:opacity .5s ease,transform .5s ease}
+.cpanel.show{opacity:1;transform:none}
+.cpanel[hidden]{display:none}
+.cpanel-t{display:block;color:var(--ac2);letter-spacing:1px;font-size:13px}
+.citem{display:flex;gap:10px;align-items:center;margin-top:8px}
+.citem .sw{width:34px;height:34px;border-radius:8px;flex:none;border:1px solid rgba(255,255,255,.4);
+ box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.citem .tx{min-width:0;font-size:12px;line-height:1.5}
+.citem .tx b{display:block}
+.cpanel-foot{margin-top:10px;display:flex;gap:10px;align-items:center}

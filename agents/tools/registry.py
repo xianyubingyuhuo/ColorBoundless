@@ -11,10 +11,11 @@
 import json
 
 from agents.tools.search_shade import search_shade_tool
-from agents.tools.palette_search import palette_search_tool, HUE_GROUPS
 from agents.tools.foundation_search import foundation_search_tool
 from agents.tools.navigate import navigate_tool, PAGES
 from agents.tools.vision_profile import get_vision_profile_tool
+from agents.tools.recommend_shade import recommend_shade_tool   # def 18 · 色号回填通路
+from agents.tools.shade_review import shade_review_tool         # def 27 · 选色社会视角守门
 from agents.prompt import TOOL_DESCRIPTIONS      # def 22k · 工具描述话术收拢至 prompt.py
 
 _REGISTRY = {
@@ -31,27 +32,6 @@ _REGISTRY = {
                         "raw_hex": {"type": "string",
                                     "description": "用户提到的色值，支持 #FF4D6D / f46 / FF4D6D 等写法"},
                         "top_k": {"type": "integer", "description": "返回候选数量，默认 3"},
-                    },
-                    "required": ["raw_hex"],
-                },
-            },
-        },
-    },
-    "palette_search_tool": {
-        "fn": palette_search_tool,
-        "schema": {
-            "type": "function",
-            "function": {
-                "name": "palette_search_tool",
-                "description": TOOL_DESCRIPTIONS["palette_search_tool"],
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "raw_hex": {"type": "string", "description": "目标色值，如 #FF4D6D"},
-                        "hue_group": {"type": "string",
-                                      "enum": list(HUE_GROUPS),
-                                      "description": "限定色相族，不限定则省略"},
-                        "top_k": {"type": "integer", "description": "返回数量，默认 5"},
                     },
                     "required": ["raw_hex"],
                 },
@@ -112,6 +92,62 @@ _REGISTRY = {
                 "name": "get_vision_profile_tool",
                 "description": TOOL_DESCRIPTIONS["get_vision_profile_tool"],
                 "parameters": {"type": "object", "properties": {}},
+            },
+        },
+    },
+    "recommend_shade_tool": {
+        "fn": recommend_shade_tool,
+        "schema": {
+            "type": "function",
+            "function": {
+                "name": "recommend_shade_tool",
+                "description": TOOL_DESCRIPTIONS["recommend_shade_tool"],
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "parts": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 5,
+                            "description": "推荐清单，每项 {region, hex}；一个部位一项，最多 5 项",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "region": {"type": "string",
+                                               "enum": ["lip", "foundation", "eyeshadow", "brow", "blush"],
+                                               "description": "试妆部位"},
+                                    "hex": {"type": "string",
+                                            "description": "推荐色值，6 位 hex（如 FF4D6D）"},
+                                },
+                                "required": ["region", "hex"],
+                            },
+                        },
+                        "reason": {"type": "string",
+                                   "description": "一句话推荐思路，如'日常通勤妆：豆沙色为主'"}
+                    },
+                    "required": ["parts"],
+                },
+            },
+        },
+    },
+    "shade_review_tool": {   # def 27 · 选色社会视角守门
+        "fn": shade_review_tool,
+        "schema": {
+            "type": "function",
+            "function": {
+                "name": "shade_review_tool",
+                "description": TOOL_DESCRIPTIONS["shade_review_tool"],
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "raw_hex": {"type": "string",
+                                    "description": "用户提到的色值，支持 #FF4D6D / f46 等写法"},
+                        "region": {"type": "string",
+                                   "enum": ["lip", "foundation", "eyeshadow", "brow", "blush"],
+                                   "description": "试妆部位/品类"},
+                    },
+                    "required": ["raw_hex", "region"],
+                },
             },
         },
     },

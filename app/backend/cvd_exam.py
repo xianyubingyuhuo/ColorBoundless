@@ -16,9 +16,11 @@
     - 单用户 MVP：档案存全局最新一份（_PROFILE），多用户留待产品化
 """
 import base64
+import json
 import math
 import time
 import uuid
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -32,6 +34,40 @@ EXAM_TTL = 60 * 30  # 会话 30 分钟超时
 
 _EXAMS = {}    # exam_id -> 会话状态
 _PROFILE = {}  # 全局最新档案（单用户 MVP）
+
+# def 26 · 档案持久化：_PROFILE 原为纯内存态，后端重启即丢——前端还渲染着旧档案、
+# AI 工具与校色端点却报「尚无测评档案」，用户被迫重测 22 题（def 24/25 两次踩坑）。
+# 落盘后：测评一次终身有效，重启自动恢复，AI 读取 / 校色 / 试妆校正通道不再断链。
+_PROFILE_PATH = Path(__file__).resolve().parent / "_cvd_profile.json"
+
+
+def _save_profile() -> None:
+    """档案落盘（失败不阻断主流程：内存态仍可用于本次进程）。"""
+    try:
+        _PROFILE_PATH.write_text(
+            json.dumps(_PROFILE, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _load_profile() -> None:
+    """启动时恢复上次测评档案（文件缺失/损坏则静默跳过 = 全新状态）。"""
+    try:
+        if _PROFILE_PATH.exists():
+            data = json.loads(_PROFILE_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("cvd_type"):
+                cal = data.get("calibration")
+                if isinstance(cal, dict):
+                    # def 34 · 启停位归一：旧档案无 enabled → 按 mode!=off 推导
+                    # （拆分前 mode 兼任启停：correct/simulate 即视为开启）
+                    cal.setdefault("enabled", cal.get("mode", "off") != "off")
+                _PROFILE.clear()
+                _PROFILE.update(data)
+    except Exception:
+        pass
+
+
+_load_profile()
 
 
 def _img_b64(img) -> str:
@@ -68,11 +104,13 @@ def _start() -> dict:
 
 
 def _ih_sheets():
-    """石原 10 题：deutan/protan 交替 ×5，数字 0-9 每次随机配对（make_plate 内点阵随机，
+    """石原 10 题：deutan×4 + protan×4 + tritan×2（三轴全覆盖——红绿两型之外补蓝黄轴盲区，
+    用户 2026-09-19 反馈"缺蓝绿测试数据"），数字 0-9 每次随机配对（make_plate 内点阵随机，
     同 digit 不同 seed 图面也不同）——消除"总是那几道相同题目"的重复感"""
     rng = np.random.default_rng()
     digits = [int(d) for d in rng.permutation(10)]
-    kinds = ["deutan", "protan"] * 5
+    kinds = ["deutan", "protan", "deutan", "protan", "tritan",
+             "deutan", "protan", "deutan", "protan", "tritan"]
     return list(zip(kinds, digits))
 
 
@@ -110,8 +148,8 @@ def _judge_wave(click_ratio, h_true):
 def _next_question(state: dict) -> dict:
     """推进到下一题并生成题面。返回 results（含 question / done / profile）
 
-    题库结构（2026-09-11 扩充：每类 ≥10、排列 2 道、新增波段定位）：
-        Q1-Q10   石原分型图（deutan/protan 交替 ×5，数字 0-9 洗牌，点阵随机）
+    题库结构（2026-09-11 扩充：每类 ≥10、排列 2 道、新增波段定位；2026-09-19 石原补三轴）：
+        Q1-Q10   石原分型图（deutan×4 + protan×4 + tritan×2，数字 0-9 洗牌，点阵随机）
         Q11-Q19  网格找异色（DIM_L/C/H × 各 3 轮快筛阶梯；每轮 base 色随机 → 无重复感）
         Q20-Q21  色相渐变排列（全环 1 道 + 蓝黄半环 1 道，拖拽排序）
         Q22      色彩波段定位（目标色 → 在波段条上指出位置，轴向佐证）
@@ -259,6 +297,7 @@ def _finish(state: dict) -> dict:
     state["profile"] = profile
     _PROFILE.clear()
     _PROFILE.update(profile)                          # 全局最新档案（单用户 MVP）
+    _save_profile()                                   # def 26 · 落盘（重启不丢）
     return {"stage": "done", "done": True, "profile": profile}
 
 
@@ -292,28 +331,52 @@ def get_profile() -> dict:
             "results": _PROFILE}
 
 
-def calibrate(mode: str) -> dict:
-    """校色确认（def 17b · 旅程第二步）：测评完成后，用户在 cvd 页选择校色模式。
+def calibrate(mode: str = None, enabled=None) -> dict:
+    """校色确认（def 34 · 配置导入与启停拆分，用户 2026-09-21 定稿）。
 
+    两个前端入口职责分离：
+      档案页模式按钮（校色/模拟/关闭）= 只导入配置：传 mode，写 mode 不改 enabled，
+          不直接驱动页面配色（导入 ≠ 开启）；
+      顶部「校色配色」开关 = 唯一启停控制：传 enabled，写 enabled 不改 mode，
+          on 时全站按当前配置上色，off 恢复原色。
     mode：
         "correct"  校色模式——试妆时用户所选色号反解为标准视觉等意色（R-06 全站联动同源）
         "simulate" 模拟模式——全站配色按该用户视角模拟展示（共情演示），试妆色号不反解
-        "off"      关闭——不做任何色彩调整
-    流程纪律（用户 2026-09-11 定稿）：测评 → 校色 → 试妆；试妆端点只消费
-    本函数写入的 calibration 状态，未校色直接试妆会被如实提示。
+        "off"      关闭动作（def 35）：只把 enabled 置 False，已导入的配置原样保留；
+                   mode=off 仅作为「从未导入过配置」的历史数据存在，此时开开关 → 升级 correct
+    enabled：None=不改启停位（纯导入）；True/False=开关切启停（mode 保持不变）。
+    消费方口径：试妆反解 = mode=="correct" 且 enabled（main.py 同步）；
+    theme_cvd 自动恢复同口径（enabled 为 False 不上色）。
     """
     if not _PROFILE:
         return {"ok": False, "tool": "cvd_exam",
                 "error": "尚无测评档案，请先完成测评再做校色选择", "results": {}}
-    if mode not in ("correct", "simulate", "off"):
-        return {"ok": False, "tool": "cvd_exam",
-                "error": f"未知校色模式: {mode}（可选 correct/simulate/off）", "results": {}}
+    cal_old = _PROFILE.get("calibration") or {}
+    if enabled is None:
+        if mode not in ("correct", "simulate", "off"):
+            return {"ok": False, "tool": "cvd_exam",
+                    "error": f"未知校色模式: {mode}（可选 correct/simulate/off）", "results": {}}
+        if mode == "off":
+            # def 35 · 「关闭」= 只关启停：enabled=False，已导入的配置原样保留
+            # （旧版把 mode 写成 off 导致关了再开配置丢失——用户 2026-09-21 反馈）
+            mode = cal_old.get("mode", "off")
+            new_enabled = False
+        else:
+            new_enabled = bool(cal_old.get("enabled", False))   # 纯导入：启停位保持现状
+    else:
+        mode = cal_old.get("mode", "off")                   # 启停切换：配置不动
+        if bool(enabled) and mode == "off":
+            mode = "correct"                                # 无配置时开开关 → 默认 correct
+        new_enabled = bool(enabled)
     _PROFILE["calibration"] = {
         "mode": mode,
         "kind": _PROFILE.get("cvd_type"),
         "severity": _PROFILE.get("severity"),
+        "enabled": new_enabled,
         "updated": int(time.time()),
     }
-    return {"ok": True, "tool": "cvd_exam", "query": {"mode": mode},
+    _save_profile()   # def 26 · 校色状态一并落盘（刷新/重启后恢复如前）
+    return {"ok": True, "tool": "cvd_exam",
+            "query": {"mode": mode, "enabled": new_enabled},
             "results": {"calibration": _PROFILE["calibration"],
                         "advice": _PROFILE.get("advice", "")}}

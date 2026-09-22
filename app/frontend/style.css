@@ -1,12 +1,12 @@
 /* def 19 · 全站共享样式（从 index.html 抽取，所有子页统一毛玻璃视觉）
  * 设计锚点：零圆角 + 玻璃拟态 + 深紫底三色 radial 光晕（def 13 定稿，勿随意改）
  */
-:root{--ac:#e5476d;--ac2:#ff9ab5;--tx:#ece7e4;--tx2:rgba(236,231,228,.55);--bd:rgba(255,255,255,.11)}
+:root{--ac:#e5476d;--ac2:#ff9ab5;--tx:#ece7e4;--tx2:rgba(236,231,228,.55);--bd:rgba(255,255,255,.11);--vio:#7654ff;--org:#ff9650}
 *{box-sizing:border-box}
 body{font-family:system-ui,"Microsoft YaHei";max-width:900px;margin:0 auto;padding:34px 18px 64px;color:var(--tx);min-height:100vh;
- background:radial-gradient(560px 380px at 10% 4%,rgba(229,71,109,.30),transparent 62%),
-            radial-gradient(640px 430px at 92% 16%,rgba(118,84,255,.26),transparent 62%),
-            radial-gradient(560px 440px at 50% 98%,rgba(255,150,80,.15),transparent 60%),
+ background:radial-gradient(560px 380px at 10% 4%,rgb(from var(--ac) r g b / .30),transparent 62%),
+            radial-gradient(640px 430px at 92% 16%,rgb(from var(--vio) r g b / .26),transparent 62%),
+            radial-gradient(560px 440px at 50% 98%,rgb(from var(--org) r g b / .15),transparent 60%),
             linear-gradient(158deg,#181220 0%,#1e1424 46%,#120f1a 100%);
  background-attachment:fixed}
 h1{font-size:24px;margin-bottom:2px;letter-spacing:.5px} .sub{color:var(--tx2);font-size:13px;margin:0 0 4px}
@@ -15,20 +15,21 @@ h1{font-size:24px;margin-bottom:2px;letter-spacing:.5px} .sub{color:var(--tx2);f
 .site-head h1 .brand{text-decoration:none;display:inline-block;transition:filter .25s ease}
 .site-head h1 .brand:hover{filter:brightness(1.3)}
 .flow{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 2px}
-.flow a,.flow .off{flex:1;min-width:150px;text-decoration:none;color:var(--tx);background:rgba(255,255,255,.05);border:1px solid var(--bd);padding:10px 12px;backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
+.flow a,.flow .off{flex:1;min-width:150px;text-decoration:none;color:var(--tx);background:rgba(255,255,255,.065);border:1px solid var(--bd);padding:10px 12px}
 .flow .off{opacity:.45}
-.flow a:hover{border-color:rgba(229,71,109,.65)}
+.flow a:hover{border-color:rgb(from var(--ac) r g b / .65)}
 .flow .n{font-size:11px;color:var(--ac2);letter-spacing:2px}
 .flow .t{font-size:14px;margin-top:3px}
 .flow .d{font-size:12px;color:var(--tx2);margin-top:2px}
-.card{background:rgba(255,255,255,.055);border:1px solid var(--bd);padding:16px 18px;margin:16px 0;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 36px rgba(0,0,0,.35)}
+/* def 38 · 去无效 backdrop-filter：卡片背后是静态渐变，模糊零视觉收益，却是软件渲染卡顿大头（改用略高底色补偿层次） */
+.card{background:rgba(255,255,255,.07);border:1px solid var(--bd);padding:16px 18px;margin:16px 0;box-shadow:0 12px 36px rgba(0,0,0,.35)}
 .card>b{display:block;margin-bottom:2px}
-.step{display:inline-block;font-size:11px;letter-spacing:1.5px;color:var(--ac2);border:1px solid rgba(229,71,109,.5);padding:1px 8px;margin-right:9px;vertical-align:1px}
+.step{display:inline-block;font-size:11px;letter-spacing:1.5px;color:var(--ac2);border:1px solid rgb(from var(--ac) r g b / .5);padding:1px 8px;margin-right:9px;vertical-align:1px}
 input,select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--tx);padding:7px 10px;font-size:14px}
 input:focus,select:focus{outline:1px solid var(--ac);border-color:transparent}
 ::placeholder{color:rgba(236,231,228,.35)}
-button{background:rgba(229,71,109,.82);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 16px;font-size:14px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-button:hover{background:rgba(229,71,109,1)} button:active{transform:translateY(1px)}
+button{background:rgb(from var(--ac) r g b / .88);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 16px;font-size:14px;cursor:pointer}
+button:hover{background:rgb(from var(--ac) r g b / 1)} button:active{transform:translateY(1px)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .res{margin-top:10px}
 .item{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 10px;margin:6px 0}
@@ -53,8 +54,8 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 .nav-x a:hover{color:var(--tx)}
 .nav-x a:hover::after{opacity:1;transform:scaleX(1)}
 /* 当前页标签：品牌渐变实底填充（def 19c） */
-.nav-x a.on{color:#fff;background:linear-gradient(120deg,rgba(229,71,109,.92),rgba(229,71,109,.60));box-shadow:0 4px 16px rgba(229,71,109,.35)}
-.nav-x a.on:hover{color:#fff;background:linear-gradient(120deg,rgba(229,71,109,1),rgba(229,71,109,.75))}
+.nav-x a.on{color:#fff;background:linear-gradient(120deg,rgb(from var(--ac) r g b / .92),rgb(from var(--ac) r g b / .60));box-shadow:0 4px 16px rgb(from var(--ac) r g b / .35)}
+.nav-x a.on:hover{color:#fff;background:linear-gradient(120deg,rgb(from var(--ac) r g b / 1),rgb(from var(--ac) r g b / .75))}
 .nav-x a.on::before{display:none}
 .nav-x .sep{color:var(--tx2);opacity:.45;font-size:12px;user-select:none}
 /* 幻灯片区：图片约定 slides/01.jpg ~ 03.jpg，缺图时显示占位帧（文字+渐变） */
@@ -62,8 +63,8 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 .slides img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s ease}
 .slides img.cur{opacity:1}
 .slide-ph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;
- background:radial-gradient(520px 340px at 20% 20%,rgba(229,71,109,.22),transparent 60%),
-            radial-gradient(560px 380px at 80% 70%,rgba(118,84,255,.20),transparent 62%),#171221;
+ background:radial-gradient(520px 340px at 20% 20%,rgb(from var(--ac) r g b / .22),transparent 60%),
+            radial-gradient(560px 380px at 80% 70%,rgb(from var(--vio) r g b / .20),transparent 62%),#171221;
  opacity:0;transition:opacity .8s ease}
 .slide-ph.cur{opacity:1}
 .slide-ph b{font-size:18px;letter-spacing:1px;color:var(--tx)}
@@ -74,7 +75,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 .dots button:active{transform:none}
 .dots button.cur{background:var(--ac)}
 /* 科普文本展示框（内容留作未来扩充） */
-.science{border:1px solid var(--bd);background:rgba(255,255,255,.045);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);padding:16px 18px;margin:16px 0}
+.science{border:1px solid var(--bd);background:rgba(255,255,255,.06);padding:16px 18px;margin:16px 0}
 .science h3{margin:0 0 8px;font-size:14px;color:var(--ac2);letter-spacing:1px;font-weight:600}
 .science p{margin:6px 0;font-size:13px;line-height:1.85;color:var(--tx)}
 .science .todo{color:var(--tx2);font-size:12px}
@@ -83,4 +84,14 @@ footer{margin-top:26px;font-size:11.5px;color:var(--tx2);border-top:1px solid va
 .support .sep{color:var(--tx2);opacity:.45;user-select:none}
 .support a{color:var(--tx2);text-decoration:none;border-bottom:1px dashed var(--bd);padding-bottom:1px;transition:color .25s,border-color .25s}
 .support a:hover{color:var(--ac2);border-color:var(--ac2)}
+
+/* ==== def 39 · 顶部校色开关样式（自 cvd.css 移植为全站：calswitch.js 在各页 site-head 注入开关） ====
+   左=原色 / 右=校色配色；零圆角锚点不变。cvd.html 静态开关同用这组 class。 */
+.cal-switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.cal-track{width:46px;height:24px;border:1px solid var(--bd);background:rgba(255,255,255,.06);position:relative;transition:background .25s,border-color .25s}
+.cal-knob{position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--tx2);transition:left .25s ease,background .25s ease}
+.cal-switch.on .cal-track{background:rgb(from var(--ac) r g b / .35);border-color:rgb(from var(--ac) r g b / .6)}
+.cal-switch.on .cal-knob{left:24px;background:var(--ac2)}
+.cal-label{font-size:12.5px;color:var(--tx2)}
+.cal-switch.on .cal-label{color:var(--tx)}
 

@@ -15,7 +15,7 @@ import re
 
 from agents.prompt import CHAT_SYSTEM
 from agents.tools.registry import get_tools_schema, dispatch_tool
-from llm_client import llm_chat
+from llm_client import llm_chat, llm_chat_stream
 
 MAX_ROUNDS = 5
 
@@ -39,7 +39,8 @@ _INJECT_PATTERNS = [
 # 出口层：AI 正文命中（幻觉泄密 / 被 prompt 注入绕过时兜底）
 _LEAK_PATTERNS = [
     r"\.csv", r"\.npz", r"\.xlsx", r"download", r"/api/export",
-    r"embed_cosmetics_kb", r"vector_store", r"secrets\.local",
+    r"embed_cosmetics_kb", r"vector_store", r"secrets\.local", r"\.env",
+    r"llm_[a-z0-9_]*api_key", r"[0-9a-f]{32}\.[0-9a-z]{8,}",
     r"sk-[a-z0-9]{8}", r"glm-[\w.]+", r"deepseek-v[\w.]+",
     r"[a-z]:\\+(users|windows)", r"system\s*prompt",
 ]
@@ -53,6 +54,32 @@ def _sanitize(text):
         if re.search(pat, text, flags=re.I):
             return _REFUSE
     return text
+
+
+def _lift_action(action, name, result):
+    """def 20/18 · 工具成功 → 顶层调度指令提升（navigate 跳页 / recommend_shade 回填）。
+
+    同一回复可多次调用，取最后一次（同一 action 槽）——agent_reply 与
+    agent_reply_stream 共用，避免两份逻辑漂移。
+    """
+    if name == "navigate_tool" and result.get("ok"):
+        r = result.get("results") or {}
+        return {"type": "navigate", "page": r.get("url") or "/",
+                "page_key": r.get("page_key"), "reason": r.get("reason") or ""}
+    if name == "recommend_shade_tool" and result.get("ok"):
+        r = result.get("results") or {}
+        return {"type": "fill", "parts": r.get("parts") or [],
+                "reason": r.get("reason") or ""}
+    return action
+
+
+def _run_tool_call(c):
+    """单次工具调用：解析参数 → dispatch → 返回 (args, result)。坏参数兜底空参。"""
+    try:
+        args = json.loads(c["function"]["arguments"] or "{}")
+    except json.JSONDecodeError:
+        args = {}
+    return args, dispatch_tool(c["function"]["name"], args)
 
 
 def agent_reply(user_message: str, history: list = None) -> dict:
@@ -101,19 +128,90 @@ def agent_reply(user_message: str, history: list = None) -> dict:
         messages.append({"role": "assistant", "content": m.get("content"), "tool_calls": clean})
 
         for c in clean:
-            try:
-                args = json.loads(c["function"]["arguments"] or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            result = dispatch_tool(c["function"]["name"], args)
+            args, result = _run_tool_call(c)
             steps.append({"tool": c["function"]["name"], "args": args, "ok": result.get("ok")})
-            # def 20 · navigate 成功 → 提升为顶层 action（同一回复可多次调用，取最后一次）
-            if c["function"]["name"] == "navigate_tool" and result.get("ok"):
-                r = result.get("results") or {}
-                action = {"type": "navigate", "page": r.get("url") or "/",
-                          "page_key": r.get("page_key"), "reason": r.get("reason") or ""}
+            action = _lift_action(action, c["function"]["name"], result)
             messages.append({"role": "tool", "tool_call_id": c.get("id") or "",
                              "content": json.dumps(result, ensure_ascii=False)})
 
     return {"content": None, "error": f"工具调用超过 {MAX_ROUNDS} 轮仍未收敛",
             "steps": steps, "usage": usage, "action": action}
+
+
+def agent_reply_stream(user_message: str, history: list = None):
+    """def 29 · agent_reply 的流式版：yield 事件字典，供 /api/chat/stream（SSE）逐帧下发。
+
+    事件序列（前端按 type 渲染）：
+        {"type": "delta", "text"}                     正文增量（逐字上屏）
+        {"type": "tool",  "tool", "args", "ok"}       一次工具调用执行完成（轨迹实时可见）
+        {"type": "replace", "text"}                   出口安检命中——前端把已流出的正文整条替换
+        {"type": "done",  content/error/steps/usage/action}   收尾，payload 与 /api/chat 完全一致
+    纪律同 agent_reply：入口安检、MAX_ROUNDS 上限、出口 _sanitize（流式下全文攒完再扫，
+    命中发 replace——防泄密的硬门不因流式绕过）。非流式 agent_reply 保留：内部调用
+    （测评后自动总结等）与回退路径继续用它。
+    """
+    for pat in _INJECT_PATTERNS:
+        if re.search(pat, user_message or "", flags=re.I):
+            yield {"type": "done", "content": _REFUSE, "error": None, "steps": [],
+                   "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                   "action": None}
+            return
+
+    messages = [{"role": "system", "content": CHAT_SYSTEM}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": user_message})
+
+    tools = get_tools_schema()
+    steps = []
+    action = None
+    usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    for _ in range(MAX_ROUNDS):
+        yield {"type": "status",
+               "text": ("大脑思考中…" if not steps
+                        else f"大脑思考中…（已完成 {len(steps)} 次工具调用）")}
+        text, calls = "", None
+        for ev in llm_chat_stream(messages, tools=tools):
+            t = ev["type"]
+            if t == "delta":
+                text += ev["text"]
+                yield ev
+            elif t == "ping":
+                yield ev                       # 心跳透传（前端重置看门狗）
+            elif t == "tool_calls":
+                calls = ev["calls"]
+            elif t == "usage":
+                for k in usage:
+                    usage[k] += (ev["usage"] or {}).get(k) or 0
+            elif t == "error":
+                yield {"type": "done", "content": None, "error": ev["text"],
+                       "steps": steps, "usage": usage, "action": action}
+                return
+
+        if not calls:                       # 正文收尾：出口安检后 done
+            safe = _sanitize(text)
+            if safe != text:
+                yield {"type": "replace", "text": safe}
+            yield {"type": "done", "content": safe, "error": None,
+                   "steps": steps, "usage": usage, "action": action}
+            return
+
+        clean = [{"id": c["id"], "type": "function",
+                  "function": {"name": c["function"]["name"],
+                               "arguments": c["function"]["arguments"]}}
+                 for c in calls]
+        messages.append({"role": "assistant", "content": text or None, "tool_calls": clean})
+
+        for c in clean:
+            args, result = _run_tool_call(c)
+            steps.append({"tool": c["function"]["name"], "args": args, "ok": result.get("ok")})
+            yield {"type": "tool", "tool": c["function"]["name"],
+                   "args": args, "ok": result.get("ok")}
+            action = _lift_action(action, c["function"]["name"], result)
+            messages.append({"role": "tool", "tool_call_id": c.get("id") or "",
+                             "content": json.dumps(result, ensure_ascii=False)})
+
+    yield {"type": "done", "content": None,
+           "error": f"工具调用超过 {MAX_ROUNDS} 轮仍未收敛",
+           "steps": steps, "usage": usage, "action": action}

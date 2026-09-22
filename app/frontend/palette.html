@@ -4,7 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>选色 · ColorBoundless</title>
-<link rel="stylesheet" href="style.css?v=def17b">
+<link rel="stylesheet" href="style.css?v=def43">
+<style>
+/* def 18o · 全域色盘「商品色层跳转」自定义下拉——与毛玻璃主题统一（原生 select 展开栏无法定制） */
+.ujbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--tx);
+  font:inherit;font-size:13px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.ujbtn:hover{border-color:var(--ac2)}
+.ujpanel{position:absolute;top:calc(100% + 4px);right:0;z-index:60;min-width:190px;max-height:260px;overflow-y:auto;
+  background:rgba(24,16,28,.96);border:1px solid var(--bd);box-shadow:0 8px 24px rgba(0,0,0,.45)} /* def 38 去 blur(14px)：96% 底色下不可见 */
+.ujitem{padding:5px 12px;font-size:12.5px;color:var(--tx2);cursor:pointer;display:flex;justify-content:space-between;gap:14px}
+.ujitem b{color:var(--tx);font-weight:inherit}
+.ujitem:hover{background:rgb(from var(--ac) r g b / .18);color:var(--tx)}
+.ujempty{padding:8px 12px;font-size:12px;color:var(--tx2)}
+#unifs{position:fixed;inset:0;z-index:90;background:rgba(12,8,16,.92);padding:16px 20px;display:flex;flex-direction:column;gap:10px} /* def 38 去 blur */
+#unifs[hidden]{display:none}
+#fsslot{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#unifs #uniwrap{width:min(92vmin,980px);height:min(92vmin,980px);margin:auto}
+#unifs #uniwall{max-width:none;width:100%;height:100%}
+/* def 25 · 对比库（全商品色板）浮窗——自产品库页搬入，与选色/商品色吸附同场景 */
+#cmpfs{position:fixed;inset:0;z-index:90;background:rgba(12,8,16,.92);padding:18px 22px;display:flex} /* def 38 去 blur */
+#cmpfs[hidden]{display:none}
+.cmpbox{margin:auto;width:min(940px,94vw);max-height:88vh;display:flex;flex-direction:column;gap:10px;
+  background:rgba(24,16,28,.96);border:1px solid var(--bd);box-shadow:0 8px 24px rgba(0,0,0,.45);padding:14px 16px}
+.cmpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px;overflow-y:auto;padding:4px 2px}
+.cmpsw{width:30px;height:30px;cursor:pointer;padding:0;border:1px solid rgba(255,255,255,.28);position:relative;border-radius:5px}
+.cmpsw:hover{transform:scale(1.18)}
+.cmpsw.cmp-off{border:2px solid #7de0a6}
+.cmpsw:hover::after{content:attr(data-name);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:70;
+  background:rgba(24,16,28,.97);border:1px solid var(--bd);color:var(--tx);font-size:11.5px;line-height:1.55;padding:6px 10px;
+  white-space:pre-line;text-align:left;max-width:280px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+</style>
 </head>
 <body>
 <header class="site-head">
@@ -15,53 +44,57 @@
 </header>
 <p class="sub">官方色号匹配 · 全库 26 万色板 · 配色知识库 · 一切数字由代码计算</p>
 
-<!-- def 17e · 色号查询统一入口：官方库判定 + 全库精确匹配（全色域任意色） -->
-<div class="card" id="card-s1"><b><span class="step">查询</span>色号查询 · 官方库判定 + 全库精确匹配</b>
+<!-- def 18k · 色号查询：全域色库 256³ 真全覆盖（任意 #ABCDEF 组合）+ 商品可提供性判定 -->
+<div class="card" id="card-s1"><b><span class="step">查询</span>色号查询 · 全域色库（256³ 全覆盖）+ 商品可提供性</b>
  <div class="row" style="margin-top:8px">
   <input id="s1hex" value="#FF4D6D" size="10" placeholder="#FF4D6D">
   <input id="s1k" type="number" value="5" min="1" max="20" style="width:60px">
   <button onclick="t1()">查询</button><span id="s1ms" class="ms"></span></div>
- <div class="meta" style="margin-top:6px">任意颜色都可查：官方库有 → 直接给官方色号；官方库无 → 如实标注（可申请定制）+ 给全库精确匹配色。判定阈值 ΔE ≤ 1.0。</div>
- <div id="s1res" class="res"></div>
+ <div class="meta" style="margin-top:6px">全域色库 = 256³ 真全覆盖（16,777,216 色，任意 RGB 组合都有 GB/T 15608 标号）；再判商品可提供性（官方色号 + 已导入商品色 210 条，ΔE ≤ 1.0）→ 有则列命中色号，无则可走定制申请。</div>
+  <div id="unihome" style="margin-top:10px">
+   <div class="row" style="margin-bottom:6px;align-items:center">
+    <span class="meta" style="flex:1">全域色盘 256×256（横轴 R · 纵轴 G）× B 滑轨 256 层 = 16,777,216 色全部可显示；绿框=商品色，黄框=附近 ±2 层（虚线=±2）</span>
+    <button class="ujbtn" style="flex:none" onclick="uniFs(true)">⛶ 全屏选色</button>
+    <button class="ujbtn" style="flex:none" onclick="cmpOpen()" title="全部商品颜色汇集 · 悬停查看归属 · 绿框=官方库覆盖">▦ 全商品色板</button></div>
+   <div id="uniwrap" style="position:relative;overflow:hidden;line-height:0">
+    <canvas id="uniwall" width="256" height="256" style="width:100%;max-width:512px;aspect-ratio:1;image-rendering:pixelated;cursor:crosshair;border:1px solid var(--bd);display:block;margin:0 auto;transform-origin:0 0"></canvas></div>
+   <div class="row" style="margin-top:6px">
+    <span class="meta" style="flex:none">B 滑轨</span>
+    <input id="unib" type="range" min="0" max="255" value="128" style="flex:1;min-width:160px">
+    <span id="unibv" class="ms" style="flex:none">B=128</span>
+    <button class="ujbtn" style="flex:none;padding:3px 9px" onclick="uniStep(-1)" title="B - 1">&lt;</button>
+    <button class="ujbtn" style="flex:none;padding:3px 9px" onclick="uniStep(1)" title="B + 1">&gt;</button>
+    <div id="unijump" style="flex:none;position:relative">
+     <button id="ujbtn" class="ujbtn" onclick="ujToggle(event)">跳到商品色所在层 ▾</button>
+     <div id="ujpanel" class="ujpanel" hidden></div></div></div>
+   <div id="unipick" class="meta" style="margin-top:4px">绿框 = 你导入的商品色 · 靠近绿框自动吸附（半径 12 色阶）· 点击任意色自动查询；⛶ 全屏后支持滚轮缩放（1×~32×）与拖拽平移。</div>
+  </div>
+ <div id="s1res" class="res" style="min-height:140px"></div>
  <details><summary>原始 JSON</summary><pre id="s1json"></pre></details>
 </div>
-
-<!-- def 17d · 全色域覆盖检查：16³=4096 采样点 vs 官方色号库 -->
-<div class="card" id="card-cov"><b><span class="step">覆盖</span>官方库全色域覆盖检查 · 16³ = 4096 采样点</b>
- <div class="row" style="margin-top:8px">
-  <button onclick="runCoverage()">检查覆盖</button><span id="covms" class="ms"></span>
-  <span class="meta">每点判定：与最近官方色号 ΔE ≤ 1.0 → 官方有</span></div>
- <div id="covstat" class="res"></div>
- <div id="covdetail" class="res"></div>
- <div class="row" style="margin-top:10px">
-  <span class="meta">清单含：色块 · hex · GB 名称 · GB 标号 · 最近官方色号 · ΔE · 是否拥有（视图与层切换在下方渲染区内）</span>
+ <div id="unifs" hidden>
+  <div class="row" style="align-items:center">
+   <b style="flex:1">全域色盘 · 全屏选色（滚轮缩放 1×~32× · 拖拽平移 · Esc 关闭）</b>
+   <span id="uzlbl" class="ms" style="flex:none">100%</span>
+   <button class="ujbtn" onclick="uniZoom(-1)" title="缩小">−</button>
+   <button class="ujbtn" onclick="uniZoom(0)" title="重置 1:1">重置</button>
+   <button class="ujbtn" onclick="uniZoom(1)" title="放大">＋</button>
+   <button class="ujbtn" onclick="uniFs(false)">✕ 关闭</button></div>
+  <div id="fsslot"></div>
  </div>
- <div id="covgrid" style="margin-top:10px"></div>
- <details><summary>原始 JSON</summary><pre id="covjson"></pre></details>
-</div>
 
-<div class="card" id="card-s3"><b><span class="step">工具③</span>palette_search · 全库 262,144 色板检索</b>
- <div class="row" style="margin-top:8px">
-  <input id="s3hex" value="#FF4D6D" size="10">
-  <input id="s3hg" list="hglist" placeholder="色相族(可空)" size="12">
-  <datalist id="hglist"><option>red</option><option>orange</option><option>yellow</option><option>green</option><option>blue</option><option>purple</option><option>pink</option><option>brown</option><option>black</option><option>white</option><option>gray</option></datalist>
-  <input id="s3k" type="number" value="5" min="1" max="20" style="width:60px">
-  <button onclick="t3()">检索</button><span id="s3ms" class="ms"></span></div>
- <div id="s3res" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="s3json"></pre></details>
-</div>
-
-<div class="card" id="card-s2"><b><span class="step">工具②</span>kb_search · 配色知识库语义检索</b>
- <div class="row" style="margin-top:8px">
-  <input id="s2q" style="flex:1;min-width:220px" placeholder="例如：冷白皮怎么选粉底？">
-  <input id="s2k" type="number" value="3" min="1" max="10" style="width:60px">
-  <button onclick="t2()">检索</button><span id="s2ms" class="ms"></span></div>
- <div id="s2res" class="res"></div>
- <details><summary>原始 JSON</summary><pre id="s2json"></pre></details>
-</div>
-
+<!-- def 25 · 对比库浮窗（自产品库页搬入）：全商品色板 · 悬停查看归属 · 绿框=官方库覆盖 -->
+<div id="cmpfs" hidden>
+  <div class="cmpbox">
+   <div class="row" style="align-items:center">
+    <b style="flex:1">对比库 · 全商品色板 <span id="cmpn" class="meta"></span></b>
+    <button class="ujbtn" onclick="cmpClose()">✕ 关闭</button></div>
+   <div id="cmpgrid" class="cmpgrid"><span class="meta">加载中……</span></div>
+   <div class="meta">悬停色块查看有哪些商品有此色；绿框 = 官方库覆盖。选色请用上方色盘（绿框商品色自动吸附）。</div>
+  </div>
+ </div>
 <footer>算法锚点：CIEDE2000（Sharma 2005 官方数据锚定，selftest 22/22）· 检索为 Lab 空间 ΔE 排序，LLM 只引用工具结果不心算。</footer>
-<script src="theme_cvd.js?v=def17"></script><script src="chatbox.js?v=def22p"></script>
-<script src="palette.js?v=def15v10"></script>
+<script src="theme_cvd.js?v=def43"></script><script src="chatbox.js?v=def43"></script><script src="calswitch.js?v=def43"></script>
+<script src="palette.js?v=def25"></script>
 </body>
 </html>

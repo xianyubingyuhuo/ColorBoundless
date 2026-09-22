@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>色盲校验 · ColorBoundless</title>
-<link rel="stylesheet" href="style.css?v=def17b">
-<link rel="stylesheet" href="cvd.css?v=def15v10">
+<link rel="stylesheet" href="style.css?v=def43">
+<link rel="stylesheet" href="cvd.css?v=def43">
 </head>
 <body>
 <header class="site-head">
@@ -54,7 +54,7 @@
    <div class="row" style="margin-top:8px">
     <button onclick="doCalibrate('correct')">校色模式</button>
     <button onclick="doCalibrate('simulate')">模拟模式</button>
-    <button onclick="doCalibrate('off')">关闭</button>
+    <button onclick="doCalibrate(null, false)">关闭</button>  <!-- def 35 · 关闭=只关启停，已导入配置保留（关了再开不丢） -->
     <span id="calstatus" class="ms"></span>
    </div>
    <div class="meta" style="margin-top:6px">
@@ -65,6 +65,16 @@
 
   <section class="cvd-panel" id="panel-verify">
    <h3>色盲视角校验（Machado 2009 模拟 + 规则库）</h3>
+   <div class="row" style="margin-top:2px">
+    <span class="meta" style="font-weight:700">全站模拟：</span>
+    <button class="simbtn" data-sim="deutan" onclick="simAll('deutan')">绿色盲</button>
+    <button class="simbtn" data-sim="protan" onclick="simAll('protan')">红色盲</button>
+    <button class="simbtn" data-sim="tritan" onclick="simAll('tritan')">蓝黄盲</button>
+    <button class="simbtn" data-sim="" onclick="simAll(null)">恢复原色</button>
+    <span id="simst" class="ms"></span>
+   </div>
+   <div class="meta" style="margin-top:4px">点按钮 = 整站配色立即变成该类型色盲用户眼中的样子（含背景光斑与 AI 钮）· 严重度用下方滑轨调 · 临时演示不写入档案，刷新即恢复；要长期生效请在「档案与校色」保存模式。</div>
+   <div style="height:10px"></div>
    <div class="row">
     <input id="cvda" value="#FF4D6D" size="9" placeholder="色号A">
     <input id="cvdb" value="#2E8B57" size="9" placeholder="色号B（可空）">
@@ -86,8 +96,8 @@
 <footer>判定阈值（confuse&lt;5 / risky&lt;12）为项目启发式，答辩口径：非行业标准 ·
 测评判定全部由规则引擎完成（可解释可复现），AI 只引用档案说话 ·
 波段时间轴与排列判定遵循 FM100 临床原型交互。</footer>
-<script src="theme_cvd.js?v=def17"></script>
-<script src="chatbox.js?v=def22p"></script>
-<script src="cvd.js?v=def15v10"></script>
+<script src="theme_cvd.js?v=def43"></script>
+<script src="chatbox.js?v=def43"></script>
+<script src="cvd.js?v=def43"></script>
 </body>
 </html>

@@ -2,17 +2,74 @@
 const $ = id => document.getElementById(id);
 
 /* def 15v2 · 上传预览淡入：选择照片 → upzone 内缩略图淡入（点击可更换） */
+/* def 31 · 照片本地缓存（IndexedDB）：刷新/关页后自动恢复上次照片，免重新选文件。
+   只存浏览器本地（IndexedDB 配额远大于 localStorage，可放原图 dataURL），不涉及服务器 */
+const IDB_NAME = "cb_tryon", IDB_STORE = "kv";
+function idbOpen(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(IDB_NAME, 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore(IDB_STORE);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function idbGet(key){
+  try{
+    const db = await idbOpen();
+    return await new Promise((res, rej) => {
+      const rq = db.transaction(IDB_STORE, "readonly").objectStore(IDB_STORE).get(key);
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror = () => rej(rq.error);
+    }).finally(() => db.close());
+  }catch(e){ return null; }
+}
+async function idbSet(key, val){
+  try{
+    const db = await idbOpen();
+    return await new Promise((res, rej) => {
+      const rq = db.transaction(IDB_STORE, "readwrite").objectStore(IDB_STORE).put(val, key);
+      rq.onsuccess = () => res(true);
+      rq.onerror = () => rej(rq.error);
+    }).finally(() => db.close());
+  }catch(e){ return false; }
+}
+function dataURLtoBlob(u){                     /* 缓存 dataURL → Blob（提交 FormData 用） */
+  const parts = u.split(","), mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+  const bin = atob(parts[1]), arr = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type: mime});
+}
+let tyPhoto = null;                            /* {data: dataURL, name} —— 刚选的或从缓存恢复的 */
+
+function showPhoto(data, tag){
+  const z = $("upzone");
+  z.classList.add("hasimg");
+  z.innerHTML = `<img src="${data}" alt="preview"><span class="reup">点击更换照片${tag ? " · " + tag : ""}</span>`;
+}
+
 $("tyfile").addEventListener("change", () => {
   const f = $("tyfile").files[0];
   if(!f) return;
   const rd = new FileReader();
   rd.onload = () => {
-    const z = $("upzone");
-    z.classList.add("hasimg");
-    z.innerHTML = `<img src="${rd.result}" alt="preview"><span class="reup">点击更换照片</span>`;
+    tyPhoto = {data: rd.result, name: f.name};
+    showPhoto(tyPhoto.data, "");
+    idbSet("photo", tyPhoto);                  /* def 31 · 写入本地缓存（覆盖旧照片） */
+    analyzeFace();                             /* def 43 · 换照片即自动重新分析 */
   };
   rd.readAsDataURL(f);
 });
+/* def 31 · 页面加载即恢复上次照片（有缓存 → 免重新选文件；点 upzone 随时可换） */
+(async () => {
+  try{
+    const saved = await idbGet("photo");
+    if(saved && saved.data){
+      tyPhoto = saved;
+      showPhoto(saved.data, "已恢复上次照片");
+      analyzeFace();                           /* def 43 · 恢复照片同样自动分析 */
+    }
+  }catch(e){ /* 缓存不可用：保持空状态，正常手选 */ }
+})();
 /* def 15v2 · 色板 / 取色器 / hex 三向联动 */
 function setDot(card, hex){
   const d = card.querySelector(".p-dot");
@@ -36,17 +93,35 @@ function syncFromHex(inp){
     setDot(inp.closest(".pcard"), v);
   }
 }
-/* def 15v8 · 网格总览=浮层：把同一份 #pcards 移入/移出浮层（选色状态零同步），不改变工具列布局 */
+/* def 15v14j · 浮层向左弹出：面板从工具列向左生长（单段动画，卡片同步错落淡入）；
+   关闭=面板带卡缩回列宽(auto-fit 3→2→1 重排)后卡片回列依次淡入归位；防重入锁防连点。
+   竖把手 #pcmore 跟随面板左缘移动（.open 与面板同步挂摘，transition 同曲线），
+   箭头 ‹/› 指示展开(左)/收回(右)方向，打开时可点把手收起 */
+let tyCoverTimer = null, tyCoverLock = false;
 function toggleGrid(){
+  if(tyCoverLock) return;
   const cover = $("pcover"), cards = $("pcards");
-  const open = !cover.classList.contains("open");
-  if(open){ $("pcover-slot").appendChild(cards); }
-  else{ $("pcards-home").appendChild(cards); }
-  cover.classList.toggle("open", open);
-  $("pcgridbtn").textContent = open ? "✕ 关闭" : "⊞ 网格视图";
+  const opening = !cover.classList.contains("open") && !cover.classList.contains("closing");
+  clearTimeout(tyCoverTimer);
+  if(opening){
+    $("pcover-slot").appendChild(cards);        // 同一份 DOM 移入浮层（选色状态零同步）
+    cover.classList.add("open");                // 面板向左生长 + 卡片错落入场（CSS 单段并发）
+  }else{
+    cover.classList.remove("open");
+    cover.classList.add("closing");             // 面板带卡缩回列宽（0.38s）
+    tyCoverLock = true;
+    tyCoverTimer = setTimeout(() => {
+      cover.classList.remove("closing");
+      $("pcards-home").appendChild(cards);      // 卡片回列
+      cards.classList.add("reback");            // 依次淡入归位
+      setTimeout(() => cards.classList.remove("reback"), 360);
+      tyCoverLock = false;
+    }, 400);
+  }
   const b = $("pcmore");
-  b.textContent = open ? "⌃" : "⌄";
-  b.title = open ? "收起工具总览" : "展开工具总览";
+  b.textContent = opening ? "›" : "‹";
+  b.classList.toggle("open", opening);          // 把手与面板同步：滑向面板左缘 / 滑回列左缝
+  b.title = opening ? "收起工具总览" : "展开工具总览";
 }
 /* def 15v6 · 展开：悬停停3s自动1s动画展开(pick-slow,移出即收) / 点击立即展开(pick-open,锁定,点外部或再点收起) */
 document.querySelectorAll(".pcard[data-region]").forEach(card => {
@@ -70,14 +145,46 @@ document.querySelectorAll(".pcard[data-region]").forEach(card => {
   });
 });
 document.addEventListener("click", (e) => {
-  if(!e.target.closest(".pcard,#pcover,#pcgridbtn,#pcmore")){
+  if(!e.target.closest(".pcard,#pcover,#pcmore")){
     document.querySelectorAll(".pcard.pick-open,.pcard.pick-slow")
       .forEach(c => c.classList.remove("pick-open", "pick-slow"));
     if($("pcover").classList.contains("open")) toggleGrid();   // 点浮层外 → 收起总览
   }
 });
 
-/* def 17b · 校色联动：页面加载即查档案+校色状态，状态条可见可解释 */
+/* def 18 · AI 色号回填：chatbox action 通道调用；每部位填 hex（复用三向联动）+ 强制启用。
+   用户可随时用色板/取色器/滑轨改写——最终决定权在用户（R-05 原则） */
+window.fillParts = function(parts){
+  let n = 0;
+  (parts || []).forEach((p) => {
+    if (!p || !p.region || !p.hex) return;
+    const card = document.querySelector('.pcard[data-region="' + p.region + '"]');
+    if (!card) return;
+    const hex = String(p.hex);
+    if (!/^[0-9a-fA-F]{6}$/.test(hex.replace("#", ""))) return;
+    const inp = card.querySelector(".p-hex");
+    if (inp){ inp.value = ("#" + hex.replace("#", "")).toUpperCase(); syncFromHex(inp); }
+    const on = card.querySelector(".p-on");
+    if (on) on.checked = true;
+    n++;
+  });
+  const ms = $("tyms");
+  if (ms && n) ms.textContent = "AI 已回填 " + n + " 个部位——可微调后点「开始聚合试妆」（原选择已被覆盖，可用色板改回）";
+  return n;
+};
+/* def 18 · 跨页中转消费：非 tryon 页收到 fill → chatbox 存 cb_fill → 本页加载后自动回填 */
+(function consumeFill(){
+  try{
+    const raw = sessionStorage.getItem("cb_fill");
+    if (!raw) return;
+    sessionStorage.removeItem("cb_fill");
+    const parts = JSON.parse(raw);
+    if (Array.isArray(parts) && parts.length && typeof window.fillParts === "function"){
+      setTimeout(() => { window.fillParts(parts); }, 80);
+    }
+  }catch(e){}
+})();
+
 (async () => {
   try {
     const p = await (await fetch("/api/cvd/exam/profile")).json();
@@ -106,17 +213,28 @@ document.addEventListener("click", (e) => {
 })();
 
 async function tyParts(){
-  const f = $("tyfile").files[0];
+  const f = $("tyfile").files[0] || (tyPhoto ? dataURLtoBlob(tyPhoto.data) : null);   /* def 31 · 新选文件优先，否则用缓存照片转 Blob */
   if(!f){ $("tyres").innerHTML = `<span class="err">[错误] 先选一张照片（jpg/png）</span>`; return; }
   const parts = [];
   document.querySelectorAll(".pcard[data-region]").forEach(card => {
     const on = card.querySelector(".p-on");
     if(!on || !on.checked) return;                                    // 未启用/无控件部位跳过
-    parts.push({ region: card.dataset.region,
-                 hex: card.querySelector(".p-hex").value.trim(),
-                 alpha: parseFloat(card.querySelector(".p-a").value) });
+    const spec = { region: card.dataset.region,
+                   hex: card.querySelector(".p-hex").value.trim(),
+                   alpha: parseFloat(card.querySelector(".p-a").value) };
+    const sz = card.querySelector(".p-sz");
+    if(sz) spec.size = parseFloat(sz.value);          // def 18c · 范围滑轨（仅腮红/眼影卡有）
+    parts.push(spec);
   });
   if(!parts.length){ $("tyres").innerHTML = `<span class="err">[错误] 至少启用一个部位</span>`; return; }
+  /* def 27 · 社会视角守门：罕见色 + 色盲档案 → 确认卡（告知别人看到的 + 主流替代），执意才放行 */
+  const needGate = [];
+  for(const p of parts){
+    if(gateKeep[p.region] === p.hex.toUpperCase()) continue;      // 同色已确认"仍要用"（改色即重新守门）
+    const rv = await shadeReview(p.hex, p.region);
+    if(rv.ok && rv.results && rv.results.gate) needGate.push({part: p, review: rv.results});
+  }
+  if(needGate.length){ renderGate(needGate); return; }   // 等待用户决策后自动重跑 tyParts
   const lip = parts.find(p => p.region === "lip") || {hex: "#C2185B", alpha: 0.75};
   const fd = new FormData();
   fd.append("file", f);
@@ -147,43 +265,218 @@ async function tyParts(){
       `<div class="row"><figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.original_b64}"><figcaption>原图</figcaption></figure>` +
       `<figure class="imgbox"><img src="data:image/jpeg;base64,${j.results.makeup_b64}"><figcaption>聚合上妆</figcaption></figure></div>` +
       `<div class="meta">已渲染部位：${applied}</div>` + corLine;
-    /* def 15d · 商品匹配：逐部位所选色 → 最近集团商品 + 有货/定制 */
-    for(const p of parts){ await matchAndShow(p.hex, p.region); }
+    /* def 15d/18c+ · 商品匹配：逐部位检索并收集 → 行渲染 + 无现货自动淡入定制面板 */
+    const matchResults = [];
+    for(const p of parts){
+      const mr = await fetchMatch(p.hex, p.region);
+      matchResults.push({hex: String(p.hex).replace("#", ""), region: p.region, ok: mr.ok,
+                         available: !!(mr.results && mr.results.available),
+                         nearest: (mr.results && mr.results.nearest) || null});
+      renderMatchLine(p.hex, p.region, mr);
+    }
+    const missing = matchResults.filter(m => m.ok && !m.available);
+    if(missing.length){ openCustomPanel(missing); } else { $("custompanel").hidden = true; }
   }catch(e){
     $("tyres").innerHTML = `<span class="err">[错误] 请求失败: ${e}</span>`;
   }
 }
 
-/* def 15d · 商品匹配（所选色 → 最近集团商品，dE≤5 有货，否则可定制） */
-async function matchAndShow(hex, region){
-  const box = $("matchres");
+/* def 18c+ · 定制流 v2：检索与渲染分离；无现货颜色 → 淡入面板（清单+近似推荐）→ 一键提交 → 跳产品库 */
+const REG_NAME = { lip: "唇妆", foundation: "粉底", eyeshadow: "眼影", brow: "眉妆", blush: "腮红" };
+async function fetchMatch(hex, region){
   try{
-    const r = await (await fetch(`/api/products/match?hex=${encodeURIComponent(hex)}&region=${encodeURIComponent(region)}`)).json();
-    if(!r.ok){ box.insertAdjacentHTML("beforeend", `<div class="meta">${region} · #${hex} 匹配失败: ${r.error}</div>`); return; }
-    const n = r.results.nearest, av = r.results.available;
-    const line = av
-      ? `<span style="color:#7de0a6">✓ 有货</span> 最近商品：<b>${n.brand} ${n.product}</b>（#${n.hex} · ΔE=${n.dE}）`
-      : `<span style="color:#ff8a80">✗ 无接近现货</span>（最近 #${n.hex} · ΔE=${n.dE}） <button onclick="customReq('${hex}','${region}',this)">申请定制</button> <span class="cbh-${region}-${hex}"></span>`;
-    box.insertAdjacentHTML("beforeend",
-      `<div class="meta" style="margin:3px 0">${region} · #${hex} → ${line}</div>`);
-  }catch(e){
-    box.insertAdjacentHTML("beforeend", `<div class="meta">${region} · #${hex} 匹配请求失败</div>`);
+    return await (await fetch(`/api/products/match?hex=${encodeURIComponent(hex)}&region=${encodeURIComponent(region)}`)).json();
+  }catch(e){ return {ok: false, error: "请求失败"}; }
+}
+function renderMatchLine(hex, region, r){
+  const box = $("matchres");
+  const cat = REG_NAME[region] || region;
+  if(!r.ok){ box.insertAdjacentHTML("beforeend", `<div class="meta">${cat} · #${hex} 匹配失败: ${r.error}</div>`); return; }
+  const n = r.results.nearest, av = r.results.available;
+  const line = av
+    ? `<span style="color:#7de0a6">✓ 有货</span> 最近商品：<b>${n.brand} ${n.product}</b>（#${n.hex} · ΔE=${n.dE}）`
+    : `<span style="color:#ff8a80">✗ 无接近现货</span>（近似：${n.brand} ${n.product} · #${n.hex} · ΔE=${n.dE}）——见下方定制面板`;
+  box.insertAdjacentHTML("beforeend", `<div class="meta" style="margin:3px 0">${cat} · #${hex} → ${line}</div>`);
+}
+function openCustomPanel(missing){
+  $("clist").innerHTML = missing.map(m => `
+    <div class="citem">
+      <span class="sw" style="background:#${m.hex}"></span>
+      <div class="tx"><b>${REG_NAME[m.region] || m.region} · #${m.hex}</b>
+      <div class="meta">${m.nearest ? `近似现货：${m.nearest.brand} ${m.nearest.product}（#${m.nearest.hex} · ΔE=${m.nearest.dE}）——可先入近似色` : "暂无近似候选"}</div></div>
+    </div>`).join("");
+  const btn = $("csubmit");
+  btn.disabled = false;
+  btn.textContent = `一键提交 ${missing.length} 项定制申请`;
+  btn.dataset.payload = JSON.stringify(missing.map(m => ({region: m.region, hex: m.hex,
+    note: m.nearest ? `试妆无现货 · 近似：${m.nearest.brand} ${m.nearest.product}（ΔE=${m.nearest.dE}）` : "试妆无现货"})));
+  const p = $("custompanel");
+  p.hidden = false;
+  requestAnimationFrame(() => p.classList.add("show"));
+}
+async function submitCustomAll(btn){
+  btn = btn || $("csubmit");
+  let items = [];
+  try{ items = JSON.parse(btn.dataset.payload || "[]"); }catch(e){}
+  if(!items.length) return;
+  btn.disabled = true;
+  const ms = $("cms");
+  ms.textContent = "提交中…";
+  let okN = 0;
+  for(const it of items){
+    try{
+      const r = await (await fetch("/api/products/custom", {method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({hex: it.hex, region: it.region, note: it.note})})).json();
+      if(r.ok) okN++;
+    }catch(e){}
   }
+  if(okN){
+    ms.textContent = `已提交 ${okN}/${items.length} 项——正在前往产品库查看…`;
+    setTimeout(() => { location.href = "products.html#custom"; }, 900);
+  } else {
+    ms.textContent = "提交失败（服务未响应）——可重试";
+    btn.disabled = false;
+}
 }
 
-/* def 15d · 定制申请登记（无现货色号 → data/products/custom_requests.json） */
-async function customReq(hex, region, btn){
-  const note = prompt("定制备注（可写想要的质地/风格，留空即可）：", "") || "";
-  btn.disabled = true; btn.textContent = "提交中…";
+/* ==== def 27 · 社会视角守门：确认卡（别人看到的 + 社会等效色 + 在售主流替代）====
+   语义（用户 2026-09-20 定稿）：罕见色必须确认；告知正常人视角 + 社会等效色 + 在售替代；
+   执意原色 → 尊重（无现货走定制）；推荐色来自在售板，无现货直接定制不再二次询问。 */
+const gateKeep = {};                       // region -> 已确认"仍要用"的 hex（改色即重新守门）
+async function shadeReview(hex, region){
   try{
-    const r = await (await fetch("/api/products/custom", {method:"POST",
+    return await (await fetch("/api/tryon/shade_review", {method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({hex, region, note})})).json();
-    const host = btn.parentElement;
-    host.innerHTML = r.ok
-      ? `<span style="color:#7de0a6">✓ 定制申请已登记（#${hex}）</span>`
-      : `<span class="err">登记失败: ${r.error}</span>`;
+      body: JSON.stringify({hex, region})})).json();
+  }catch(e){ return {ok:false, error:String(e)}; }
+}
+function gateSetHex(region, hex){
+  const card = document.querySelector('.pcard[data-region="' + region + '"]');
+  const inp = card && card.querySelector(".p-hex");
+  if(inp){ inp.value = ("#" + String(hex).replace("#", "")).toUpperCase(); syncFromHex(inp); }
+}
+let gateData = [];
+function renderGate(items){
+  gateData = items;
+  $("tyres").innerHTML = items.map((it, i) => {
+    const r = it.review, se = r.social_equiv || {};
+    const sug = (r.suggestions || []).map(s =>
+      `<div class="row" style="margin:3px 0;align-items:center">` +
+      `<button style="background:#${s.hex};width:34px;height:30px;border:1px solid rgba(255,255,255,.45);cursor:pointer;border-radius:6px;flex:none" title="#${s.hex}" onclick="gatePick(${i}, '${s.hex}')"></button>` +
+      `<span class="meta">${s.brand ? s.brand + " " : ""}${s.name} · #${s.hex} · 你眼中 ΔE=${s.dE_sim}${s.official ? " · 官方有货" : ""}</span></div>`).join("");
+    return `<div class="item" style="border:1px solid rgba(255,196,107,.5);padding:10px">` +
+      `<b style="color:#ffc46b">⚠ 社会视角确认 · ${r.region_name}</b>` +
+      `<div class="meta" style="margin-top:6px">你选了 <span class="sw" style="background:${r.hex}"></span> <b>${r.hex}</b>——该品类 ${r.palette_size} 个在售色中最近的 ΔE=${r.min_dE}（<b>罕见/非主流色</b>）。</div>` +
+      `<div class="meta">在正常人眼里，它是「<b>${(r.seen_by_norm || {}).name}</b>」。${se.applied ? `你想要的效果，在社会正常视角下是 <span class="sw" style="background:${se.corrected_hex}"></span> <b>${se.corrected_hex}</b>「${se.seen_by_norm_name}」。` : ((se && se.note) || "")}</div>` +
+      `<div class="meta" style="margin-top:6px">换成在售主流色（按你眼中相似度排序 · 别人看到的是正常妆效）：</div>` +
+      `<div style="margin:4px 0">${sug || '<span class="meta">该品类暂无在售替代</span>'}</div>` +
+      `<div class="row" style="margin-top:8px">` +
+      `<button onclick="gateKeepConfirm(${i})">仍用这个色出门（尊重你的选择，无现货会走定制）</button>` +
+      `<button onclick="gateAskAI(${i})">问 AI 这个选择合不合适</button></div>` +
+      `</div>`;
+  }).join("") + `<div class="meta">处理完确认卡会自动继续上妆；确认原色或换色后本次不再重复询问（改色会重新守门）。</div>`;
+  const bx = document.getElementById("tyres");
+  window.scrollTo({top: bx.offsetTop - 60, behavior: "smooth"});
+}
+function gatePick(i, hex){
+  const it = gateData[i]; if(!it) return;
+  gateSetHex(it.part.region, hex);
+  tyParts();                                 // 推荐色来自在售板 → 主流判定通过，直接继续
+}
+function gateKeepConfirm(i){
+  const it = gateData[i]; if(!it) return;
+  gateKeep[it.part.region] = it.part.hex.toUpperCase();
+  tyParts();
+}
+function gateAskAI(i){
+  const it = gateData[i]; if(!it || !window.CBChat) return;
+  const r = it.review, se = r.social_equiv || {};
+  window.CBChat.open();
+  window.CBChat.send(
+    `用户（色觉档案：${se.cvd_type || "见档案"} severity ${se.severity || "见档案"}）在${r.region_name}选了 ${r.hex}。` +
+    `代码工具 shade_review 判定：该品类 ${r.palette_size} 个在售色中最小 ΔE=${r.min_dE}（罕见/非主流）；` +
+    `正常人眼里是「${(r.seen_by_norm || {}).name}」；` +
+    (se.applied ? `社会正常等效色（你想要的效果）= ${se.corrected_hex}「${se.seen_by_norm_name}」；` : "") +
+    `在售主流替代（按用户视角相似度）：` +
+    (r.suggestions || []).map(s => `${s.brand ? s.brand + " " : ""}${s.name} #${s.hex}（用户视角 ΔE=${s.dE_sim}）`).join("、") + "。" +
+    "请用人话向用户解释：一、这个颜色出门别人大概率会怎么看（诚实、不评判）；" +
+    "二、替代色为什么效果接近；三、两条路都尊重——仍用原色可走定制，换推荐色点色块即可。不要调用导航工具。");
+}
+
+/* =============================================================================
+   def 43 · AI 面部分析：上传/恢复照片 → 自动调 /api/face_profile
+   （后端：Gray-World 白平衡校正 + BiSeNet 部位解析 + 分部位中值取色；
+   肤色按 YCbCr 肤色域得分在原图/校正图间择优，防「白皮拍成黄皮」）
+   → 渲染档案面板 →「AI 智能配妆」把检测事实一键注入 AI 对话上下文，
+   AI 直调 recommend_shade_tool → 既有 fill 通路回填部位卡。
+   省 token：AI 不看图、不反问外貌，一条结构化消息完成推荐。
+   ============================================================= */
+let tyProfSeq = 0, tyFaceProf = null;          /* 序号防竞态（连换照片只认最后一次） */
+
+function fpRowHtml(label, o){
+  if(!o || o.status !== "ok")
+    return `<div class="fp-row fp-na"><span class="sw" style="background:#5a5a5a"></span>` +
+           `<span class="meta"><b>${label}</b>：${(o && o.note) || "未检出"}</span></div>`;
+  const desc = o.level ? `${o.level} · ${o.undertone}` : (o.name || "");
+  const note = o.note ? ` · ${o.note}` : "";
+  return `<div class="fp-row"><span class="sw" style="background:#${o.hex}" title="#${o.hex}"></span>` +
+         `<span class="meta"><b>${label}</b>：#${o.hex} · ${desc}${note}</span></div>`;
+}
+function renderFaceProf(p){
+  let html = fpRowHtml("肤色", p.skin) + fpRowHtml("发色", p.hair) + fpRowHtml("眉色", p.brow) +
+             fpRowHtml("瞳色", p.eye) + fpRowHtml("唇色", p.lip);
+  if(p.face_shape && p.face_shape.status === "ok")
+    html += `<div class="fp-row"><span class="sw" style="background:transparent;border-style:dashed"></span>` +
+            `<span class="meta"><b>脸型</b>：${p.face_shape.name} · ${p.face_shape.note}</span></div>`;
+  if(p.correction && p.correction.chosen === "original")
+    html += `<div class="fp-row meta">照片色偏较大：白平衡校正反而引入偏差，已按原图取色（机制自动择优）</div>`;
+  $("fp-rows").innerHTML = html;
+  const nOK = ["skin", "hair", "brow", "eye", "lip"].filter(k => p[k] && p[k].status === "ok").length;
+  $("fp-ms").textContent = `已识别 ${nOK}/5 项 · AI 推荐结果会自动填入右侧部位卡`;
+}
+async function analyzeFace(){
+  const seq = ++tyProfSeq;
+  const f = $("tyfile").files[0] || (tyPhoto ? dataURLtoBlob(tyPhoto.data) : null);
+  if(!f) return;
+  $("faceprof").hidden = false;
+  $("faceprof").classList.add("show");           /* def 43 · cpanel 基类默认 opacity:0，须挂 show 才可见 */
+  $("fp-rows").innerHTML = `<div class="fp-row meta">面部分析中…（首次约 30s 加载解析模型，之后每次约 1~3s）</div>`;
+  $("fp-ms").textContent = "";
+  try{
+    const fd = new FormData();
+    fd.append("file", f);
+    const r = await fetch("/api/face_profile", {method: "POST", body: fd});
+    const j = await r.json();
+    if(seq !== tyProfSeq) return;              /* 用户已换新照片：丢弃过期结果 */
+    if(!j.ok){ $("fp-rows").innerHTML = `<div class="fp-row err">分析失败：${j.error}</div>`; return; }
+    tyFaceProf = j.results.profile;
+    renderFaceProf(tyFaceProf);
   }catch(e){
-    btn.disabled = false; btn.textContent = "申请定制（重试）";
+    if(seq === tyProfSeq) $("fp-rows").innerHTML = `<div class="fp-row err">分析服务未响应：${e}</div>`;
   }
+}
+function fpRecommend(){
+  const p = tyFaceProf;
+  if(!p || !window.CBChat) return;
+  const seg = [];
+  const push = (name, o, fmt) => {
+    if(o && o.status === "ok") seg.push(`${name} ${fmt(o)}`);
+    else seg.push(`${name}未检出（区域过小，按常规推荐即可）`);
+  };
+  push("肤色", p.skin, o => `#${o.hex}（${o.level}·${o.undertone}）`);
+  push("发色", p.hair, o => `#${o.hex}（${o.name}）`);
+  push("眉色", p.brow, o => `#${o.hex}（${o.name}）`);
+  push("瞳色", p.eye, o => `#${o.hex}（${o.name}${o.note ? "；" + o.note : ""}）`);
+  push("唇色", p.lip, o => `#${o.hex}（${o.name}）`);
+  if(p.face_shape && p.face_shape.status === "ok") seg.push(`脸型 ${p.face_shape.name}（粗略估计）`);
+  const msg =
+    "我在试妆页上传了照片，平台代码已完成人脸解析（灰世界白平衡校正后自动取色，是客观检测数据）：\n" +
+    seg.join("；") + "。\n" +
+    "请直接基于以上事实调用 recommend_shade_tool 推荐一套完整妆容：lip、foundation、eyeshadow、brow、blush " +
+    "五个部位各一项色号，并附一句话配色思路。这些数据已由代码检测完成，不要反问我的外貌；" +
+    "如需了解我的色觉特点可调用 get_vision_profile_tool；不要调用导航工具。";
+  $("fp-ms").textContent = "已把面部分析发给 AI，请在右侧对话查看推荐…";
+  window.CBChat.open();
+  window.CBChat.send(msg);
 }
