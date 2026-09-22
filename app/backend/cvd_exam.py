@@ -34,6 +34,7 @@ EXAM_TTL = 60 * 30  # 会话 30 分钟超时
 
 _EXAMS = {}    # exam_id -> 会话状态
 _PROFILE = {}  # 全局最新档案（单用户 MVP）
+_TEMP_CAL = None  # def 51 · 无档案时的临时校准（对称红绿增强口径，仅内存，重启归零）
 
 # def 26 · 档案持久化：_PROFILE 原为纯内存态，后端重启即丢——前端还渲染着旧档案、
 # AI 工具与校色端点却报「尚无测评档案」，用户被迫重测 22 题（def 24/25 两次踩坑）。
@@ -360,9 +361,26 @@ def calibrate(mode: str = None, enabled=None) -> dict:
     消费方口径：试妆反解 = mode=="correct" 且 enabled（main.py 同步）；
     theme_cvd 自动恢复同口径（enabled 为 False 不上色）。
     """
+    global _TEMP_CAL
     if not _PROFILE:
-        return {"ok": False, "tool": "cvd_exam",
-                "error": "尚无测评档案，请先完成测评再做校色选择", "results": {}}
+        # def 51（用户 2026-09-22：重启清档案后校色开关按不动）· 无档案只挡「配置导入」
+        # （mode 路径——导入需真实档案支撑）；开关启停（enabled 路径）放行为「对称红绿增强」
+        # 临时口径（kind=uncertain 中性增强，不假定缺陷方向、亮度保持）。临时校准仅存内存、
+        # 不落盘、不进试妆反解管线（该管线读档案文件，无档案时本就由试妆页守门引导测评），
+        # 后端重启即归零——符合 def50 演示态缓存纪律。
+        if enabled is None:
+            return {"ok": False, "tool": "cvd_exam",
+                    "error": "尚无测评档案，请先完成测评再做校色选择", "results": {}}
+        _mode = _TEMP_CAL.get("mode", "correct") if _TEMP_CAL else "correct"
+        if bool(enabled) and _mode == "off":
+            _mode = "correct"
+        _TEMP_CAL = {"mode": _mode, "kind": "uncertain", "severity": 1.0,
+                     "enabled": bool(enabled), "updated": int(time.time()),
+                     "provisional": True}
+        return {"ok": True, "tool": "cvd_exam",
+                "query": {"mode": _mode, "enabled": bool(enabled)},
+                "results": {"calibration": _TEMP_CAL, "advice": ""}}
+    _TEMP_CAL = None   # def 51 · 已有真实档案：临时口径作废，以档案为准
     cal_old = _PROFILE.get("calibration") or {}
     if enabled is None:
         if mode not in ("correct", "simulate", "off"):

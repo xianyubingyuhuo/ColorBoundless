@@ -53,7 +53,9 @@
     const prev = (window.CVDTheme && window.CVDTheme.getSession) ? window.CVDTheme.getSession() : null;
     try{
       const turningOn = !isOn();
-      if (turningOn && !cal){ toast("暂无测评档案——请先在「色盲校验」页完成 22 题测评", true); return; }
+      /* def 51 · 无档案也允许开启：乐观默认「对称红绿增强」，POST 返回后以服务端临时校准为准
+         （后端造 kind=uncertain 临时口径，不落盘、重启归零）；配置导入按钮路径无档案仍守门 */
+      if (turningOn && !cal) cal = {mode: "correct", kind: "uncertain", severity: 1.0};
       const locked = !!window.__cvd_url_sim;
       /* def 41 · 会话标记本地先写（启停真相源），POST 仅同步档案存档；URL 演示锁下不动标记 */
       if (window.CVDTheme && window.CVDTheme.setSession && !locked){
@@ -74,6 +76,7 @@
         if (turningOn){
           const res = window.CVDTheme.apply(cal.mode, cal.kind, cal.severity);
           if (!res.applied && res.reason === "kind_unsupported") toast(UNCERTAIN_NOTE);
+          else if (cal.provisional) toast("未测评——已按<b>对称红绿增强</b>（保守口径）开启全站校色：不假定缺陷方向、亮度保持，红绿色差双向拉开；到「色盲校验」页完成测评可获个性化补偿");
           else toast(cal.kind === "uncertain"
             ? "校色配色已开启——档案类型未定型，已启用对称红绿增强（不假定方向、亮度保持）；本会话内跨页保留，关闭浏览器后默认恢复原色"
             : "校色配色已开启——全站按校色配置上色；本会话内跨页保留，关闭浏览器后默认恢复原色");
@@ -102,6 +105,6 @@
           sessionStorage.setItem("cal_uncertain_note", "1");
         }
       }
-    }catch(e){ /* 档案服务未响应：开关仍按会话标记工作；无标记时点击会提示先测评 */ }
+    }catch(e){ /* 档案服务未响应：开关仍按会话标记工作；无标记时点击走 def51 临时口径 */ }
   })();
 })();

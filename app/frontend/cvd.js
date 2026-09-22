@@ -15,6 +15,15 @@ async function toggleCalSwitch(){
   if(calBusy) return;
   const sw = $("calswitch");
   if(sw.dataset.hasProfile !== "1"){
+    /* def 51 · 无档案但全站已开（未测评临时口径：对称红绿增强）→ 在此允许关闭，
+       否则 calswitch 开启后到本页会「关不掉」（session 标记仍在、配色继续生效） */
+    if(window.CVDTheme && window.CVDTheme.getSession && window.CVDTheme.getSession()){
+      window.CVDTheme.setSession(null);
+      window.CVDTheme.reset();
+      syncCalSwitch(false);
+      $("calstatus").innerHTML = `<span class="ms">已关闭校色配色（此前为未测评临时口径：对称红绿增强）——完成 22 题测评后可获个性化校色</span>`;
+      return;
+    }
     $("calstatus").innerHTML = `<span class="err">暂无测评档案——请先在"色盲测评"完成 22 题</span>`;
     showTab("exam"); return;   /* 兜底保留：真无档案仍引导去测评，但仅在首次无档案时发生 */
   }
@@ -482,4 +491,11 @@ function simAll(kind){
     }
   }catch(e){}
   $("calswitch").dataset.hasProfile = $("calswitch").dataset.hasProfile || "0";
+  /* def 51 · 无档案但全站已开（calswitch 临时口径）→ 开关 UI 同步 on，
+     否则开关显示 off 而配色实际生效，状态不符且无法从本页关断 */
+  if($("calswitch").dataset.hasProfile !== "1"
+     && window.CVDTheme && window.CVDTheme.getSession && window.CVDTheme.getSession()){
+    syncCalSwitch(true);
+    $("calstatus").innerHTML = `<span class="ms">全站校色开启中（未测评临时口径：对称红绿增强——不假定缺陷方向、亮度保持，跨页保留）——顶部开关可关闭；完成 22 题测评可获个性化校色</span>`;
+  }
 })();
