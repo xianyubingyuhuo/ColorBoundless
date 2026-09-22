@@ -14,18 +14,34 @@
     keep = sessionStorage.getItem(KEEPER) === "1";
     sessionStorage.removeItem(KEEPER);
   } catch (e) {}
+  /* 浏览器后退/前进也是"切换"语义：bfcache 恢复不重跑本脚本；重跑时同样保留 */
+  const navType = (performance.getEntriesByType("navigation")[0] || {}).type || "";
 
   function wipe() {
     try { sessionStorage.clear(); } catch (e) {}
     try { localStorage.clear(); } catch (e) {}
     try { indexedDB.deleteDatabase("cb_tryon"); } catch (e) {}
   }
-  if (!keep) wipe();
+  if (!keep && navType !== "back_forward") wipe();
 
   /* 站内跳转登记：跳转前调一次，目标页读到标记即保留缓存 */
   window.cbNavKeep = function () {
     try { sessionStorage.setItem(KEEPER, "1"); } catch (e) {}
   };
+
+  /* def 50b（用户 2026-09-22：色盲体验通道冲突）· 站内 <a> 链接统一登记——
+     捕获阶段拦截，覆盖顶部导航条（选色/试妆/色盲校验/产品库/回主页）与
+     JS 动态生成的引导链接（如试妆页"去色盲校验"）。漏接标记的原生跳转
+     会把演示态清掉——在此一处兜底，未来新增 <a> 无需再接标记。 */
+  document.addEventListener("click", function (e) {
+    const t = e.target;
+    const a = (t && t.closest) ? t.closest("a[href]") : null;
+    if (!a) return;
+    const href = a.getAttribute("href") || "";
+    if (!href || href.charAt(0) === "#" ||
+        /^(https?:)?\/\//i.test(href) || /^(mailto:|tel:)/i.test(href)) return;
+    window.cbNavKeep && window.cbNavKeep();
+  }, true);
 
   /* 后端重启检测：boot 基线是内存变量（不落盘）——重启必变 → wipe + reload */
   let boot = null;
