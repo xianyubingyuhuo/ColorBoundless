@@ -9,6 +9,7 @@
 定制申请：追加写入 data/products/custom_requests.json（零依赖，本地 JSON）。
 """
 import importlib.util
+import random
 import uuid
 import json
 import time
@@ -242,55 +243,110 @@ def list_custom() -> dict:
         return {"ok": False, "tool": "products_custom_list", "error": f"读取失败: {e}", "results": {}}
 
 
+# def 46 · 橱窗随机分配用固定种子：数量与组合随机错落（真实货架感），但每次启动/刷新
+# 完全一致——答辩演示可复现、compare_library 对比库色源不漂移；换种子即换一批布局。
+_SHOWCASE_SEED = 89   # 扫描选定：各品类内色数互不重复、错落感最强（3 色小样 ↔ 7 色大系列）
+
+
+def _wants(rng, n, lo, hi, cap):
+    """n 个窗口的随机色数（lo~hi），总和超池容量 cap 时从最多的窗口往回削。"""
+    w = [rng.randint(lo, hi) for _ in range(n)]
+    while sum(w) > cap:
+        i = max(range(n), key=lambda k: w[k])
+        if w[i] <= lo:
+            break
+        w[i] -= 1
+    return w
+
+
+def _deal_shades(rng, pool, wants):
+    """洗牌副本 → 按 wants 依次切窗（末窗 clamp，池尽即止；窗口间颜色不重复）。"""
+    pool = list(pool)
+    rng.shuffle(pool)
+    out, start = [], 0
+    for w in wants:
+        take = min(w, len(pool) - start)
+        if take <= 0:
+            break
+        out.append(pool[start:start + take])
+        start += take
+    return out
+
+
+@lru_cache(maxsize=1)
+def _showcase_items() -> list:
+    """def 46 · 橱窗窗口构造：catalog（展示）与 compare_library（对比库）共用此单一数据源，
+    两边永不失同步。每款商品的颜色数量随机错落——真实货架上有的系列 30+ 色、有的仅 2 色，
+    不再是旧版「每款恰好对半」的均匀切分；窗口间颜色不重复。粉底按集团品牌各成一款
+    （Fit Me / Ultra HD / Teint Idole / True Match），其余品类为官方/内建池洗牌分窗。"""
+    rng = random.Random(_SHOWCASE_SEED)
+    items = []
+
+    # 口红：官方唇色库 20 色 → 4 款系列（各 3~7 色随机）
+    lip = [{"hex": s["hex"], "name": s["name"], "tone": s.get("tone", ""),
+            "desc": s.get("desc", "")} for s in _core.SHADES]
+    for i, shades in enumerate(_deal_shades(rng, lip, _wants(rng, 4, 3, 7, len(lip))), 1):
+        items.append({"id": f"lip{i}", "name": f"丝绒唇膏 · 系列 {i}", "category": "lip",
+                      "desc": "官方唇色库随机抽样组合", "shades": shades})
+
+    # 粉底：集团库 168 条按品牌各成一款（22~36 色——真实粉底系列普遍 20~40 色）
+    fd_by_brand = {}
+    for it in _shades_pool():
+        fd_by_brand.setdefault(it["brand"], []).append(
+            {"hex": it["hex"], "name": it["product"], "brand": it["brand"], "L": it["L"]})
+    fd_names = {"Maybelline": "Fit Me 柔雾粉底", "Make Up For Ever": "Ultra HD 高清粉底",
+                "Lancôme": "Teint Idole 持妆粉底", "L'Oréal": "True Match 绝配无瑕粉底"}
+    fi = 0
+    for brand, pool in fd_by_brand.items():
+        take = min(rng.randint(22, 36), len(pool))
+        rng.shuffle(pool)
+        fi += 1
+        items.append({"id": f"foundation{fi}", "name": f"{fd_names.get(brand, brand)}（{brand}）",
+                      "category": "foundation", "desc": f"{brand} · 集团粉底库系列抽样",
+                      "shades": pool[:take]})
+
+    # 眼影：内建十二色命名盘 → 3 款盘（各 3~6 色，真实眼影盘每盘色数少）
+    eye = [dict(it) for it in _EYESHADOW_POOL]
+    for i, shades in enumerate(_deal_shades(rng, eye, _wants(rng, 3, 3, 6, len(eye))), 1):
+        items.append({"id": f"eyeshadow{i}", "name": f"眼影盘 · 系列 {i}", "category": "eyeshadow",
+                      "desc": "内建命名盘抽样组合（大地/玫瑰/紫灰）", "shades": shades})
+
+    # 眉妆：内建五色盘 → 2 款（各 2~4 色，眉部色号本就少）
+    brow = [dict(it) for it in _BROW_POOL]
+    for i, shades in enumerate(_deal_shades(rng, brow, _wants(rng, 2, 2, 4, len(brow))), 1):
+        items.append({"id": f"brow{i}", "name": f"眉笔 · 系列 {i}", "category": "brow",
+                      "desc": "五色眉妆盘抽样（深棕/灰黑为主）", "shades": shades})
+
+    # 腮红：演示池 5 色 → 2 款（各 2~4 色）
+    blush = [{"hex": it["hex"], "name": it["product"], "brand": it["brand"],
+              "desc": it["desc"]} for it in _BLUSH_POOL]
+    for i, shades in enumerate(_deal_shades(rng, blush, _wants(rng, 2, 2, 4, len(blush))), 1):
+        items.append({"id": f"blush{i}", "name": f"腮红 · 系列 {i}", "category": "blush",
+                      "desc": "腮红演示池随机抽样（裸粉→陶土珊瑚）", "shades": shades})
+
+    return items
+
+
 def catalog() -> dict:
-    """def 18d · 商品橱窗：每品类多窗口（口红1/2、粉底1/2、眼影1、腮红1），
-    色板切片自真实数据池（唇 20 色对半、粉底 168 条隔条抽样、腮红 5 色、眼影内建 12 色）；
+    """def 18d/46 · 商品橱窗：每品类多款商品（唇 4 / 粉底 4 / 眼影 3 / 眉 2 / 腮红 2），
+    每款颜色数量随机错落（固定种子可复现，见 _showcase_items）；
     图片为收集占位图（app/frontend/assets/）；ingredients/ratio 为详情页占位——
     为 v3「询问 AI 是否健康 / 成分表的作用」预留接入点。
     """
     tool = "products_catalog"
-    lip = list(_core.SHADES)
-    fd = _shades_pool()
-    items = [
-        {"id": "lip1", "name": "口红 1", "category": "lip",
-         "img": "/assets/lipstick_placeholder.jpg",
-         "desc": "官方唇色库 · 前半系列（正红/豆沙/珊瑚）",
-         "shades": [{"hex": s["hex"], "name": s["name"], "tone": s.get("tone", ""),
-                     "desc": s.get("desc", "")} for s in lip[: len(lip) // 2]]},
-        {"id": "lip2", "name": "口红 2", "category": "lip",
-         "img": "/assets/lipstick_placeholder.jpg",
-         "desc": "官方唇色库 · 后半系列（玫瑰/浆果/棕调）",
-         "shades": [{"hex": s["hex"], "name": s["name"], "tone": s.get("tone", ""),
-                     "desc": s.get("desc", "")} for s in lip[len(lip) // 2 :]]},
-        {"id": "foundation1", "name": "粉底 1", "category": "foundation",
-         "img": "/assets/foundation_placeholder.jpg",
-         "desc": "欧莱雅集团粉底 · 均匀抽样 A 组",
-         "shades": [{"hex": it["hex"], "name": it["product"], "brand": it["brand"],
-                     "L": it["L"]} for it in fd[0::2]]},
-        {"id": "foundation2", "name": "粉底 2", "category": "foundation",
-         "img": "/assets/foundation_placeholder.jpg",
-         "desc": "欧莱雅集团粉底 · 均匀抽样 B 组",
-         "shades": [{"hex": it["hex"], "name": it["product"], "brand": it["brand"],
-                     "L": it["L"]} for it in fd[1::2]]},
-        {"id": "eyeshadow1", "name": "眼影 1", "category": "eyeshadow",
-         "img": "/assets/eyeshadow_placeholder.jpg",
-         "desc": "内建十二色盘（大地/玫瑰/紫灰）",
-         "shades": list(_EYESHADOW_POOL)},
-        {"id": "brow1", "name": "眉妆 1", "category": "brow",
-         "img": "/assets/brow_placeholder.jpg",
-         "desc": "内建五色命名盘（深棕/灰黑为主，按发色选）",
-         "shades": [{"hex": it["hex"], "name": it["name"],
-                     "desc": it["desc"]} for it in _BROW_POOL]},
-        {"id": "blush1", "name": "腮红 1", "category": "blush",
-         "img": "/assets/blush_placeholder.jpg",
-         "desc": "腮红演示池（冷调裸粉→陶土珊瑚）",
-         "shades": [{"hex": it["hex"], "name": it["product"], "brand": it["brand"],
-                     "desc": it["desc"]} for it in _BLUSH_POOL]},
-    ]
-    for it in items:
-        it["count"] = len(it["shades"])
-        it["ingredients"] = "成分表整理中——v3 将接入「询问 AI 是否健康 / 成分表的作用」"
-        it["ratio"] = "色粉/基质配比资料整理中（演示占位）"
+    _IMG = {"lip": "/assets/lipstick_placeholder.jpg",
+            "foundation": "/assets/foundation_placeholder.jpg",
+            "eyeshadow": "/assets/eyeshadow_placeholder.jpg",
+            "brow": "/assets/brow_placeholder.jpg",
+            "blush": "/assets/blush_placeholder.jpg"}
+    items = []
+    for it in _showcase_items():
+        row = dict(it)
+        row["img"] = _IMG[it["category"]]
+        row["count"] = len(it["shades"])
+        row["ingredients"] = "成分表整理中——v3 将接入「询问 AI 是否健康 / 成分表的作用」"
+        row["ratio"] = "色粉/基质配比资料整理中（演示占位）"
+        items.append(row)
     return {"ok": True, "tool": tool,
             "results": {"count": len(items), "items": items}, "error": None}
 
@@ -370,20 +426,10 @@ def compare_library() -> dict:
     色源 = 全部橱窗窗口的色板；排序按明度（暗→亮）。
     """
     tool = "products_compare"
-    lip = list(_core.SHADES)
-    fd = _shades_pool()
-    groups = [
-        ("lip", "口红 1", [{"hex": s["hex"], "name": s["name"]} for s in lip[: len(lip) // 2]]),
-        ("lip", "口红 2", [{"hex": s["hex"], "name": s["name"]} for s in lip[len(lip) // 2 :]]),
-        ("foundation", "粉底 1", [{"hex": it["hex"], "name": it["product"],
-                                   "brand": it["brand"]} for it in fd[0::2]]),
-        ("foundation", "粉底 2", [{"hex": it["hex"], "name": it["product"],
-                                   "brand": it["brand"]} for it in fd[1::2]]),
-        ("eyeshadow", "眼影 1", [{"hex": it["hex"], "name": it["name"]} for it in _EYESHADOW_POOL]),
-        ("brow", "眉妆 1", [{"hex": it["hex"], "name": it["name"]} for it in _BROW_POOL]),
-        ("blush", "腮红 1", [{"hex": it["hex"], "name": it["product"],
-                              "brand": it["brand"]} for it in _BLUSH_POOL]),
-    ]
+    # def 46 · 色源=橱窗窗口（_showcase_items 单一数据源，与商品橱窗永不失同步）
+    groups = [(it["category"], it["name"],
+               [{"hex": s["hex"], "name": s["name"], "brand": s.get("brand", "")}
+                for s in it["shades"]]) for it in _showcase_items()]
     index = {}
     for cat, item_name, shades in groups:
         for s in shades:
