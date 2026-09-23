@@ -10,8 +10,8 @@ async function t1(){
     $("s1ms").textContent = `官方库 ${ms}ms`;
     if(!j.ok){
       /* 防御：把真实响应打进错误区，便于定位（正常不应触发） */
-      $("s1res").innerHTML = `<span class="err">[错误] ${j.error || "后端返回异常结构（请展开下方调试信息）"}</span>` +
-        `<details><summary>调试信息（点击展开，截图发我）</summary><pre>${JSON.stringify(j).slice(0, 600)}</pre></details>`;
+      $("s1res").innerHTML = `<span class="err">[错误] ${j.error || "后端返回异常结构（可展开下方调试信息查看原始响应）"}</span>` +
+        `<details><summary>调试信息</summary><pre>${JSON.stringify(j).slice(0, 600)}</pre></details>`;
       return;
     }
 
