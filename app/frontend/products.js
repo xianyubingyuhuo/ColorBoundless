@@ -34,20 +34,84 @@ async function doQuery(){
   }
 }
 
+/* def 56 · 定制申请弹窗：选商品（近似候选 top5）→ 确认系列名 → 选规格 */
+const CM_SPEC_SET = {
+  lip: ["单支装 3.5g", "迷你装 1.5g"],
+  foundation: ["正装 30ml", "便携装 15ml"],
+  eyeshadow: ["单色 2g", "四色盘 8g"],
+  brow: ["单支 1g", "双头 0.8g"],
+  blush: ["单色 5g", "盒装 7g"],
+};
+function cmRow(hex, region, cands){
+  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—"}];
+  const opts = list.map((c, i) =>
+    `<option value="${i}" data-brand="${esc(c.brand)}" data-product="${esc(c.product)}" ${i === 0 ? "selected" : ""}>` +
+    `${esc(c.brand)} · ${esc(c.product || "（无候选）")}（#${esc(c.hex)} · ΔE=${esc(c.dE)}）</option>`).join("");
+  const specs = (CM_SPEC_SET[region] || ["标准规格"]).map((s, i) =>
+    `<option value="${esc(s)}" ${i === 0 ? "selected" : ""}>${esc(s)}</option>`).join("");
+  const RN = { lip: "唇妆", foundation: "粉底", eyeshadow: "眼影", brow: "眉妆", blush: "腮红" };
+  return `
+    <div class="citem" data-hex="${esc(hex)}" data-region="${esc(region)}">
+      <span class="sw" style="background:#${esc(hex)}"></span>
+      <div class="tx" style="flex:1;min-width:0">
+        <b>${esc(RN[region] || region)} · #${esc(hex)}</b>
+        <div class="meta">商品类型：${esc(RN[region] || region)}</div>
+        <div class="crow"><label>定制商品</label>
+          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.product || ''">${opts}</select></div>
+        <div class="crow"><label>系列名</label>
+          <input class="csel-series" value="${esc(list[0].product || "")}" placeholder="系列名（选商品自动带出，可微调）" /></div>
+        <div class="crow"><label>规格</label>
+          <select class="csel-spec">${specs}</select></div>
+      </div>
+    </div>`;
+}
 async function customReq(){
   const hex = $("qhex").value.trim().replace("#", "");
   const region = $("qregion").value;
+  $("cmodal-body").innerHTML = '<div class="meta">加载候选商品…</div>';
+  const mask = $("custommask");
+  mask.hidden = false;
+  requestAnimationFrame(() => mask.classList.add("show"));
+  try{
+    const r = await (await fetch(`/api/products/match?hex=${encodeURIComponent(hex)}&region=${encodeURIComponent(region)}`)).json();
+    const cands = (r.ok && r.results.candidates) || [];
+    $("cmodal-body").innerHTML = cmRow(hex, region, cands);
+  }catch(e){
+    $("cmodal-body").innerHTML = '<span class="err">候选加载失败——可直接填系列名提交</span>' + cmRow(hex, region, []);
+  }
+}
+function closeCustomModal(){
+  const mask = $("custommask");
+  mask.classList.remove("show");
+  setTimeout(() => { mask.hidden = true; }, 180);
+}
+async function submitCustomModal(){
+  const row = document.querySelector("#cmodal-body .citem");
+  if(!row) return;
+  const btn = $("cmodal-submit");
+  btn.disabled = true;
+  const hex = row.dataset.hex, region = row.dataset.region;
+  const prodSel = row.querySelector(".csel-product");
+  const opt = prodSel && prodSel.selectedOptions[0];
+  const series = (row.querySelector(".csel-series") || {}).value || "";
+  const spec = (row.querySelector(".csel-spec") || {}).value || "";
+  const b = (opt && opt.dataset.brand) || "";
+  const product = series.startsWith(b) ? series : [b, series].filter(Boolean).join(" ");
   try{
     const r = await (await fetch("/api/products/custom", {method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({hex, region, note: "产品库页申请"})})).json();
-    $("custommsg").innerHTML = r.ok
-      ? '<span style="color:#7de0a6">✓ ' + esc(r.results.message) + '</span>'
-      : '<span class="err">' + esc(r.error) + '</span>';
-    if(r.ok) loadCustom();
+      body: JSON.stringify({hex, region, product, series, spec, note: "产品库页申请 · 弹窗选择定制"})})).json();
+    if(r.ok){
+      $("custommsg").innerHTML = '<span style="color:#7de0a6">✓ ' + esc(r.results.message) + '</span>';
+      closeCustomModal();
+      loadCustom();
+    } else {
+      $("cmodal-body").insertAdjacentHTML("beforeend", `<span class="err">${esc(r.error)}</span>`);
+    }
   }catch(e){
-    $("custommsg").innerHTML = '<span class="err">登记失败</span>';
+    $("cmodal-body").insertAdjacentHTML("beforeend", '<span class="err">登记失败</span>');
   }
+  btn.disabled = false;
 }
 
 async function loadCustom(){
@@ -68,6 +132,8 @@ async function loadCustom(){
           <span class="tl-sw" style="background:#${esc(rec.hex)}"></span>
           <span class="tl-tag">${esc(RN[rec.region] || rec.region || "定制")}</span>
           <b>#${esc(rec.hex)}</b> <span class="meta">${esc(rec.ts)}</span>
+          ${(rec.series || rec.spec || rec.product) ? '<div style="margin-top:2px"><b>' + esc(rec.product || "") + '</b></div>' : ""}
+          ${(rec.series || rec.spec) ? '<div class="meta" style="margin-top:1px">系列：' + esc(rec.series || "—") + (rec.spec ? " · 规格：" + esc(rec.spec) : "") + '</div>' : ""}
           ${rec.note ? '<div class="meta" style="margin-top:2px">' + esc(rec.note) + '</div>' : ""}
         </div>
         <button class="tl-cancel" onclick="cancelCustom('${esc(rec.hex)}','${esc(rec.region)}','${esc(rec.ts)}')">取消</button>

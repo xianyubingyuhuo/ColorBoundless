@@ -104,9 +104,28 @@ def _owner_label(o: dict) -> str:
     return name if o["category"] in name else f"{o['category']} · {name}"
 
 
+def _top_candidates(pool, lab, n=5, official=False):
+    """def 56 · 池内 top-N 最近候选（定制弹窗的「选择商品」列表）。
+    official=True 的池（眼影/眉妆内建命名盘）没有 brand/product 字段，
+    用 name 当系列名、品牌统一为 ColorBoundless Official。"""
+    scored = sorted(pool, key=lambda it: float(
+        _core.ciede2000(lab, list(_core.hex2lab(it["hex"])))))
+    out = []
+    for it in scored[:n]:
+        d = float(_core.ciede2000(lab, list(_core.hex2lab(it["hex"]))))
+        rec = dict(it)
+        if official:
+            rec["brand"] = "ColorBoundless Official"
+            rec["product"] = it.get("name", it.get("product", ""))
+        rec["dE"] = round(d, 2)
+        out.append(rec)
+    return out
+
+
 def match_product(hex_color: str, region: str = "lip") -> dict:
     """def 15d/46c · 所选色号 → 最近商品 + 有货判定（dE 阈值 _AVAILABLE_D）；
-    results 附 showcase/showcase_txt——最近商品色在商品橱窗中的归属（品类 · 分支 · 色号）。"""
+    results 附 showcase/showcase_txt——最近商品色在商品橱窗中的归属（品类 · 分支 · 色号）。
+    def 56 · results 附 candidates（top5 近似候选）——定制弹窗「选择商品」的数据源。"""
     tool = "products_match"
     try:
         hex_std = str(hex_color).strip().lstrip("#").upper()
@@ -118,44 +137,28 @@ def match_product(hex_color: str, region: str = "lip") -> dict:
     lab = list(_core.hex2lab(hex_std))
     try:
         if region == "foundation":
-            best, best_d = None, 1e9
-            for it in _shades_pool():
-                d = float(_core.ciede2000(lab, list(_core.hex2lab(it["hex"]))))
-                if d < best_d:
-                    best, best_d = it, d
-            nearest = {"brand": best["brand"], "product": best["product"],
-                       "hex": best["hex"], "L": best["L"], "dE": round(best_d, 2)}
+            cands = _top_candidates(_shades_pool(), lab, official=False)
+            nearest = {"brand": cands[0]["brand"], "product": cands[0]["product"],
+                       "hex": cands[0]["hex"], "L": cands[0].get("L"), "dE": cands[0]["dE"]}
         elif region == "blush":
-            best, best_d = None, 1e9
-            for it in _BLUSH_POOL:
-                d = float(_core.ciede2000(lab, list(_core.hex2lab(it["hex"]))))
-                if d < best_d:
-                    best, best_d = it, d
-            nearest = {"brand": best["brand"], "product": best["product"],
-                       "hex": best["hex"], "dE": round(best_d, 2)}
+            cands = _top_candidates(_BLUSH_POOL, lab, official=False)
+            nearest = {"brand": cands[0]["brand"], "product": cands[0]["product"],
+                       "hex": cands[0]["hex"], "dE": cands[0]["dE"]}
         elif region == "lip":
-            rows = _core.search_shade(hex_std, top_k=1)
-            s = rows[0] if rows else None
-            if not s:
+            rows = _core.search_shade(hex_std, top_k=5)
+            if not rows:
                 return {"ok": False, "tool": tool, "error": "唇色库为空", "results": {}}
-            nearest = {"brand": "ColorBoundless Official", "product": s["name"],
-                       "hex": s["hex"], "dE": round(float(s["dE"]), 2)}
+            cands = [{"brand": "ColorBoundless Official", "product": s["name"],
+                      "hex": s["hex"], "dE": round(float(s["dE"]), 2)} for s in rows]
+            nearest = dict(cands[0])
         elif region == "eyeshadow":
-            best, best_d = None, 1e9
-            for it in _EYESHADOW_POOL:
-                d = float(_core.ciede2000(lab, list(_core.hex2lab(it["hex"]))))
-                if d < best_d:
-                    best, best_d = it, d
-            nearest = {"brand": "ColorBoundless Official", "product": best["name"],
-                       "hex": best["hex"], "dE": round(best_d, 2)}
+            cands = _top_candidates(_EYESHADOW_POOL, lab, official=True)
+            nearest = {"brand": cands[0]["brand"], "product": cands[0]["product"],
+                       "hex": cands[0]["hex"], "dE": cands[0]["dE"]}
         elif region == "brow":
-            best, best_d = None, 1e9
-            for it in _BROW_POOL:
-                d = float(_core.ciede2000(lab, list(_core.hex2lab(it["hex"]))))
-                if d < best_d:
-                    best, best_d = it, d
-            nearest = {"brand": "ColorBoundless Official", "product": best["name"],
-                       "hex": best["hex"], "dE": round(best_d, 2)}
+            cands = _top_candidates(_BROW_POOL, lab, official=True)
+            nearest = {"brand": cands[0]["brand"], "product": cands[0]["product"],
+                       "hex": cands[0]["hex"], "dE": cands[0]["dE"]}
         else:
             return {"ok": False, "tool": tool,
                     "error": f"未知部位: {region}（可用: lip / foundation / eyeshadow / brow / blush）", "results": {}}
@@ -167,6 +170,7 @@ def match_product(hex_color: str, region: str = "lip") -> dict:
     return {"ok": True, "tool": tool,
             "query": {"hex": hex_std, "region": region, "threshold_dE": _AVAILABLE_D},
             "results": {"nearest": nearest,
+                        "candidates": cands,
                         "available": bool(dE <= _AVAILABLE_D),
                         "verdict": ("有现货——最近集团商品色差很小" if dE <= _AVAILABLE_D
                                     else "无接近现货——可申请定制"),
@@ -177,8 +181,10 @@ def match_product(hex_color: str, region: str = "lip") -> dict:
             "error": None}
 
 
-def custom_request(hex_color: str, region: str = "lip", note: str = "") -> dict:
-    """def 15d · 无现货色号 → 定制申请登记（追加写 data/products/custom_requests.json）。"""
+def custom_request(hex_color: str, region: str = "lip", note: str = "",
+                   product: str = "", series: str = "", spec: str = "") -> dict:
+    """def 15d · 无现货色号 → 定制申请登记（追加写 data/products/custom_requests.json）。
+    def 56 · 弹窗选择流新增三个字段：product（定制商品）、series（系列名）、spec（规格）。"""
     tool = "products_custom"
     try:
         hex_std = str(hex_color).strip().lstrip("#").upper()
@@ -190,6 +196,8 @@ def custom_request(hex_color: str, region: str = "lip", note: str = "") -> dict:
         _DATA_DIR.mkdir(parents=True, exist_ok=True)
         data = json.loads(_CUSTOM_JSON.read_text(encoding="utf-8")) if _CUSTOM_JSON.exists() else []
         rec = {"id": uuid.uuid4().hex[:8], "hex": hex_std, "region": region, "note": str(note)[:200],
+               "product": str(product)[:120], "series": str(series)[:120],
+               "spec": str(spec)[:60],
                "ts": time.strftime("%Y-%m-%d %H:%M:%S")}
         data.append(rec)
         _CUSTOM_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")

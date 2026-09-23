@@ -227,13 +227,16 @@
  <b class="meta" style="display:block;margin-top:8px">商品匹配（所选色号 → 最近集团商品 / 定制）</b>
  <div id="matchres" style="margin-top:4px"></div>
  <!-- def 18c+ · 试妆后定制面板：无现货颜色清单 + 近似推荐 + 一键提交（淡入） -->
- <div id="custompanel" class="cpanel" hidden>
-   <b class="cpanel-t">以下颜色暂无接近现货——可一键申请定制</b>
+ <div id="custommask" hidden onclick="closeCustomModal()">
+   <div id="custompanel" class="cmodal" onclick="event.stopPropagation()">
+   <b class="cpanel-t">定制申请 · 以下颜色暂无接近现货</b>
    <div id="clist"></div>
    <div class="cpanel-foot">
     <button id="csubmit" onclick="submitCustomAll(this)">一键提交定制申请</button>
+     <button class="cbtn-ghost" onclick="closeCustomModal()">取消</button>
     <span id="cms" class="ms"></span>
    </div>
+  </div>
   </div>
  <details class="corbox"><summary>高级 · 颜色校正设置（默认跟随测评档案，一般无需改动）</summary>
   <div class="row" style="margin-top:8px;align-items:center">
@@ -253,6 +256,6 @@
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
 <script src="state_clear.js?v=def51"></script><script src="theme_cvd.js?v=def53"></script><script src="chatbox.js?v=def55"></script><script src="calswitch.js?v=def51"></script>
-<script src="tryon.js?v=def55"></script>
+<script src="tryon.js?v=def56"></script>
 </body>
 </html>

@@ -273,7 +273,8 @@ async function tyParts(){
       const mr = await fetchMatch(p.hex, p.region);
       matchResults.push({hex: String(p.hex).replace("#", ""), region: p.region, ok: mr.ok,
                          available: !!(mr.results && mr.results.available),
-                         nearest: (mr.results && mr.results.nearest) || null});
+                         nearest: (mr.results && mr.results.nearest) || null,
+                         candidates: (mr.results && mr.results.candidates) || []});
       renderMatchLine(p.hex, p.region, mr);
     }
     const missing = matchResults.filter(m => m.ok && !m.available);
@@ -302,41 +303,87 @@ function renderMatchLine(hex, region, r){
     : `<span style="color:#ff8a80">✗ 无接近现货</span>（近似：${n.brand} ${n.product} · #${n.hex} · ΔE=${n.dE}）——见下方定制面板${own}`;
   box.insertAdjacentHTML("beforeend", `<div class="meta" style="margin:3px 0">${cat} · #${hex} → ${line}</div>`);
 }
+/* def 56 · 定制申请弹窗：每颜色 → 选商品（近似候选 top5）→ 确认系列名 → 选规格 */
+const SPEC_SET = {
+  lip: ["单支装 3.5g", "迷你装 1.5g"],
+  foundation: ["正装 30ml", "便携装 15ml"],
+  eyeshadow: ["单色 2g", "四色盘 8g"],
+  brow: ["单支 1g", "双头 0.8g"],
+  blush: ["单色 5g", "盒装 7g"],
+};
+const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+
+function customModalRow(hex, region, cands){
+  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—"}];
+  const opts = list.map((c, i) =>
+    `<option value="${i}" data-brand="${escHtml(c.brand)}" data-product="${escHtml(c.product)}" ${i === 0 ? "selected" : ""}>` +
+    `${escHtml(c.brand)} · ${escHtml(c.product || "（无候选）")}（#${escHtml(c.hex)} · ΔE=${escHtml(c.dE)}）</option>`).join("");
+  const specs = (SPEC_SET[region] || ["标准规格"]).map((s, i) =>
+    `<option value="${escHtml(s)}" ${i === 0 ? "selected" : ""}>${escHtml(s)}</option>`).join("");
+  return `
+    <div class="citem" data-hex="${escHtml(hex)}" data-region="${escHtml(region)}">
+      <span class="sw" style="background:#${escHtml(hex)}"></span>
+      <div class="tx" style="flex:1;min-width:0">
+        <b>${REG_NAME[region] || region} · #${escHtml(hex)}</b>
+        <div class="meta">商品类型：${REG_NAME[region] || region}</div>
+        <div class="crow"><label>定制商品</label>
+          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.product || ''">${opts}</select></div>
+        <div class="crow"><label>系列名</label>
+          <input class="csel-series" value="${escHtml(list[0].product || "")}" placeholder="系列名（选商品自动带出，可微调）" /></div>
+        <div class="crow"><label>规格</label>
+          <select class="csel-spec">${specs}</select></div>
+      </div>
+    </div>`;
+}
+
+function closeCustomModal(){
+  const p = $("custommask");
+  p.classList.remove("show");
+  setTimeout(() => { p.hidden = true; }, 180);
+}
+
 function openCustomPanel(missing){
-  $("clist").innerHTML = missing.map(m => `
-    <div class="citem">
-      <span class="sw" style="background:#${m.hex}"></span>
-      <div class="tx"><b>${REG_NAME[m.region] || m.region} · #${m.hex}</b>
-      <div class="meta">${m.nearest ? `近似现货：${m.nearest.brand} ${m.nearest.product}（#${m.nearest.hex} · ΔE=${m.nearest.dE}）——可先入近似色` : "暂无近似候选"}</div></div>
-    </div>`).join("");
+  /* def 56 · 批量无现货 → 弹窗逐项选择（商品/系列名/规格）后统一提交 */
+  $("clist").innerHTML = missing.map(m => {
+    let cands = m.candidates || [];
+    if (!cands.length && m.nearest) cands = [m.nearest];
+    return customModalRow(m.hex, m.region, cands);
+  }).join("");
   const btn = $("csubmit");
   btn.disabled = false;
   btn.textContent = `一键提交 ${missing.length} 项定制申请`;
-  btn.dataset.payload = JSON.stringify(missing.map(m => ({region: m.region, hex: m.hex,
-    note: m.nearest ? `试妆无现货 · 近似：${m.nearest.brand} ${m.nearest.product}（ΔE=${m.nearest.dE}）` : "试妆无现货"})));
-  const p = $("custompanel");
+  $("cms").textContent = "";
+  const p = $("custommask");
   p.hidden = false;
   requestAnimationFrame(() => p.classList.add("show"));
 }
 async function submitCustomAll(btn){
   btn = btn || $("csubmit");
-  let items = [];
-  try{ items = JSON.parse(btn.dataset.payload || "[]"); }catch(e){}
-  if(!items.length) return;
+  const rows = [...document.querySelectorAll("#clist .citem")];
+  if(!rows.length) return;
   btn.disabled = true;
   const ms = $("cms");
   ms.textContent = "提交中…";
   let okN = 0;
-  for(const it of items){
+  for(const row of rows){
+    const hex = row.dataset.hex, region = row.dataset.region;
+    const prodSel = row.querySelector(".csel-product");
+    const opt = prodSel && prodSel.selectedOptions[0];
+    const brand = (opt && opt.dataset.brand) || "";
+    const series = (row.querySelector(".csel-series") || {}).value || "";
+    const spec = (row.querySelector(".csel-spec") || {}).value || "";
+    const product = series.startsWith(brand) ? series : [brand, series].filter(Boolean).join(" ");
     try{
       const r = await (await fetch("/api/products/custom", {method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({hex: it.hex, region: it.region, note: it.note})})).json();
+        body: JSON.stringify({hex, region, product, series, spec,
+          note: "聚合试妆无现货 · 弹窗选择定制"})})).json();
       if(r.ok) okN++;
     }catch(e){}
   }
   if(okN){
-    ms.textContent = `已提交 ${okN}/${items.length} 项——正在前往产品库查看…`;
+    ms.textContent = `已提交 ${okN}/${rows.length} 项——正在前往产品库查看…`;
     window.cbNavKeep && window.cbNavKeep();   /* def 50 · 站内跳转标记：时间线读取依赖跳转后状态保留 */
     setTimeout(() => { location.href = "products.html#custom"; }, 900);
   } else {

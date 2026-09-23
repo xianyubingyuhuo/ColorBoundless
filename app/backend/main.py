@@ -84,6 +84,9 @@ class CustomIn(BaseModel):
     hex: str
     region: str = "lip"
     note: str = ""
+    product: str = ""   # def 56 · 定制弹窗：定制商品（候选中选择）
+    series: str = ""    # def 56 · 系列名（选中商品带出，可微调）
+    spec: str = ""      # def 56 · 规格（30ml / 单支装 3.5g …）
 
 
 @app.get("/api/tools/search_shade")
@@ -222,8 +225,10 @@ def api_products_match(hex: str, region: str = "lip"):
 
 @app.post("/api/products/custom")
 def api_products_custom(body: CustomIn):
-    """def 15d · 无现货色号 → 定制申请登记（data/products/custom_requests.json）"""
-    return custom_request(body.hex, body.region, body.note)
+    """def 15d · 无现货色号 → 定制申请登记（data/products/custom_requests.json）；
+    def 56 · 弹窗选择流：product/series/spec 一并登记。"""
+    return custom_request(body.hex, body.region, body.note,
+                          product=body.product, series=body.series, spec=body.spec)
 
 
 @app.get("/api/products/list")

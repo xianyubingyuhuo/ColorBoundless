@@ -172,3 +172,21 @@
 .citem .tx{min-width:0;font-size:12px;line-height:1.5}
 .citem .tx b{display:block}
 .cpanel-foot{margin-top:10px;display:flex;gap:10px;align-items:center}
+
+/* ==== def 56 · 定制申请弹窗（遮罩 + 居中卡片） ==== */
+#custommask{position:fixed;inset:0;background:rgba(10,7,16,.74);z-index:900;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;transition:opacity .18s}
+#custommask.show{opacity:1}
+#custommask[hidden]{display:none}
+.cmodal{background:#1c1526;border:1px solid rgb(from var(--ac) r g b / .45);border-radius:12px;
+  box-shadow:0 18px 60px rgba(0,0,0,.55);max-width:600px;width:100%;max-height:84vh;
+  overflow:auto;padding:16px 18px;transform:translateY(8px);transition:transform .18s}
+#custommask.show .cmodal{transform:none}
+.crow{display:flex;gap:8px;align-items:center;margin-top:6px}
+.crow>label{flex:none;width:58px;font-size:12px;color:var(--tx2)}
+.crow select,.crow input{flex:1;min-width:0;background:#241b30;color:var(--tx);
+  border:1px solid var(--bd);padding:5px 8px;border-radius:6px;font-size:12px}
+.cbtn-ghost{background:transparent;border:1px solid var(--bd);color:var(--tx2);
+  padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+.cbtn-ghost:hover{border-color:rgb(from var(--ac) r g b / .6);color:var(--tx)}
