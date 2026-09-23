@@ -449,7 +449,8 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
   window.CBChat = {
     open: () => { toggle(true); fab.classList.add("cb-pop"); setTimeout(() => fab.classList.remove("cb-pop"), 900); },
     close: () => toggle(false),
-    send: async (text) => { toggle(true); return sendMessage(text); },
+    send: async (text, opts) => { toggle(true); return sendMessage(text, opts); },
+    get busy(){ return busy; },   /* def 55 · 外部自动流程感知对话占用（忙则排队） */
   };
 
   /* ==== 消息发送：AbortController 超时/停止 + 思考中锁定输入（防串台）+ TTS ==== */
@@ -477,15 +478,18 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
     logEl.scrollTop = logEl.scrollHeight;
     return d2;
   }
-  async function sendMessage(text){
+  async function sendMessage(text, opts){
+    const silent = !!(opts && opts.silent);      /* def 55 · 静默注入：上下文进 AI 但用户消息不上屏（自动配妆用） */
     const m = (text === undefined ? input.value : String(text)).trim();
     if (!m) return;
     if (busy){                                     // 思考中点击发送按钮 = 停止
       if (aborter) aborter.abort();
       return;
     }
-    addMsg("u", m);
-    input.value = "";
+    if (!silent){
+      addMsg("u", m);
+      input.value = "";
+    }
     setBusy(true);
     const th = document.createElement("div");      /* def 29 · 状态行手动建并挂 cb-thinking——旧版 addMsg 产物是 cb-meta，五处 querySelector(".cb-thinking") 移除全是死引用，Thinking 行一直残留（本次根治） */
     th.className = "cb-meta cb-thinking";
@@ -504,9 +508,9 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
           message: m,
-          history: (() => {                     /* def 22l · 最近 10 条多轮上下文（不含 meta/err；当前消息走 message 字段，剔除避免重复） */
+          history: (() => {                     /* def 22l · 最近 10 条多轮上下文（不含 meta/err；当前消息走 message 字段，剔除避免重复）；def 55 · 静默注入时当前消息本就不在档内，取全量 */
             const ms = (curConv() || {}).msgs || [];
-            return ms.slice(0, -1).slice(-10)
+            return (silent ? ms : ms.slice(0, -1)).slice(-10)
               .filter(x => x.cls === "u" || x.cls === "a")
               .map(x => ({ role: x.cls === "u" ? "user" : "assistant", content: x.text }));
           })(),
@@ -537,9 +541,8 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
               partial += ev.text;
               aiEl.textContent += ev.text;               /* 逐字上屏 */
               logEl.scrollTop = logEl.scrollHeight;
-            } else if (ev.type === "tool"){              /* 工具轨迹实时可见（结果已知才发，不重复显示） */
+            } else if (ev.type === "tool"){              /* def 55 · 工具轨迹不再上屏（内部过程静默，用户只要结果）；工具轮次耗时以 status 行呈现 */
               document.querySelectorAll(".cb-thinking").forEach((e) => e.remove());
-              addMsg("meta", `[工具] ${ev.tool}(${JSON.stringify(ev.args)}) ${ev.ok ? "[OK]" : "[错误]"}`);
             } else if (ev.type === "status"){            /* def 29 · 轮次状态（工具决策轮可能 30s+ 无正文） */
               if (th && th.isConnected) th.textContent = ev.text + "（流式输出；可点右侧按钮停止）";
             } else if (ev.type === "ping"){              /* 心跳：read 循环已统一 kick 续命，无需渲染 */
@@ -622,12 +625,11 @@ let busy = false, aborter = null;   /* def 22 · 提前声明：启动自动建�
       window.cbNavKeep && window.cbNavKeep();   /* def 50 · 站内跳转标记：目标页保留演示态 */
       setTimeout(() => { location.href = a.page; }, 350);
     }
-    /* def 18 · 色号回填：tryon 页就地填卡；其他页 → sessionStorage 中转 → 跳试妆页自动填 */
+    /* def 18 · 色号回填：tryon 页就地填卡；其他页 → sessionStorage 中转 → 跳试妆页自动填
+       def 55 · 回填动作静默生效，不在对话窗播报（用户只要卡片被填好这个结果） */
     if (a.type === "fill" && Array.isArray(a.parts) && a.parts.length){
-      addMsg("meta", `[回填] AI 推荐了 ${a.parts.length} 个部位色号${a.reason ? " · " + a.reason : ""}`);
       if (typeof window.fillParts === "function"){
-        const n = window.fillParts(a.parts);
-        if (n) addMsg("ai", "已填入试妆卡——α/色值都可微调，点「开始聚合试妆」看效果（最终决定权在你）。");
+        window.fillParts(a.parts);
         return;
       }
       try { sessionStorage.setItem("cb_fill", JSON.stringify(a.parts)); } catch(e){}

@@ -28,12 +28,11 @@
    <input id="tyfile" type="file" accept="image/jpeg,image/png" hidden>
    <button id="tybig" onclick="tyParts()">开始聚合试妆</button>
    <span id="tyms" class="ms"></span>
-   <!-- def 43 · AI 面部分析：上传即自动检测（白平衡校正→BiSeNet 解析→五官取色）→ 一键 AI 配妆回填 -->
+   <!-- def 43 · AI 面部分析：上传即自动检测（白平衡校正→BiSeNet 解析→五官取色）；def 55 · 分析完自动 AI 配妆回填 -->
    <div id="faceprof" class="cpanel" hidden>
      <b class="cpanel-t">AI 面部分析 · 照片已自动做白平衡校正后取色</b>
      <div id="fp-rows"></div>
      <div class="cpanel-foot">
-       <button id="fp-ai" onclick="fpRecommend()">AI 智能配妆（按我的五官推荐色号）</button>
        <span id="fp-ms" class="ms"></span>
      </div>
    </div>
@@ -253,7 +252,7 @@
 <!-- def 16 预留位：上传即分析 → 自动肤色 → 精确色号回填表单（确认权在用户） -->
 
 <footer>冷启动约 30s（人脸解析模型加载），之后每次约 0.1s · 上妆强度 α 直接作用于 Lab 混色，数值可复现。</footer>
-<script src="state_clear.js?v=def51"></script><script src="theme_cvd.js?v=def53"></script><script src="chatbox.js?v=def50"></script><script src="calswitch.js?v=def51"></script>
-<script src="tryon.js?v=def50"></script>
+<script src="state_clear.js?v=def51"></script><script src="theme_cvd.js?v=def53"></script><script src="chatbox.js?v=def55"></script><script src="calswitch.js?v=def51"></script>
+<script src="tryon.js?v=def55"></script>
 </body>
 </html>

@@ -438,7 +438,7 @@ function renderFaceProf(p){
     html += `<div class="fp-row meta">照片色偏较大：白平衡校正反而引入偏差，已按原图取色（机制自动择优）</div>`;
   $("fp-rows").innerHTML = html;
   const nOK = ["skin", "hair", "brow", "eye", "lip"].filter(k => p[k] && p[k].status === "ok").length;
-  $("fp-ms").textContent = `已识别 ${nOK}/5 项 · AI 推荐结果会自动填入右侧部位卡`;
+  $("fp-ms").textContent = `已识别 ${nOK}/5 项 · 正在自动配色…`;
 }
 async function analyzeFace(){
   const seq = ++tyProfSeq;
@@ -457,6 +457,9 @@ async function analyzeFace(){
     if(!j.ok){ $("fp-rows").innerHTML = `<div class="fp-row err">分析失败：${j.error}</div>`; return; }
     tyFaceProf = j.results.profile;
     renderFaceProf(tyFaceProf);
+    /* def 55 · 分析完成即自动发起 AI 配妆——用户不必再手动点「AI 智能配妆」
+       （序号校验防竞态：连换照片只认最后一次分析结果） */
+    setTimeout(() => { if (seq === tyProfSeq) fpRecommend(); }, 400);
   }catch(e){
     if(seq === tyProfSeq) $("fp-rows").innerHTML = `<div class="fp-row err">分析服务未响应：${e}</div>`;
   }
@@ -481,7 +484,19 @@ function fpRecommend(){
     "请直接基于以上事实调用 recommend_shade_tool 推荐一套完整妆容：lip、foundation、eyeshadow、brow、blush " +
     "五个部位各一项色号，并附一句话配色思路。这些数据已由代码检测完成，不要反问我的外貌；" +
     "如需了解我的色觉特点可调用 get_vision_profile_tool；不要调用导航工具。";
-  $("fp-ms").textContent = "已把面部分析发给 AI，请在右侧对话查看推荐…";
-  window.CBChat.open();
-  window.CBChat.send(msg);
+  /* def 55 · 注入消息静默（不上屏、不进对话档——用户只看到 AI 的推荐结果与卡片被填好）；
+     AI 忙时排队等其回复完再发，避免打断用户正在进行的问答 */
+  const fire = () => {
+    $("fp-ms").textContent = "AI 正在按你的五官自动配色…（推荐结果见右侧对话，色号已同步到下方卡片）";
+    window.CBChat.open();
+    window.CBChat.send(msg, {silent: true});
+  };
+  if (window.CBChat.busy){
+    $("fp-ms").textContent = "AI 回复中——回复结束后自动开始配色…";
+    const t = setInterval(() => {
+      if (!window.CBChat.busy){ clearInterval(t); fire(); }
+    }, 700);
+    return;
+  }
+  fire();
 }
