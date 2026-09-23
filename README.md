@@ -73,15 +73,15 @@ key 留空即可（本地服务无鉴权）。每次对话重读环境，改完 
 
 ```text
 ColorBoundless/
-├── app/ # 前后端应用（FastAPI + Gradio，开发中）
-├── agents/ # 双 Agent 层：测评诊断 / 美学顾问（开发中）
-├── beauty/ # 试妆能力：lipstick [OK] eyebrow [OK] eyeshadow [待办] foundation [待办]
-├── cvd_test/ # 色觉测评：ishihara / hue / grid + triage 状态机 [OK]
-├── cv/ # 图像与色彩算法层
-├── data/ # 数据层：raw → processed → knowledge_base → 索引
-├── models/ # 权重（不入库）与检索索引（4 个 .npz 已入库）
-├── scripts/ # 一次性数据工厂 + 测试脚本（test_* / diag_*）
-├── results/ # 输出（git 忽略）
+├── app/            # 前后端应用（FastAPI 后端 + 原生前端五页）
+├── agents/         # Agent 层：美妆色彩顾问 + 六件 function calling 工具
+├── beauty/         # 试妆能力：lipstick / eyebrow / eyeshadow / foundation
+├── cvd_test/       # 色觉测评：ishihara / hue / grid + triage 状态机
+├── cv/             # 图像算法：face_parsing 人脸解析
+├── data/           # 数据：人脸样张 / 商品库 / 定制申请（运行态，重启清空）
+├── models/         # 第三方权重（不入库）与自建检索索引（.npz 已入库）
+├── scripts/        # 一次性数据工厂 + 测试脚本
+├── results/        # 输出（git 忽略）
 ```
 
 ## 演示清单（现场操作）
@@ -154,4 +154,3 @@ ColorBoundless/
 
 **大模型**：默认不内置任何 LLM——通过环境变量接入云端 API（DeepSeek / 智谱 GLM
 等）或本地推理（llama.cpp / Ollama），密钥自备、永不入库（见「大模型接入」一节）。
-
