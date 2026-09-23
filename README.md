@@ -116,6 +116,43 @@ ColorBoundless/
 
 ## 许可证与数据来源
 
-- CelebAMask-HQ 权重：仅限非商业研究/教育用途
-- face-parsing.PyTorch：MIT
-- 品牌色号与趋势图像资源遵循对应版权要求；完整设计思路见 [docs/DESIGN.md](docs/DESIGN.md)
+**项目代码**：[MIT License](LICENSE)。注意分层条款——`models/` 下的第三方模型权重
+不适用 MIT，遵循其原始许可；其中 CelebAMask-HQ 人脸解析权重**仅限非商业研究/教育
+用途**，该限制优先。
+
+**开源依赖**（pip 安装，协议归属各自项目）：
+
+| 组件 | 协议 | 用途 |
+|---|---|---|
+| fastapi | MIT | 后端 HTTP 端点与 SSE 流式 |
+| uvicorn | BSD-3 | ASGI 服务器 |
+| numpy | BSD-3 | 矩阵运算（CVD 模拟/取色） |
+| opencv-python | Apache-2.0 | 图像处理（白平衡校正/裁剪） |
+| Pillow | MIT-CMU | 图像读写 |
+| pandas | BSD-3 | 数据清洗 |
+| scikit-learn | BSD-3 | 向量索引辅助 |
+| torch / torchvision | BSD-style | 人脸解析网络推理 |
+| sentence-transformers | Apache-2.0 | bge-small-zh 语义嵌入 |
+| python-multipart | Apache-2.0 | 照片上传表单解析 |
+
+**模型与数据来源**：
+
+- `models/face_parsing/79999_iter.pth`：来自
+  [face-parsing.PyTorch](https://github.com/zllrunning/face-parsing.PyTorch)（MIT），
+  权重训练数据为 [CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ)
+  ——**仅限非商业研究/教育用途**，不入库，需自行获取。
+- `models/vector_store/*.npz`：自建资产（Kaggle 公开口红色号数据集 shades.csv
+  清洗为集团粉底库 168 条 + 自建嵌入），已入库，克隆即用；原始数据遵循 Kaggle
+  数据页标注的许可条款。
+- CVD 模拟矩阵：Machado, Oliveira & Fernandes 2009（IEEE TVCG）公开数据，
+  与自研 `cvd_test/cvd_matrix.py` 逐值对齐（selftest 22/22 同源背书）。
+- 石原氏色盲测试：`cvd_test/ishihara.py` 为**数字化重实现**（混淆色沿 CVD 矩阵
+  零空间方向构造），不使用原版图卡，规避版权。
+- GB/T 15608《中国颜色体系》：仅作近似命名参照（标号换算为工程近似，
+  精确标号以国家标准样册为准）。
+- 品牌（L'Oréal / Maybelline / Lancôme / Make Up For Ever 等）名称与商标归
+  各权利人所有，本项目仅作检索演示用途；品牌色号与趋势图像资源遵循对应版权要求。
+
+**大模型**：默认不内置任何 LLM——通过环境变量接入云端 API（DeepSeek / 智谱 GLM
+等）或本地推理（llama.cpp / Ollama），密钥自备、永不入库（见「大模型接入」一节）。
+
