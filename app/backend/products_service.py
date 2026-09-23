@@ -107,7 +107,9 @@ def _owner_label(o: dict) -> str:
 def _top_candidates(pool, lab, n=5, official=False):
     """def 56 · 池内 top-N 最近候选（定制弹窗的「选择商品」列表）。
     official=True 的池（眼影/眉妆内建命名盘）没有 brand/product 字段，
-    用 name 当系列名、品牌统一为 ColorBoundless Official。"""
+    用 name 当商品名、品牌统一为 ColorBoundless Official。
+    def 56b · 每候选附 series——该色在商品橱窗中的归属系列名（如「丝绒唇膏 · 系列 1」，
+    即用户语义的「口红1/口红2」）；橱窗未陈列则空串。"""
     scored = sorted(pool, key=lambda it: float(
         _core.ciede2000(lab, list(_core.hex2lab(it["hex"])))))
     out = []
@@ -118,6 +120,8 @@ def _top_candidates(pool, lab, n=5, official=False):
             rec["brand"] = "ColorBoundless Official"
             rec["product"] = it.get("name", it.get("product", ""))
         rec["dE"] = round(d, 2)
+        owners = _showcase_owners(rec["hex"])
+        rec["series"] = owners[0]["item"] if owners else ""
         out.append(rec)
     return out
 
@@ -148,8 +152,12 @@ def match_product(hex_color: str, region: str = "lip") -> dict:
             rows = _core.search_shade(hex_std, top_k=5)
             if not rows:
                 return {"ok": False, "tool": tool, "error": "唇色库为空", "results": {}}
-            cands = [{"brand": "ColorBoundless Official", "product": s["name"],
-                      "hex": s["hex"], "dE": round(float(s["dE"]), 2)} for s in rows]
+            cands = []
+            for s in rows:
+                owners = _showcase_owners(s["hex"])
+                cands.append({"brand": "ColorBoundless Official", "product": s["name"],
+                              "hex": s["hex"], "dE": round(float(s["dE"]), 2),
+                              "series": owners[0]["item"] if owners else ""})
             nearest = dict(cands[0])
         elif region == "eyeshadow":
             cands = _top_candidates(_EYESHADOW_POOL, lab, official=True)

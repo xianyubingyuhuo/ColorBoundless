@@ -315,9 +315,9 @@ const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 
 function customModalRow(hex, region, cands){
-  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—"}];
+  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—", series: ""}];
   const opts = list.map((c, i) =>
-    `<option value="${i}" data-brand="${escHtml(c.brand)}" data-product="${escHtml(c.product)}" ${i === 0 ? "selected" : ""}>` +
+    `<option value="${i}" data-brand="${escHtml(c.brand)}" data-product="${escHtml(c.product)}" data-series="${escHtml(c.series || "")}" ${i === 0 ? "selected" : ""}>` +
     `${escHtml(c.brand)} · ${escHtml(c.product || "（无候选）")}（#${escHtml(c.hex)} · ΔE=${escHtml(c.dE)}）</option>`).join("");
   const specs = (SPEC_SET[region] || ["标准规格"]).map((s, i) =>
     `<option value="${escHtml(s)}" ${i === 0 ? "selected" : ""}>${escHtml(s)}</option>`).join("");
@@ -328,9 +328,9 @@ function customModalRow(hex, region, cands){
         <b>${REG_NAME[region] || region} · #${escHtml(hex)}</b>
         <div class="meta">商品类型：${REG_NAME[region] || region}</div>
         <div class="crow"><label>定制商品</label>
-          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.product || ''">${opts}</select></div>
+          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.series || ''">${opts}</select></div>
         <div class="crow"><label>系列名</label>
-          <input class="csel-series" value="${escHtml(list[0].product || "")}" placeholder="系列名（选商品自动带出，可微调）" /></div>
+          <input class="csel-series" value="${escHtml(list[0].series || "")}" placeholder="所属系列（选商品自动带出，可微调）" /></div>
         <div class="crow"><label>规格</label>
           <select class="csel-spec">${specs}</select></div>
       </div>
@@ -373,7 +373,7 @@ async function submitCustomAll(btn){
     const brand = (opt && opt.dataset.brand) || "";
     const series = (row.querySelector(".csel-series") || {}).value || "";
     const spec = (row.querySelector(".csel-spec") || {}).value || "";
-    const product = series.startsWith(brand) ? series : [brand, series].filter(Boolean).join(" ");
+    const product = [brand, (opt && opt.dataset.product) || ""].filter(Boolean).join(" ");
     try{
       const r = await (await fetch("/api/products/custom", {method: "POST",
         headers: {"Content-Type": "application/json"},

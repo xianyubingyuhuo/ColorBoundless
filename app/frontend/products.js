@@ -43,9 +43,9 @@ const CM_SPEC_SET = {
   blush: ["单色 5g", "盒装 7g"],
 };
 function cmRow(hex, region, cands){
-  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—"}];
+  const list = cands && cands.length ? cands : [{brand: "ColorBoundless Official", product: "", hex: hex, dE: "—", series: ""}];
   const opts = list.map((c, i) =>
-    `<option value="${i}" data-brand="${esc(c.brand)}" data-product="${esc(c.product)}" ${i === 0 ? "selected" : ""}>` +
+    `<option value="${i}" data-brand="${esc(c.brand)}" data-product="${esc(c.product)}" data-series="${esc(c.series || "")}" ${i === 0 ? "selected" : ""}>` +
     `${esc(c.brand)} · ${esc(c.product || "（无候选）")}（#${esc(c.hex)} · ΔE=${esc(c.dE)}）</option>`).join("");
   const specs = (CM_SPEC_SET[region] || ["标准规格"]).map((s, i) =>
     `<option value="${esc(s)}" ${i === 0 ? "selected" : ""}>${esc(s)}</option>`).join("");
@@ -57,9 +57,9 @@ function cmRow(hex, region, cands){
         <b>${esc(RN[region] || region)} · #${esc(hex)}</b>
         <div class="meta">商品类型：${esc(RN[region] || region)}</div>
         <div class="crow"><label>定制商品</label>
-          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.product || ''">${opts}</select></div>
+          <select class="csel-product" onchange="this.closest('.citem').querySelector('.csel-series').value = this.options[this.selectedIndex].dataset.series || ''">${opts}</select></div>
         <div class="crow"><label>系列名</label>
-          <input class="csel-series" value="${esc(list[0].product || "")}" placeholder="系列名（选商品自动带出，可微调）" /></div>
+          <input class="csel-series" value="${esc(list[0].series || "")}" placeholder="所属系列（选商品自动带出，可微调）" /></div>
         <div class="crow"><label>规格</label>
           <select class="csel-spec">${specs}</select></div>
       </div>
@@ -95,8 +95,7 @@ async function submitCustomModal(){
   const opt = prodSel && prodSel.selectedOptions[0];
   const series = (row.querySelector(".csel-series") || {}).value || "";
   const spec = (row.querySelector(".csel-spec") || {}).value || "";
-  const b = (opt && opt.dataset.brand) || "";
-  const product = series.startsWith(b) ? series : [b, series].filter(Boolean).join(" ");
+  const product = [(opt && opt.dataset.brand) || "", (opt && opt.dataset.product) || ""].filter(Boolean).join(" ");
   try{
     const r = await (await fetch("/api/products/custom", {method: "POST",
       headers: {"Content-Type": "application/json"},
