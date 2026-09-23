@@ -82,7 +82,6 @@ ColorBoundless/
 ├── models/ # 权重（不入库）与检索索引（4 个 .npz 已入库）
 ├── scripts/ # 一次性数据工厂 + 测试脚本（test_* / diag_*）
 ├── results/ # 输出（git 忽略）
-└── docs/ # 设计文档（DESIGN.md：数据落库与配色体系设计）
 ```
 
 ## 演示清单（现场操作）
