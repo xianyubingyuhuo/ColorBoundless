@@ -12,8 +12,8 @@
 | 色觉测评（CVD Screening） | [OK] | 石原板/色相排列/网格测试 + 规则状态机分诊 | triage 全绿（test_triage.py） |
 | 色号精准推荐 | [OK] | CIEDE2000 色差算法 · CIELab 空间排序 | 正红匹配 ΔLab = 1.1 |
 | AI 虚拟试妆 | [OK] | BiSeNet 人脸解析 + Lab 颜色迁移 + 羽化 | 纯 CPU 0.17s/图（实测） |
-| 双 Agent 对话 | [进行中] 进行中 | LangChain 1.x create_agent + LangGraph 工具循环 | — |
-| 检索索引（4 库） | [OK] | 262K 色 KMeans 聚类 + undertone 查询表 + 风格 RAG | 检索 0.1~0.2s |
+| 双 Agent 对话 | [进行中] 进行中 | LangChain 1.x create_agent + Agent 工具循环 · 六件 function calling 工具 | — |
+| 检索索引（4 库） | [OK] | 262K 色 KMeans 聚类 + undertone 查询表 + 风格知识库语义检索 | 检索 0.1~0.2s |
 | 波浪图可视化 | [进行中] 进行中 | 光谱波动模拟（spectrum_wave_demo.py） | — |
 
 ## 架构
@@ -21,7 +21,7 @@
 ```
 数据层 算法层 Agent 层 应用层
 data/ → cvd_test/ ──┐ ┌─ FastAPI
-4 类索引 beauty/ ──┼── agents/（LangGraph） ──→ └─ Gradio
+4 类索引 beauty/ ──┼── agents/（Agent 工具循环） ──→ └─ Gradio
               models/ ──┘ 工具化调用算法层 (9/6 起开发)
 ```
 
