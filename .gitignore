@@ -27,3 +27,7 @@ Thumbs.db
 
 _backend.log
 _backend_err.log
+
+# ===== 生成的大文件：索引/向量/清洗数据（scripts/ 下有重建脚本，见 README）=====
+models/vector_store/*.npz
+data/processed/**/*.csv
